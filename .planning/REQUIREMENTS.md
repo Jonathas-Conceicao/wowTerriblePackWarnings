@@ -10,6 +10,7 @@ Requirements for initial proof of concept. Each maps to roadmap phases.
 ### Foundation
 
 - [ ] **FOUND-01**: Addon loads in WoW Midnight with correct TOC (Interface 120001), namespace, and SavedVariables
+- [ ] **FOUND-02**: Dev tooling: install script, release script, .pkgmeta, and GitHub Actions release workflow
 
 ### Data
 
@@ -78,25 +79,26 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01 | — | Pending |
-| DATA-01 | — | Pending |
-| DATA-02 | — | Pending |
-| WARN-01 | — | Pending |
-| WARN-02 | — | Pending |
-| WARN-03 | — | Pending |
-| CMBT-01 | — | Pending |
-| CMBT-02 | — | Pending |
-| CMBT-03 | — | Pending |
-| UI-01 | — | Pending |
-| UI-02 | — | Pending |
-| UI-03 | — | Pending |
-| UI-04 | — | Pending |
+| FOUND-01 | Phase 1 | Pending |
+| FOUND-02 | Phase 1 | Pending |
+| DATA-01 | Phase 1 | Pending |
+| DATA-02 | Phase 1 | Pending |
+| WARN-01 | Phase 2 | Pending |
+| WARN-02 | Phase 2 | Pending |
+| WARN-03 | Phase 2 | Pending |
+| CMBT-01 | Phase 2 | Pending |
+| CMBT-02 | Phase 2 | Pending |
+| CMBT-03 | Phase 2 | Pending |
+| UI-01 | Phase 3 | Pending |
+| UI-02 | Phase 3 | Pending |
+| UI-03 | Phase 3 | Pending |
+| UI-04 | Phase 3 | Pending |
 
 **Coverage:**
-- v1 requirements: 13 total
-- Mapped to phases: 0
-- Unmapped: 13 ⚠️
+- v1 requirements: 14 total
+- Mapped to phases: 14
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-13*
-*Last updated: 2026-03-13 after initial definition*
+*Last updated: 2026-03-13 — added FOUND-02 (dev tooling)*
