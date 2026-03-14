@@ -40,11 +40,15 @@ Plans:
 **Depends on**: Phase 1
 **Requirements**: WARN-01, WARN-02, WARN-03, CMBT-01, CMBT-02, CMBT-03
 **Success Criteria** (what must be TRUE):
-  1. Running `/run TPW.Scheduler:Start("pack_key")` in the Lua console triggers ability warnings at the correct offsets
-  2. Warnings appear in Blizzard's Boss Warnings UI during a dungeon trash pull; a custom fallback frame displays if the Boss Warnings API does not support trash content
+  1. Running `/tpw select windrunner_spire` then `/tpw start` in WoW triggers ability warnings at the correct offsets
+  2. Warnings appear via Blizzard's Encounter Timeline, DBM timer bars, or RaidNotice text flash (3-tier fallback)
   3. Entering combat with a pack selected auto-starts timers via `PLAYER_REGEN_DISABLED`
   4. All timers stop and no ghost warnings fire after combat ends (`PLAYER_REGEN_ENABLED`) or after a zone change (`PLAYER_ENTERING_WORLD`)
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Data restructure (ordered array), display abstraction (3-tier fallback), TOC update
+- [ ] 02-02-PLAN.md — Scheduler timer engine, CombatWatcher state machine, Core.lua event wiring
 
 ### Phase 3: Pack Selection UI
 **Goal**: Players can open the addon, browse and select a pack from a grouped list, see which pack is active, and trigger a pull — all without touching the Lua console
@@ -65,5 +69,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation and Data | 2/2 | Complete    | 2026-03-14 |
-| 2. Warning Engine and Combat Integration | 0/TBD | Not started | - |
+| 2. Warning Engine and Combat Integration | 0/2 | Not started | - |
 | 3. Pack Selection UI | 0/TBD | Not started | - |
