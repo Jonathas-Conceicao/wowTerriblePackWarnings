@@ -8,4 +8,7 @@
 ## SavedVariables: TerriblePackWarningsDB
 
 Core.lua
+Engine\Scheduler.lua
+Engine\CombatWatcher.lua
+Display\BossWarnings.lua
 Data\WindrunnerSpire.lua

@@ -1,7 +1,11 @@
 local addonName, ns = ...
 
-ns.PackDatabase["windrunner_spire_pack_1"] = {
-    displayName = "Windrunner Spire — Pack 1",
+ns.PackDatabase["windrunner_spire"] = ns.PackDatabase["windrunner_spire"] or {}
+local packs = ns.PackDatabase["windrunner_spire"]
+
+packs[#packs + 1] = {
+    key = "windrunner_spire_pack_1",
+    displayName = "Windrunner Spire -- Pack 1",
     mobs = {
         {
             name = "Spellguard Magus",
