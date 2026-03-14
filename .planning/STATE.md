@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 2 context gathered
-last_updated: "2026-03-14T07:19:57.529Z"
-last_activity: 2026-03-13 — Completed Plan 01-02 (dev tooling)
+stopped_at: Completed Plan 02-01 (PackDatabase restructure and display abstraction)
+last_updated: "2026-03-14T08:00:00.000Z"
+last_activity: 2026-03-14 — Completed Plan 02-01 (PackDatabase restructure and display abstraction)
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 100
+  total_plans: 4
+  completed_plans: 3
+  percent: 75
 ---
 
 # Project State
@@ -21,32 +21,33 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-13)
 
 **Core value:** When a player selects a pack and pulls, they see accurate, timed ability warnings for that pack's dangerous mob abilities in Blizzard's native Boss Warning UI.
-**Current focus:** Phase 1 — Foundation and Data
+**Current focus:** Phase 2 — Warning Engine and Combat Integration
 
 ## Current Position
 
-Phase: 1 of 3 (Foundation and Data)
-Plan: 2 of 2 in current phase
+Phase: 2 of 3 (Warning Engine and Combat Integration)
+Plan: 1 of 2 in current phase (02-01 complete, 02-02 next)
 Status: Executing
-Last activity: 2026-03-13 — Completed Plan 01-02 (dev tooling)
+Last activity: 2026-03-14 — Completed Plan 02-01 (PackDatabase restructure and display abstraction)
 
-Progress: [██████████] 100%
+Progress: [███████░░░] 75%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2 (01-01, 01-02)
-- Average duration: 1 min
-- Total execution time: 2 min
+- Total plans completed: 3 (01-01, 01-02, 02-01)
+- Average duration: ~2 min
+- Total execution time: ~7 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation-and-data | 2 (01-01, 01-02) | 2 min | 1 min |
+| 02-warning-engine-and-combat-integration | 1 (02-01) | 5 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (1min), 01-02 (1min)
+- Last 5 plans: 01-01 (1min), 01-02 (1min), 02-01 (5min)
 - Trend: Fast execution
 
 *Updated after each plan completion*
@@ -66,6 +67,9 @@ Recent decisions affecting current work:
 - PackDatabase initialized at module scope so data files can populate it during load time (01-01)
 - No global TPW table -- namespace-only access per locked decision (01-01)
 - Added .planning, .github, .git to .pkgmeta ignore list beyond reference project patterns (01-02)
+- PackDatabase per-dungeon ordered array (not flat map) allows index-based auto-advance by Scheduler (02-01)
+- Lazy adapter detection defers C_EncounterTimeline check until first call, avoiding load-time unavailability (02-01)
+- DBM adapter tracks own bar IDs in activeBarIDs table instead of calling DBT:CancelAllBars() to avoid cancelling other addon bars (02-01)
 
 ### Pending Todos
 
@@ -78,6 +82,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-14T07:19:57.526Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-warning-engine-and-combat-integration/02-CONTEXT.md
+Last session: 2026-03-14T08:00:00.000Z
+Stopped at: Completed Plan 02-01 (PackDatabase restructure and display abstraction)
+Resume file: .planning/phases/02-warning-engine-and-combat-integration/02-02-PLAN.md

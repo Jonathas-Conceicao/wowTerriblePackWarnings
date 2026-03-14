@@ -20,7 +20,7 @@ Requirements for initial proof of concept. Each maps to roadmap phases.
 ### Warning Engine
 
 - [ ] **WARN-01**: Timer scheduler starts ability cooldown timers when a pack pull is triggered
-- [ ] **WARN-02**: Warnings display through Blizzard's Boss Warnings API (with fallback frame if API doesn't support trash)
+- [x] **WARN-02**: Warnings display through Blizzard's Boss Warnings API (with fallback frame if API doesn't support trash)
 - [ ] **WARN-03**: All active timers cancel on combat end or zone change
 
 ### Combat Integration
@@ -84,7 +84,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-01 | Phase 1 | Complete |
 | DATA-02 | Phase 1 | Complete |
 | WARN-01 | Phase 2 | Pending |
-| WARN-02 | Phase 2 | Pending |
+| WARN-02 | Phase 2 | Complete |
 | WARN-03 | Phase 2 | Pending |
 | CMBT-01 | Phase 2 | Pending |
 | CMBT-02 | Phase 2 | Pending |
@@ -101,4 +101,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-13*
-*Last updated: 2026-03-13 — added FOUND-02 (dev tooling)*
+*Last updated: 2026-03-14 — marked WARN-02 complete (02-01: display abstraction module)*

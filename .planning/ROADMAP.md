@@ -47,7 +47,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Data restructure (ordered array), display abstraction (3-tier fallback), TOC update
+- [x] 02-01-PLAN.md — Data restructure (ordered array), display abstraction (3-tier fallback), TOC update
 - [ ] 02-02-PLAN.md — Scheduler timer engine, CombatWatcher state machine, Core.lua event wiring
 
 ### Phase 3: Pack Selection UI
@@ -69,5 +69,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation and Data | 2/2 | Complete    | 2026-03-14 |
-| 2. Warning Engine and Combat Integration | 0/2 | Not started | - |
+| 2. Warning Engine and Combat Integration | 1/2 | In progress | - |
 | 3. Pack Selection UI | 0/TBD | Not started | - |
