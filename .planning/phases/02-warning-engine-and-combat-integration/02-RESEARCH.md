@@ -502,10 +502,132 @@ This section consolidates the Midnight API risk because it touches every part of
 
 ---
 
+## Additional Research: DBM Integration & WoW UI Source
+
+**Sources:** Local repos — `C:\Users\jonat\Repositories\DeadlyBossMods`, `C:\Users\jonat\Repositories\wow-ui-source`
+
+### C_EncounterTimeline.AddScriptEvent() — PRIMARY DISPLAY PATH
+
+**Discovery:** Blizzard's Encounter Timeline has a native API for addons to inject custom timer events:
+
+```lua
+-- From wow-ui-source/Blizzard_APIDocumentationGenerated/EncounterTimelineDocumentation.lua
+C_EncounterTimeline.AddScriptEvent(eventInfo)    -- Add custom timeline event (returns eventID)
+C_EncounterTimeline.CancelScriptEvent(eventID)   -- Cancel custom event
+C_EncounterTimeline.FinishScriptEvent(eventID)    -- Mark event as finished
+C_EncounterTimeline.PauseScriptEvent(eventID)     -- Pause event
+C_EncounterTimeline.ResumeScriptEvent(eventID)    -- Resume event
+C_EncounterTimeline.CancelAllScriptEvents()       -- Clear all custom events
+```
+
+**Supporting APIs:**
+- `C_EncounterTimeline.IsFeatureEnabled()` / `IsFeatureAvailable()` — detect if timeline is active
+- `C_EncounterTimeline.HasVisibleEvents()` — check if events are showing
+- `C_EncounterTimeline.GetEventHighlightTime()` — returns pre-warning highlight time (default 5s)
+- `C_EncounterTimeline.GetViewType()` — Timer or Track view (user's choice)
+
+**This changes the display strategy:** Instead of `RaidNotice_AddMessage` (text flash), the addon should inject events into Blizzard's Encounter Timeline. The player sees them as native timer bars or track events depending on their UI preference. This is exactly what the user requested ("add it to Blizzard as an upcoming CD").
+
+**Risk:** `AddScriptEvent` may only work during active boss encounters (like the rest of the Encounter Timeline). Needs in-game validation for trash combat. If it only works during encounters, fall back to DBM.
+
+### C_EncounterWarnings — SECONDARY/COMPLEMENTARY PATH
+
+```lua
+-- ENCOUNTER_WARNING event payload:
+-- text, casterGUID, casterName, targetGUID, targetName, iconFileID, tooltipSpellID,
+-- isDeadly, color, duration, severity, shouldPlaySound, shouldShowChatMessage, shouldShowWarning
+
+-- Severity levels: Critical (High), Medium, Normal (Low)
+-- API: C_EncounterWarnings.GetColorForSeverity(severity)
+--      C_EncounterWarnings.GetSoundKitForSeverity(severity)
+--      C_EncounterWarnings.PlaySound(severity)
+--      C_EncounterWarnings.IsFeatureEnabled()
+```
+
+**Use:** Can complement timeline events with text warnings for imminent casts. However, ENCOUNTER_WARNING is likely fired by Blizzard server-side for encounter mechanics — addon may not be able to trigger it.
+
+### DBM Integration API — FALLBACK DISPLAY PATH
+
+**From local DeadlyBossMods source (`DBM-Core/` and `DBM-StatusBarTimers/`):**
+
+#### Option A: DBT:CreateBar() — Direct Timer Bar Injection
+```lua
+-- DBM-StatusBarTimers/DBT.lua
+DBT:CreateBar(timer, id, icon, huge, small, color, isDummy, colorType, inlineIcon, keep, fade, countdown, countdownMax, isCooldown)
+DBT:CancelBar(id)
+DBT:CancelAllBars()
+DBT:GetBar(id)
+```
+This is the lowest-level API — injects a bar directly into DBM's timer bar display.
+
+#### Option B: DBM:NewMod() + mod:NewTimer() — Full Mod Registration
+```lua
+-- Register as a DBM mod
+local mod = DBM:NewMod("TPW_WindrunnerSpire", 0, nil, 0)
+
+-- Create reusable timer objects
+local timerSpellguard = mod:NewTimer(50, "Spellguard's Protection", 1253686, true, nil, 4)
+
+-- Start timer
+timerSpellguard:Start(50)  -- 50 second countdown
+
+-- Stop timer
+timerSpellguard:Stop()
+```
+This gives full DBM integration including user options, WeakAuras support, and voice pack compatibility.
+
+#### Option C: DBM Callback System — Event Hooks
+```lua
+DBM:RegisterCallback("DBM_Pull", function() end)    -- Combat started
+DBM:RegisterCallback("DBM_Wipe", function() end)    -- Group wiped
+DBM:RegisterCallback("DBM_Kill", function() end)    -- Boss killed
+DBM:RegisterCallback("DBM_TimerBegin", function(event, id, msg, timer, icon, ...) end)
+```
+
+**Recommendation:** Use **Option A (DBT:CreateBar)** as the DBM fallback. It's the simplest — just push a bar with a duration and ID. No mod registration needed. Check `if DBT then` to detect DBM presence.
+
+### RaidNotice_AddMessage — TERTIARY/LEGACY PATH
+
+From `wow-ui-source/Interface/AddOns/Blizzard_FrameXMLUtil/Mainline/RaidWarning.lua`:
+
+```lua
+function RaidNotice_AddMessage(noticeFrame, textString, colorInfo, displayTime)
+-- noticeFrame: RaidBossEmoteFrame or RaidWarningFrame
+-- colorInfo: {r, g, b} table (e.g., ChatTypeInfo["RAID_WARNING"])
+-- displayTime: optional, defaults to 10 seconds
+-- Uses two-slot queue with scale-up/fade-out animation
+```
+
+Not restricted to boss encounters. Events: `RAID_BOSS_EMOTE`, `RAID_BOSS_WHISPER`, `CLEAR_BOSS_EMOTES`.
+
+### Updated Display Priority
+
+Based on research:
+1. **C_EncounterTimeline.AddScriptEvent()** — Native Blizzard timeline bars. Ideal match for user request. Validate in-game.
+2. **DBT:CreateBar()** — DBM timer bars. Works if player has DBM installed. Simple API.
+3. **RaidNotice_AddMessage()** — Text flash fallback. Always available, less informative.
+
+### Detection Logic
+```lua
+local function getDisplayAdapter()
+    if C_EncounterTimeline and C_EncounterTimeline.IsFeatureEnabled() then
+        return "encounter_timeline"
+    elseif DBT then
+        return "dbm"
+    else
+        return "raid_notice"
+    end
+end
+```
+
+---
+
 ## Metadata
 
 **Confidence breakdown:**
 - Standard Stack (C_Timer APIs): HIGH — verified from warcraft.wiki.gg official docs
+- C_EncounterTimeline.AddScriptEvent: MEDIUM — confirmed API exists in wow-ui-source; trash combat applicability unverified in-game
+- DBM Integration (DBT:CreateBar): HIGH — verified from local DeadlyBossMods source code
 - Standard Stack (RaidNotice_AddMessage): MEDIUM — verified from Blizzard UI source; Midnight compatibility unconfirmed
 - Architecture: HIGH — standard WoW addon patterns, verified against existing codebase
 - Combat Events (PLAYER_REGEN_DISABLED): HIGH — well-documented, not listed in Midnight removals

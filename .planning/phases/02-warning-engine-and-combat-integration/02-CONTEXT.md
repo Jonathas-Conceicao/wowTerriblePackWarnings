@@ -15,8 +15,10 @@ Timer scheduling, warning display integration, and combat event wiring that deli
 
 ### Warning Display
 - Addon is a **data provider only** — it does NOT implement timers, bars, or alert UI
-- Push ability data into **Blizzard's Encounter Timer system** (native bars/timeline) as primary display
-- **DBM API integration** as fallback if Blizzard's API doesn't support addon-injected trash timers
+- Display priority (try in order):
+  1. **C_EncounterTimeline.AddScriptEvent()** — Blizzard's native encounter timeline (bars/timeline based on user config)
+  2. **DBT:CreateBar()** — DBM timer bars (if player has DBM installed)
+  3. **RaidNotice_AddMessage()** — Text flash fallback (always available)
 - Use built-in sounds from whichever display system is active
 - No custom frames or rendering in v1
 
