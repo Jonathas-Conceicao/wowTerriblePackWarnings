@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed Plan 02-01 (PackDatabase restructure and display abstraction)
-last_updated: "2026-03-14T08:00:00.000Z"
+stopped_at: Completed 02-02 (Warning engine and combat integration)
+last_updated: "2026-03-14T08:13:14.587Z"
 last_activity: 2026-03-14 — Completed Plan 02-01 (PackDatabase restructure and display abstraction)
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
   percent: 75
 ---
 
@@ -51,6 +51,7 @@ Progress: [███████░░░] 75%
 - Trend: Fast execution
 
 *Updated after each plan completion*
+| Phase 02-warning-engine-and-combat-integration P02 | 2min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -70,6 +71,9 @@ Recent decisions affecting current work:
 - PackDatabase per-dungeon ordered array (not flat map) allows index-based auto-advance by Scheduler (02-01)
 - Lazy adapter detection defers C_EncounterTimeline check until first call, avoiding load-time unavailability (02-01)
 - DBM adapter tracks own bar IDs in activeBarIDs table instead of calling DBT:CancelAllBars() to avoid cancelling other addon bars (02-01)
+- [Phase 02-warning-engine-and-combat-integration]: combatActive uses single-element table {false} for closure-visible mutation (Lua boolean reassignment is invisible to existing closures)
+- [Phase 02-warning-engine-and-combat-integration]: scheduleAbility recursion in cast callback creates repeating cycle; each recursion uses cooldown as first_cast
+- [Phase 02-warning-engine-and-combat-integration]: CombatWatcher OnCombatStart guards with state ~= 'ready' to prevent double-starts and end-state triggers
 
 ### Pending Todos
 
@@ -82,6 +86,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-14T08:00:00.000Z
-Stopped at: Completed Plan 02-01 (PackDatabase restructure and display abstraction)
-Resume file: .planning/phases/02-warning-engine-and-combat-integration/02-02-PLAN.md
+Last session: 2026-03-14T08:13:14.584Z
+Stopped at: Completed 02-02 (Warning engine and combat integration)
+Resume file: None

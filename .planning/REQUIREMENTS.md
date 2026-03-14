@@ -19,15 +19,15 @@ Requirements for initial proof of concept. Each maps to roadmap phases.
 
 ### Warning Engine
 
-- [ ] **WARN-01**: Timer scheduler starts ability cooldown timers when a pack pull is triggered
+- [x] **WARN-01**: Timer scheduler starts ability cooldown timers when a pack pull is triggered
 - [x] **WARN-02**: Warnings display through Blizzard's Boss Warnings API (with fallback frame if API doesn't support trash)
-- [ ] **WARN-03**: All active timers cancel on combat end or zone change
+- [x] **WARN-03**: All active timers cancel on combat end or zone change
 
 ### Combat Integration
 
-- [ ] **CMBT-01**: Manual pull trigger button starts timers for the selected pack
-- [ ] **CMBT-02**: PLAYER_REGEN_DISABLED/ENABLED detection for automatic combat start/end
-- [ ] **CMBT-03**: State resets on PLAYER_ENTERING_WORLD (zone change)
+- [x] **CMBT-01**: Manual pull trigger button starts timers for the selected pack
+- [x] **CMBT-02**: PLAYER_REGEN_DISABLED/ENABLED detection for automatic combat start/end
+- [x] **CMBT-03**: State resets on PLAYER_ENTERING_WORLD (zone change)
 
 ### UI
 
@@ -83,12 +83,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FOUND-02 | Phase 1 | Complete |
 | DATA-01 | Phase 1 | Complete |
 | DATA-02 | Phase 1 | Complete |
-| WARN-01 | Phase 2 | Pending |
+| WARN-01 | Phase 2 | Complete |
 | WARN-02 | Phase 2 | Complete |
-| WARN-03 | Phase 2 | Pending |
-| CMBT-01 | Phase 2 | Pending |
-| CMBT-02 | Phase 2 | Pending |
-| CMBT-03 | Phase 2 | Pending |
+| WARN-03 | Phase 2 | Complete |
+| CMBT-01 | Phase 2 | Complete |
+| CMBT-02 | Phase 2 | Complete |
+| CMBT-03 | Phase 2 | Complete |
 | UI-01 | Phase 3 | Pending |
 | UI-02 | Phase 3 | Pending |
 | UI-03 | Phase 3 | Pending |
