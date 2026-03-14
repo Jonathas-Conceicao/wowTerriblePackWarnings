@@ -65,6 +65,7 @@ Recent decisions affecting current work:
 - Dev tooling mirrors TerribleBuffTracker: install.bat, release.bat, .pkgmeta, GitHub Actions via BigWigsMods/packager@v2
 - PackDatabase initialized at module scope so data files can populate it during load time (01-01)
 - No global TPW table -- namespace-only access per locked decision (01-01)
+- Added .planning, .github, .git to .pkgmeta ignore list beyond reference project patterns (01-02)
 
 ### Pending Todos
 

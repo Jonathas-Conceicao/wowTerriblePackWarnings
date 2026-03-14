@@ -10,7 +10,7 @@ Requirements for initial proof of concept. Each maps to roadmap phases.
 ### Foundation
 
 - [x] **FOUND-01**: Addon loads in WoW Midnight with correct TOC (Interface 120001), namespace, and SavedVariables
-- [ ] **FOUND-02**: Dev tooling: install script, release script, .pkgmeta, and GitHub Actions release workflow
+- [x] **FOUND-02**: Dev tooling: install script, release script, .pkgmeta, and GitHub Actions release workflow
 
 ### Data
 
@@ -80,7 +80,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | FOUND-01 | Phase 1 | Complete |
-| FOUND-02 | Phase 1 | Pending |
+| FOUND-02 | Phase 1 | Complete |
 | DATA-01 | Phase 1 | Complete |
 | DATA-02 | Phase 1 | Complete |
 | WARN-01 | Phase 2 | Pending |
