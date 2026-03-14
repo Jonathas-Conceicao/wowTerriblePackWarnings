@@ -1,0 +1,11 @@
+## Interface: 120000, 120001
+## Title: TerriblePackWarnings
+## Notes: Dungeon trash pack ability timers for Mythic+
+## Author: Jonathas-Conceicao
+## Version: @project-version@
+## URL: https://github.com/Jonathas-Conceicao/TerriblePackWarnings
+## Category: Combat
+## SavedVariables: TerriblePackWarningsDB
+
+Core.lua
+Data\WindrunnerSpire.lua
