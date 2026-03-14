@@ -12,7 +12,7 @@ Build a WoW Midnight addon that gives M+ players DBM-style ability warnings on d
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation and Data** - Loadable addon skeleton with correct TOC, namespace, a fully-specified pack/ability database for one dungeon, and dev tooling for local install and automated GitHub releases
+- [x] **Phase 1: Foundation and Data** - Loadable addon skeleton with correct TOC, namespace, a fully-specified pack/ability database for one dungeon, and dev tooling for local install and automated GitHub releases (completed 2026-03-14)
 - [ ] **Phase 2: Warning Engine and Combat Integration** - Timer scheduler, Boss Warnings display, and combat event wiring that delivers working in-game ability warnings
 - [ ] **Phase 3: Pack Selection UI** - Scrollable grouped pack list with click-to-select, active state indicator, and slash command entry point
 
@@ -29,7 +29,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. `/reload` completes without taint errors or secret value violations
   5. Running `scripts/install.bat` copies addon files to the local WoW AddOns folder without error
   6. Pushing a git tag triggers the GitHub Actions release workflow and produces a packaged release artifact via BigWigsMods/packager
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 01-01-PLAN.md — Addon skeleton: TOC, Core.lua namespace/events, and Windrunner Spire pack data
@@ -64,6 +64,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation and Data | 0/2 | Planning complete | - |
+| 1. Foundation and Data | 2/2 | Complete   | 2026-03-14 |
 | 2. Warning Engine and Combat Integration | 0/TBD | Not started | - |
 | 3. Pack Selection UI | 0/TBD | Not started | - |
