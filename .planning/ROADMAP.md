@@ -13,7 +13,7 @@ Build a WoW Midnight addon that gives M+ players DBM-style ability warnings on d
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation and Data** - Loadable addon skeleton with correct TOC, namespace, a fully-specified pack/ability database for one dungeon, and dev tooling for local install and automated GitHub releases (completed 2026-03-14)
-- [x] **Phase 2: Warning Engine and Combat Integration** - Timer scheduler, Boss Warnings display, and combat event wiring that delivers working in-game ability warnings (completed 2026-03-14)
+- [ ] **Phase 2: Warning Engine and Combat Integration** - Timer scheduler, Boss Warnings display, and combat event wiring that delivers working in-game ability warnings (UAT gap closure in progress)
 - [ ] **Phase 3: Pack Selection UI** - Scrollable grouped pack list with click-to-select, active state indicator, and slash command entry point
 
 ## Phase Details
@@ -32,8 +32,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 01-01-PLAN.md — Addon skeleton: TOC, Core.lua namespace/events, and Windrunner Spire pack data
-- [ ] 01-02-PLAN.md — Dev tooling: install.bat, release.bat, .pkgmeta, GitHub Actions release workflow
+- [x] 01-01-PLAN.md — Addon skeleton: TOC, Core.lua namespace/events, and Windrunner Spire pack data
+- [x] 01-02-PLAN.md — Dev tooling: install.bat, release.bat, .pkgmeta, GitHub Actions release workflow
 
 ### Phase 2: Warning Engine and Combat Integration
 **Goal**: Selecting a pack and pulling causes timed ability warnings to appear in the Boss Warnings UI (or fallback frame) and all timers clean up correctly on combat end or zone change
@@ -44,11 +44,13 @@ Plans:
   2. Warnings appear via Blizzard's Encounter Timeline, DBM timer bars, or RaidNotice text flash (3-tier fallback)
   3. Entering combat with a pack selected auto-starts timers via `PLAYER_REGEN_DISABLED`
   4. All timers stop and no ghost warnings fire after combat ends (`PLAYER_REGEN_ENABLED`) or after a zone change (`PLAYER_ENTERING_WORLD`)
-**Plans:** 2/2 plans complete
+**Plans:** 4 plans (2 complete, 2 gap closure)
 
 Plans:
 - [x] 02-01-PLAN.md — Data restructure (ordered array), display abstraction (3-tier fallback), TOC update
-- [ ] 02-02-PLAN.md — Scheduler timer engine, CombatWatcher state machine, Core.lua event wiring
+- [x] 02-02-PLAN.md — Scheduler timer engine, CombatWatcher state machine, Core.lua event wiring
+- [ ] 02-03-PLAN.md — Gap closure: combat-end timer cleanup and zone-change reset fixes
+- [ ] 02-04-PLAN.md — Gap closure: display adapter Show() implementations and debug logging
 
 ### Phase 3: Pack Selection UI
 **Goal**: Players can open the addon, browse and select a pack from a grouped list, see which pack is active, and trigger a pull — all without touching the Lua console
@@ -69,5 +71,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation and Data | 2/2 | Complete    | 2026-03-14 |
-| 2. Warning Engine and Combat Integration | 2/2 | Complete    | 2026-03-14 |
+| 2. Warning Engine and Combat Integration | 2/4 | Gap closure | - |
 | 3. Pack Selection UI | 0/TBD | Not started | - |
