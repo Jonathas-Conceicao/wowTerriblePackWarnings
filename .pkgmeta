@@ -1,0 +1,13 @@
+package-as: TerriblePackWarnings
+
+ignore:
+  - .git
+  - .gitignore
+  - .github
+  - .pkgmeta
+  - .planning
+  - CLAUDE.md
+  - README.md
+  - LICENSE
+  - scripts
+  - "*.png"
