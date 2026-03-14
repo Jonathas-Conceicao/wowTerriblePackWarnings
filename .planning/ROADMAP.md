@@ -29,7 +29,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. `/reload` completes without taint errors or secret value violations
   5. Running `scripts/install.bat` copies addon files to the local WoW AddOns folder without error
   6. Pushing a git tag triggers the GitHub Actions release workflow and produces a packaged release artifact via BigWigsMods/packager
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Addon skeleton: TOC, Core.lua namespace/events, and Windrunner Spire pack data
+- [ ] 01-02-PLAN.md — Dev tooling: install.bat, release.bat, .pkgmeta, GitHub Actions release workflow
 
 ### Phase 2: Warning Engine and Combat Integration
 **Goal**: Selecting a pack and pulling causes timed ability warnings to appear in the Boss Warnings UI (or fallback frame) and all timers clean up correctly on combat end or zone change
@@ -60,6 +64,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation and Data | 0/TBD | Not started | - |
+| 1. Foundation and Data | 0/2 | Planning complete | - |
 | 2. Warning Engine and Combat Integration | 0/TBD | Not started | - |
 | 3. Pack Selection UI | 0/TBD | Not started | - |
