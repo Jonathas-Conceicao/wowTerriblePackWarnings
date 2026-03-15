@@ -32,6 +32,26 @@ function CombatWatcher:SelectDungeon(dungeonKey)
     state            = "ready"
 
     print("|cff00ccffTPW|r Selected: " .. dungeonKey .. " (" .. #dungeon .. " packs)")
+    if ns.PackUI and ns.PackUI.Refresh then ns.PackUI:Refresh() end
+end
+
+function CombatWatcher:SelectPack(dungeonKey, packIndex)
+    local dungeon = ns.PackDatabase[dungeonKey]
+    if not dungeon or #dungeon == 0 then
+        print("|cff00ccffTPW|r Error: unknown dungeon key '" .. tostring(dungeonKey) .. "'")
+        return
+    end
+    if not packIndex or packIndex < 1 or packIndex > #dungeon then
+        print("|cff00ccffTPW|r Error: invalid pack index " .. tostring(packIndex))
+        return
+    end
+
+    selectedDungeon  = dungeonKey
+    currentPackIndex = packIndex
+    state            = "ready"
+
+    print("|cff00ccffTPW|r Selected: " .. dungeon[packIndex].displayName)
+    if ns.PackUI and ns.PackUI.Refresh then ns.PackUI:Refresh() end
 end
 
 function CombatWatcher:ManualStart(packIndex)
@@ -74,6 +94,7 @@ function CombatWatcher:OnCombatEnd()
         ns.Scheduler:Stop()
         print("|cff00ccffTPW|r Next: " .. dungeon[currentPackIndex].displayName)
     end
+    if ns.PackUI and ns.PackUI.Refresh then ns.PackUI:Refresh() end
 end
 
 function CombatWatcher:Reset()
@@ -83,6 +104,7 @@ function CombatWatcher:Reset()
     currentPackIndex = nil
     state            = "idle"
     print("|cff00ccffTPW|r Session cleared (zone change).")
+    if ns.PackUI and ns.PackUI.Refresh then ns.PackUI:Refresh() end
 end
 
 function CombatWatcher:GetState()
