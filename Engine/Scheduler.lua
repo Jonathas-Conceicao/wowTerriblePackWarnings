@@ -17,7 +17,7 @@ local function dbg(msg)
     if DEBUG then print("|cff888888TPW-dbg|r " .. msg) end
 end
 
--- Incrementing ID for display timer bars
+-- Incrementing ID for display icon slots
 local timerCounter = 0
 
 -- ============================================================
@@ -26,8 +26,16 @@ local timerCounter = 0
 
 local scheduleAbility  -- forward declaration for recursion
 
-scheduleAbility = function(ability)
-    -- Pre-warning: 5 seconds before the cast
+scheduleAbility = function(ability, existingBarId)
+    local barId = existingBarId or ("bar_" .. timerCounter)
+    if not existingBarId then
+        timerCounter = timerCounter + 1
+    end
+
+    -- Show the icon immediately with cooldown sweep
+    ns.IconDisplay.ShowIcon(barId, ability.spellID, ability.ttsMessage, ability.first_cast)
+
+    -- Pre-warning: 5 seconds before the cast — set urgent glow + TTS
     local preWarnOffset = ability.first_cast - 5
     if preWarnOffset < 0 then preWarnOffset = 0 end
 
@@ -37,31 +45,27 @@ scheduleAbility = function(ability)
         local preHandle = C_Timer.NewTimer(preWarnOffset, function()
             if not combatActive[1] then return end
             dbg("Fire pre-warn: " .. ability.name)
-            ns.BossWarnings.Show(ability.name .. " in 5 sec", 4)
+            ns.IconDisplay.SetUrgent(barId)
         end)
         table.insert(activeTimers, preHandle)
     end
 
-    -- Cast alert timer
+    -- Cast alert timer — reschedule for next cycle
     local castHandle = C_Timer.NewTimer(ability.first_cast, function()
         if not combatActive[1] then return end
         dbg("Fire cast: " .. ability.name .. ", next in " .. ability.cooldown .. "s")
-        ns.BossWarnings.Show(ability.name, 3)
 
         -- Reschedule for next repeat using cooldown as the new first_cast
+        -- Reuse the same barId so ShowIcon resets the existing icon slot
         scheduleAbility({
-            name     = ability.name,
-            spellID  = ability.spellID,
+            name       = ability.name,
+            spellID    = ability.spellID,
+            ttsMessage = ability.ttsMessage,
             first_cast = ability.cooldown,
             cooldown   = ability.cooldown,
-        })
+        }, barId)
     end)
     table.insert(activeTimers, castHandle)
-
-    -- Countdown timer bar (ShowTimer begins the bar immediately with full duration)
-    timerCounter = timerCounter + 1
-    local barId = "bar_" .. timerCounter
-    ns.BossWarnings.ShowTimer(barId, ability.name, ability.first_cast, ability.spellID)
 end
 
 -- ============================================================
@@ -88,7 +92,9 @@ function Scheduler:Start(dungeonKey, packIndex)
         if ability.cooldown then
             scheduleAbility(ability)
         else
-            dbg("Skip untimed: " .. ability.name)
+            -- Untimed: show static icon (one per ability, regardless of mob count)
+            ns.IconDisplay.ShowStaticIcon("static_" .. ability.spellID, ability.spellID)
+            dbg("Static icon: " .. ability.name)
         end
     end
 
@@ -106,9 +112,9 @@ function Scheduler:Stop()
     end
     wipe(activeTimers)
 
-    local ok, err = pcall(ns.BossWarnings.CancelAllTimers)
+    local ok, err = pcall(ns.IconDisplay.CancelAll)
     if not ok then
-        print("|cff00ccffTPW|r Warning: CancelAllTimers error: " .. tostring(err))
+        print("|cff00ccffTPW|r Warning: CancelAll error: " .. tostring(err))
     end
 
     timerCounter = 0
