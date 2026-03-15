@@ -16,19 +16,24 @@ local activeAdapter = nil
 local activeBarIDs = {}
 
 -- ============================================================
+-- Forward declarations (ET fallback needs RN functions)
+-- ============================================================
+local RN_Show, RN_ShowTimer, RN_CancelTimer, RN_CancelAllTimers
+
+-- ============================================================
 -- Adapter Detection (lazy, runs once on first call)
 -- ============================================================
 
 local function DetectAdapter()
     if activeAdapter then return end
 
-    if C_EncounterTimeline
+    if DBT then
+        activeAdapter = "DBM"
+    elseif C_EncounterTimeline
         and C_EncounterTimeline.IsFeatureEnabled
         and C_EncounterTimeline.IsFeatureEnabled()
     then
         activeAdapter = "EncounterTimeline"
-    elseif DBT then
-        activeAdapter = "DBM"
     else
         activeAdapter = "RaidNotice"
     end
@@ -49,22 +54,26 @@ local function ET_ShowTimer(id, text, duration, spellID)
         duration = duration,
         spellID = spellID,
     }
-    local eventID = C_EncounterTimeline.AddScriptEvent(eventInfo)
-    if eventID then
+    local ok, eventID = pcall(C_EncounterTimeline.AddScriptEvent, eventInfo)
+    if ok and eventID then
         etEventIDs[id] = eventID
+    else
+        -- Timeline not rendering (outside boss encounter) — fall back to RaidNotice
+        dbg("ET_ShowTimer fallback to RaidNotice")
+        RN_ShowTimer(id, text, duration, spellID)
     end
 end
 
 local function ET_CancelTimer(id)
     local eventID = etEventIDs[id]
     if eventID then
-        C_EncounterTimeline.CancelScriptEvent(eventID)
+        pcall(C_EncounterTimeline.CancelScriptEvent, eventID)
         etEventIDs[id] = nil
     end
 end
 
 local function ET_CancelAllTimers()
-    C_EncounterTimeline.CancelAllScriptEvents()
+    pcall(C_EncounterTimeline.CancelAllScriptEvents)
     wipe(etEventIDs)
 end
 
@@ -74,9 +83,13 @@ local function ET_Show(text, duration)
         text = text,
         duration = duration or 5,
     }
-    local eventID = C_EncounterTimeline.AddScriptEvent(eventInfo)
-    if eventID then
+    local ok, eventID = pcall(C_EncounterTimeline.AddScriptEvent, eventInfo)
+    if ok and eventID then
         etEventIDs["alert_" .. GetTime()] = eventID
+    else
+        -- Timeline not rendering (outside boss encounter) — fall back to RaidNotice
+        dbg("ET_Show fallback to RaidNotice")
+        RN_Show(text, duration)
     end
 end
 
@@ -106,29 +119,28 @@ local function DBM_CancelAllTimers()
 end
 
 local function DBM_Show(text, duration)
-    local barID = "TPW: " .. text
-    DBT:CreateBar(duration or 5, barID)
-    activeBarIDs["alert_" .. GetTime()] = barID
+    -- Text alerts complement the existing timer bar — use RaidNotice flash
+    RN_Show(text, duration)
 end
 
 -- ============================================================
 -- RaidNotice fallback adapter
 -- ============================================================
 
-local function RN_Show(text, duration)
+RN_Show = function(text, duration)
     RaidNotice_AddMessage(RaidBossEmoteFrame, text, ChatTypeInfo["RAID_WARNING"], duration or 5)
 end
 
-local function RN_ShowTimer(id, text, duration, spellID)
+RN_ShowTimer = function(id, text, duration, spellID)
     -- No bar support; approximate as text flash with duration appended
     RN_Show(text .. " (" .. duration .. "s)", duration)
 end
 
-local function RN_CancelTimer(id)
+RN_CancelTimer = function(id)
     -- No-op: text flash cannot be cancelled
 end
 
-local function RN_CancelAllTimers()
+RN_CancelAllTimers = function()
     -- No-op: text flash cannot be cancelled
 end
 
