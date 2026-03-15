@@ -56,11 +56,11 @@ Plans:
   3. Untimed abilities show as a single static icon with no sweep or countdown, regardless of how many mobs of that class exist
   4. When 5 seconds remain before a timed cast, the icon gains a red glow border and text-to-speech announces the ability name
   5. DBM bars, Encounter Timeline, and RaidNotice display adapters are fully removed from the codebase
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 05-01: TBD
-- [ ] 05-02: TBD
+- [ ] 05-01-PLAN.md -- Create IconDisplay module and add ttsMessage to pack data
+- [ ] 05-02-PLAN.md -- Wire Scheduler to IconDisplay, delete BossWarnings, update TOC/install
 
 ### Phase 6: Nameplate Detection and Mob Lifecycle
 **Goal**: The addon detects mobs via nameplate scanning and manages timer instance lifecycle (creation and cleanup) per mob
@@ -87,5 +87,5 @@ Phases execute in numeric order: 4 → 5 → 6
 | 2. Warning Engine and Combat Integration | v0.0.1 | 4/4 | Complete | 2026-03-15 |
 | 3. Pack Selection UI | v0.0.1 | 2/2 | Complete | 2026-03-15 |
 | 4. Data Schema and Pack Update | 1/1 | Complete   | 2026-03-15 | - |
-| 5. Custom Spell Icon Display | v0.0.2 | 0/? | Not started | - |
+| 5. Custom Spell Icon Display | v0.0.2 | 0/2 | In progress | - |
 | 6. Nameplate Detection and Mob Lifecycle | v0.0.2 | 0/? | Not started | - |
