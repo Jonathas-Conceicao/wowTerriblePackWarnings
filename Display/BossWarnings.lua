@@ -63,7 +63,15 @@ local function ET_CancelAllTimers()
 end
 
 local function ET_Show(text, duration)
-    RaidNotice_AddMessage(RaidBossEmoteFrame, text, ChatTypeInfo["RAID_WARNING"], duration or 5)
+    -- Use AddScriptEvent to show a short-lived timeline entry for the alert
+    local eventInfo = {
+        text = text,
+        duration = duration or 5,
+    }
+    local eventID = C_EncounterTimeline.AddScriptEvent(eventInfo)
+    if eventID then
+        etEventIDs["alert_" .. GetTime()] = eventID
+    end
 end
 
 -- ============================================================
@@ -92,7 +100,9 @@ local function DBM_CancelAllTimers()
 end
 
 local function DBM_Show(text, duration)
-    RaidNotice_AddMessage(RaidBossEmoteFrame, text, ChatTypeInfo["RAID_WARNING"], duration or 5)
+    local barID = "TPW: " .. text
+    DBT:CreateBar(duration or 5, barID)
+    activeBarIDs["alert_" .. GetTime()] = barID
 end
 
 -- ============================================================
