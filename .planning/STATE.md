@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-03 (Combat-end timer cleanup and zone-reset fixes)
-last_updated: "2026-03-15T01:36:43.887Z"
-last_activity: 2026-03-14 — Completed Plan 02-01 (PackDatabase restructure and display abstraction)
+stopped_at: Completed 02-04 (Adapter-specific Show and debug logging)
+last_updated: "2026-03-15T01:41:13.906Z"
+last_activity: 2026-03-14 — Completed Plan 02-03 (Combat-end timer cleanup and zone-reset fixes)
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
-  percent: 75
+  completed_plans: 6
+  percent: 83
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-13)
 
 ## Current Position
 
-Phase: 2 of 3 (Warning Engine and Combat Integration)
-Plan: 3 of 4 in current phase (02-01, 02-02, 02-03 complete, 02-04 next)
-Status: Executing
-Last activity: 2026-03-14 — Completed Plan 02-03 (Combat-end timer cleanup and zone-reset fixes)
+Phase: 2 of 3 (Warning Engine and Combat Integration) -- COMPLETE
+Plan: 4 of 4 in current phase (02-01, 02-02, 02-03, 02-04 complete)
+Status: Phase 2 Complete
+Last activity: 2026-03-15 — Completed Plan 02-04 (Adapter-specific Show and debug logging)
 
-Progress: [████████░░] 83%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -49,6 +49,7 @@ Progress: [████████░░] 83%
 **Recent Trend:**
 - Last 5 plans: 01-01 (1min), 01-02 (1min), 02-01 (5min), 02-02 (2min), 02-03 (1min)
 - Trend: Fast execution
+| Phase 02 P04 | 2min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -73,6 +74,8 @@ Recent decisions affecting current work:
 - [Phase 02-warning-engine-and-combat-integration]: CombatWatcher OnCombatStart guards with state ~= 'ready' to prevent double-starts and end-state triggers
 - [Phase 02-warning-engine-and-combat-integration]: State transitions happen before Stop() call to prevent re-triggering if Stop() errors (02-03)
 - [Phase 02-warning-engine-and-combat-integration]: Reset() unconditionally clears to idle -- player must re-select dungeon after zone change (02-03)
+- [Phase 02]: DBM_Show uses barID as display text for CreateBar alerts
+- [Phase 02]: ET_Show creates short-lived AddScriptEvent entries for text alerts (same API as ShowTimer)
 
 ### Pending Todos
 
@@ -85,6 +88,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-15T01:36:10Z
-Stopped at: Completed 02-03 (Combat-end timer cleanup and zone-reset fixes)
+Last session: 2026-03-15T01:41:13.901Z
+Stopped at: Completed 02-04 (Adapter-specific Show and debug logging)
 Resume file: None
