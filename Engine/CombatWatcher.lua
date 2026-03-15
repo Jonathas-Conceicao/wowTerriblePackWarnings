@@ -79,13 +79,10 @@ end
 function CombatWatcher:Reset()
     ns.Scheduler:Stop()
 
-    if selectedDungeon and ns.PackDatabase[selectedDungeon] then
-        currentPackIndex = 1
-        state            = "ready"
-        print("|cff00ccffTPW|r Reset to pack 1")
-    else
-        state = "idle"
-    end
+    selectedDungeon  = nil
+    currentPackIndex = nil
+    state            = "idle"
+    print("|cff00ccffTPW|r Session cleared (zone change).")
 end
 
 function CombatWatcher:GetState()
