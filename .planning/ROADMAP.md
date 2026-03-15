@@ -71,10 +71,11 @@ Plans:
   2. Three Paladins in combat produce three separate Spellguard's Protection icons, each with independent countdowns
   3. Mobs entering combat after the initial pull are detected and spawn new timer instances
   4. When all mobs of a tracked skill's class die, all icons for that skill are cleared from the display
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 06-01: TBD
+- [ ] 06-01-PLAN.md -- Refactor Scheduler (StartAbility/StopAbility), create NameplateScanner module
+- [ ] 06-02-PLAN.md -- Wire scanner into CombatWatcher, update TOC, in-game verification
 
 ## Progress
 
@@ -88,4 +89,4 @@ Phases execute in numeric order: 4 → 5 → 6
 | 3. Pack Selection UI | v0.0.1 | 2/2 | Complete | 2026-03-15 |
 | 4. Data Schema and Pack Update | 1/1 | Complete   | 2026-03-15 | - |
 | 5. Custom Spell Icon Display | v0.0.2 | 2/2 | Complete | 2026-03-15 |
-| 6. Nameplate Detection and Mob Lifecycle | v0.0.2 | 0/? | Not started | - |
+| 6. Nameplate Detection and Mob Lifecycle | v0.0.2 | 0/2 | Not started | - |
