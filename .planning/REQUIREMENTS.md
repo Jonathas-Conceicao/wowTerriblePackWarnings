@@ -15,7 +15,7 @@ Requirements for custom display rework. Replaces DBM/ET/RaidNotice adapters with
 - [x] **DISP-04**: Red glow border on timed squares when 5 seconds remain before cast
 - [x] **DISP-05**: Text-to-speech announces ability name 5 seconds before timed cast fires
 - [x] **DISP-06**: Remove DBM/EncounterTimeline/RaidNotice display adapters (custom display replaces all)
-- [ ] **DISP-07**: When all mobs of a tracked skill's class die, clear all instances of that skill from display
+- [x] **DISP-07**: When all mobs of a tracked skill's class die, clear all instances of that skill from display
 - [x] **DISP-08**: Timed skills show one icon per mob instance; untimed skills show one icon total
 
 ### Data
@@ -27,10 +27,10 @@ Requirements for custom display rework. Replaces DBM/ET/RaidNotice adapters with
 
 ### Detection
 
-- [ ] **DETC-01**: Scan nameplates on combat start to detect which mob classes are in combat
-- [ ] **DETC-02**: When a mob matching a skill's mobClass enters combat, start an independent timer instance
-- [ ] **DETC-03**: Multiple mobs of the same class create multiple independent timed squares
-- [ ] **DETC-04**: Continue scanning nameplates during combat to detect newly-aggro'd mobs
+- [x] **DETC-01**: Scan nameplates on combat start to detect which mob classes are in combat
+- [x] **DETC-02**: When a mob matching a skill's mobClass enters combat, start an independent timer instance
+- [x] **DETC-03**: Multiple mobs of the same class create multiple independent timed squares
+- [x] **DETC-04**: Continue scanning nameplates during combat to detect newly-aggro'd mobs
 
 ## Out of Scope
 
@@ -51,16 +51,16 @@ Requirements for custom display rework. Replaces DBM/ET/RaidNotice adapters with
 | DISP-04 | Phase 5 | Complete |
 | DISP-05 | Phase 5 | Complete |
 | DISP-06 | Phase 5 | Complete |
-| DISP-07 | Phase 6 | Pending |
+| DISP-07 | Phase 6 | Complete |
 | DISP-08 | Phase 5 | Complete |
 | DATA-06 | Phase 4 | Complete |
 | DATA-07 | Phase 4 | Complete |
 | DATA-08 | Phase 4 | Complete |
 | DATA-09 | Phase 4 | Complete |
-| DETC-01 | Phase 6 | Pending |
-| DETC-02 | Phase 6 | Pending |
-| DETC-03 | Phase 6 | Pending |
-| DETC-04 | Phase 6 | Pending |
+| DETC-01 | Phase 6 | Complete |
+| DETC-02 | Phase 6 | Complete |
+| DETC-03 | Phase 6 | Complete |
+| DETC-04 | Phase 6 | Complete |
 
 **Coverage:**
 - v0.0.2 requirements: 16 total

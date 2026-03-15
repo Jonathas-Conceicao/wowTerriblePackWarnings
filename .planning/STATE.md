@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.0
 milestone_name: milestone
-status: completed
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-03-15T20:42:11.225Z"
-last_activity: 2026-03-15 — Completed 05-02 Scheduler integration and legacy cleanup
+status: in-progress
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-03-15T21:19:00Z"
+last_activity: 2026-03-15 — Completed 06-01 Scheduler per-mob API and NameplateScanner
 progress:
   total_phases: 3
   completed_phases: 2
-  total_plans: 3
-  completed_plans: 3
-  percent: 95
+  total_plans: 5
+  completed_plans: 4
+  percent: 92
 ---
 
 # Project State
@@ -21,21 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-15)
 
 **Core value:** When a player selects a pack and pulls, they see accurate, timed ability warnings for that pack's dangerous mob abilities via custom spell icon display.
-**Current focus:** v0.0.2 Display Rework — Phase 5, Plan 2 complete
+**Current focus:** v0.0.2 Display Rework — Phase 6, Plan 1 complete
 
 ## Current Position
 
-Phase: 5 of 6 (Custom Spell Icon Display)
-Plan: 2 of 3 in current phase (complete)
-Status: Plan 05-02 complete, ready for Plan 05-03
-Last activity: 2026-03-15 — Completed 05-02 Scheduler integration and legacy cleanup
+Phase: 6 of 6 (Nameplate Detection and Mob Lifecycle)
+Plan: 1 of 2 in current phase (complete)
+Status: Plan 06-01 complete, ready for Plan 06-02
+Last activity: 2026-03-15 — Completed 06-01 Scheduler per-mob API and NameplateScanner
 
-Progress: [██████████] 95%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11 (8 v0.0.1 + 3 v0.0.2)
+- Total plans completed: 12 (8 v0.0.1 + 4 v0.0.2)
 - Average duration: —
 - Total execution time: —
 
@@ -48,6 +48,7 @@ Progress: [██████████] 95%
 | 3 (v0.0.1) | 2 | — | — |
 | 4 (v0.0.2) | 1 | 1min | 1min |
 | 5 (v0.0.2) | 2 | 5min | 2.5min |
+| 6 (v0.0.2) | 1 | 2min | 2min |
 
 ## Accumulated Context
 
@@ -63,6 +64,8 @@ Recent decisions affecting current work:
 - [05-01]: C_TTSSettings.GetVoiceOptionID with C_VoiceChat.GetTtsVoices fallback for TTS voice ID
 - [05-02]: Reuse same barId on repeating ability reschedule for icon slot reset
 - [05-02]: ShowIcon called at schedule time (not just pre-warn) for full countdown visibility
+- [06-01]: Per-barId timer tracking in barTimers table for surgical per-mob cancellation
+- [06-01]: Immediate first tick on Scanner:Start for instant mob detection
 
 ### Pending Todos
 
@@ -75,5 +78,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-15
-Stopped at: Completed 05-02-PLAN.md
+Stopped at: Completed 06-01-PLAN.md
 Resume file: None
