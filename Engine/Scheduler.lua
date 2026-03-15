@@ -82,11 +82,13 @@ function Scheduler:Start(dungeonKey, packIndex)
     end
 
     combatActive[1] = true
-    dbg("Start: " .. pack.displayName .. " (" .. #pack.mobs .. " mobs)")
+    dbg("Start: " .. pack.displayName .. " (" .. #pack.abilities .. " abilities)")
 
-    for _, mob in ipairs(pack.mobs) do
-        for _, ability in ipairs(mob.abilities) do
+    for _, ability in ipairs(pack.abilities) do
+        if ability.cooldown then
             scheduleAbility(ability)
+        else
+            dbg("Skip untimed: " .. ability.name)
         end
     end
 
