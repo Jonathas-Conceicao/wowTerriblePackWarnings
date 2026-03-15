@@ -19,7 +19,7 @@ copy /Y "%SOURCE%Engine\Scheduler.lua" "%DEST%\Engine\"
 copy /Y "%SOURCE%Engine\CombatWatcher.lua" "%DEST%\Engine\"
 
 if not exist "%DEST%\Display" mkdir "%DEST%\Display"
-copy /Y "%SOURCE%Display\BossWarnings.lua" "%DEST%\Display\"
+copy /Y "%SOURCE%Display\IconDisplay.lua" "%DEST%\Display\"
 
 if not exist "%DEST%\UI" mkdir "%DEST%\UI"
 copy /Y "%SOURCE%UI\PackFrame.lua" "%DEST%\UI\"

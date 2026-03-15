@@ -10,6 +10,6 @@
 Core.lua
 Engine\Scheduler.lua
 Engine\CombatWatcher.lua
-Display\BossWarnings.lua
+Display\IconDisplay.lua
 Data\WindrunnerSpire.lua
 UI\PackFrame.lua
