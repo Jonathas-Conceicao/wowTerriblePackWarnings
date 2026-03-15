@@ -44,7 +44,7 @@ Plans:
   2. Warnings appear via Blizzard's Encounter Timeline, DBM timer bars, or RaidNotice text flash (3-tier fallback)
   3. Entering combat with a pack selected auto-starts timers via `PLAYER_REGEN_DISABLED`
   4. All timers stop and no ghost warnings fire after combat ends (`PLAYER_REGEN_ENABLED`) or after a zone change (`PLAYER_ENTERING_WORLD`)
-**Plans:** 4 plans (2 complete, 2 gap closure)
+**Plans:** 3/4 plans executed
 
 Plans:
 - [x] 02-01-PLAN.md — Data restructure (ordered array), display abstraction (3-tier fallback), TOC update
@@ -71,5 +71,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation and Data | 2/2 | Complete    | 2026-03-14 |
-| 2. Warning Engine and Combat Integration | 2/4 | Gap closure | - |
+| 2. Warning Engine and Combat Integration | 3/4 | In Progress|  |
 | 3. Pack Selection UI | 0/TBD | Not started | - |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-02 (Warning engine and combat integration)
-last_updated: "2026-03-14T08:17:31.190Z"
+stopped_at: Completed 02-03 (Combat-end timer cleanup and zone-reset fixes)
+last_updated: "2026-03-15T01:36:43.887Z"
 last_activity: 2026-03-14 — Completed Plan 02-01 (PackDatabase restructure and display abstraction)
 progress:
   total_phases: 3
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  completed_phases: 1
+  total_plans: 6
+  completed_plans: 5
   percent: 75
 ---
 
@@ -26,16 +26,16 @@ See: .planning/PROJECT.md (updated 2026-03-13)
 ## Current Position
 
 Phase: 2 of 3 (Warning Engine and Combat Integration)
-Plan: 1 of 2 in current phase (02-01 complete, 02-02 next)
+Plan: 3 of 4 in current phase (02-01, 02-02, 02-03 complete, 02-04 next)
 Status: Executing
-Last activity: 2026-03-14 — Completed Plan 02-01 (PackDatabase restructure and display abstraction)
+Last activity: 2026-03-14 — Completed Plan 02-03 (Combat-end timer cleanup and zone-reset fixes)
 
-Progress: [███████░░░] 75%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3 (01-01, 01-02, 02-01)
+- Total plans completed: 5 (01-01, 01-02, 02-01, 02-02, 02-03)
 - Average duration: ~2 min
 - Total execution time: ~7 min
 
@@ -44,14 +44,11 @@ Progress: [███████░░░] 75%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation-and-data | 2 (01-01, 01-02) | 2 min | 1 min |
-| 02-warning-engine-and-combat-integration | 1 (02-01) | 5 min | 5 min |
+| 02-warning-engine-and-combat-integration | 3 (02-01, 02-02, 02-03) | 8 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (1min), 01-02 (1min), 02-01 (5min)
+- Last 5 plans: 01-01 (1min), 01-02 (1min), 02-01 (5min), 02-02 (2min), 02-03 (1min)
 - Trend: Fast execution
-
-*Updated after each plan completion*
-| Phase 02-warning-engine-and-combat-integration P02 | 2min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -74,6 +71,8 @@ Recent decisions affecting current work:
 - [Phase 02-warning-engine-and-combat-integration]: combatActive uses single-element table {false} for closure-visible mutation (Lua boolean reassignment is invisible to existing closures)
 - [Phase 02-warning-engine-and-combat-integration]: scheduleAbility recursion in cast callback creates repeating cycle; each recursion uses cooldown as first_cast
 - [Phase 02-warning-engine-and-combat-integration]: CombatWatcher OnCombatStart guards with state ~= 'ready' to prevent double-starts and end-state triggers
+- [Phase 02-warning-engine-and-combat-integration]: State transitions happen before Stop() call to prevent re-triggering if Stop() errors (02-03)
+- [Phase 02-warning-engine-and-combat-integration]: Reset() unconditionally clears to idle -- player must re-select dungeon after zone change (02-03)
 
 ### Pending Todos
 
@@ -86,6 +85,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-14T08:13:14.584Z
-Stopped at: Completed 02-02 (Warning engine and combat integration)
+Last session: 2026-03-15T01:36:10Z
+Stopped at: Completed 02-03 (Combat-end timer cleanup and zone-reset fixes)
 Resume file: None
