@@ -34,7 +34,16 @@ When a player selects a pack and pulls, they see accurate, timed ability warning
 
 ### Active
 
-(None -- next milestone will define new requirements)
+- [ ] Custom spell icon display (horizontal squares, cooldown sweep, red glow)
+- [ ] Nameplate-based mob detection (filter by UnitClass)
+- [ ] Multi-instance timed tracking (one timer per mob of matching class)
+- [ ] Text-to-speech pre-warnings
+- [ ] Untimed skill support (icon-only, no countdown)
+- [ ] Updated Windrunner Spire data with mob class filters
+
+## Current Milestone: v0.0.2 Display Rework
+
+**Goal:** Replace DBM/ET/RaidNotice adapters with a custom WeakAura-style spell icon display that uses nameplate scanning to detect mobs and create independent timer instances per mob.
 
 ### Out of Scope
 
@@ -73,4 +82,4 @@ When a player selects a pack and pulls, they see accurate, timed ability warning
 | Zone auto-detection via GetInstanceInfo | Maps instance names to dungeon keys for automatic selection | Good -- reduces manual steps |
 
 ---
-*Last updated: 2026-03-15 after v0.0.1 milestone*
+*Last updated: 2026-03-15 after v0.0.2 milestone start*
