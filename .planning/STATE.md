@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.0
 milestone_name: milestone
-status: in-progress
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-03-15T21:19:00Z"
-last_activity: 2026-03-15 — Completed 06-01 Scheduler per-mob API and NameplateScanner
+status: completed
+stopped_at: Completed 06-02-PLAN.md
+last_updated: "2026-03-15T23:01:19.257Z"
+last_activity: 2026-03-15 — Completed 06-02 Wire scanner into CombatWatcher
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 5
-  completed_plans: 4
-  percent: 92
+  completed_plans: 5
+  percent: 100
 ---
 
 # Project State
@@ -21,21 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-15)
 
 **Core value:** When a player selects a pack and pulls, they see accurate, timed ability warnings for that pack's dangerous mob abilities via custom spell icon display.
-**Current focus:** v0.0.2 Display Rework — Phase 6, Plan 1 complete
+**Current focus:** v0.0.2 Display Rework — All phases complete
 
 ## Current Position
 
 Phase: 6 of 6 (Nameplate Detection and Mob Lifecycle)
-Plan: 1 of 2 in current phase (complete)
-Status: Plan 06-01 complete, ready for Plan 06-02
-Last activity: 2026-03-15 — Completed 06-01 Scheduler per-mob API and NameplateScanner
+Plan: 2 of 2 in current phase (complete)
+Status: v0.0.2 milestone complete
+Last activity: 2026-03-15 — Completed 06-02 Wire scanner into CombatWatcher
 
-Progress: [█████████░] 92%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12 (8 v0.0.1 + 4 v0.0.2)
+- Total plans completed: 13 (8 v0.0.1 + 5 v0.0.2)
 - Average duration: —
 - Total execution time: —
 
@@ -48,7 +48,7 @@ Progress: [█████████░] 92%
 | 3 (v0.0.1) | 2 | — | — |
 | 4 (v0.0.2) | 1 | 1min | 1min |
 | 5 (v0.0.2) | 2 | 5min | 2.5min |
-| 6 (v0.0.2) | 1 | 2min | 2min |
+| 6 (v0.0.2) | 2 | 5min | 2.5min |
 
 ## Accumulated Context
 
@@ -66,6 +66,8 @@ Recent decisions affecting current work:
 - [05-02]: ShowIcon called at schedule time (not just pre-warn) for full countdown visibility
 - [06-01]: Per-barId timer tracking in barTimers table for surgical per-mob cancellation
 - [06-01]: Immediate first tick on Scanner:Start for instant mob detection
+- [06-02]: Scanner Stop called before Scheduler Stop on combat end for correct cleanup order
+- [06-02]: ManualStart uses scanner path so /tpw start tests the same detection pipeline
 
 ### Pending Todos
 
@@ -78,5 +80,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-15
-Stopped at: Completed 06-01-PLAN.md
+Stopped at: Completed 06-02-PLAN.md (v0.0.2 milestone complete)
 Resume file: None
