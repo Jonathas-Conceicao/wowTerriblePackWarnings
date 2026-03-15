@@ -6,6 +6,9 @@ local Scheduler = ns.Scheduler
 -- All active C_Timer handles for bulk cancellation
 local activeTimers = {}
 
+-- Per-barId timer tracking for surgical cancellation (used by StopAbility)
+local barTimers = {}
+
 -- Single-element table so closures capture the table reference (not a boolean value).
 -- Lua closures capture variable references; boolean reassignment creates a new value,
 -- but table mutation is visible to all existing closures via the same reference.
@@ -41,6 +44,9 @@ scheduleAbility = function(ability, existingBarId)
 
     dbg("Schedule: " .. ability.name .. " pre-warn at " .. preWarnOffset .. "s, cast at " .. ability.first_cast .. "s")
 
+    -- Ensure per-barId tracking table exists
+    barTimers[barId] = barTimers[barId] or { handles = {} }
+
     if preWarnOffset > 0 then
         local preHandle = C_Timer.NewTimer(preWarnOffset, function()
             if not combatActive[1] then return end
@@ -48,6 +54,7 @@ scheduleAbility = function(ability, existingBarId)
             ns.IconDisplay.SetUrgent(barId)
         end)
         table.insert(activeTimers, preHandle)
+        table.insert(barTimers[barId].handles, preHandle)
     end
 
     -- Cast alert timer — reschedule for next cycle
@@ -66,6 +73,7 @@ scheduleAbility = function(ability, existingBarId)
         }, barId)
     end)
     table.insert(activeTimers, castHandle)
+    table.insert(barTimers[barId].handles, castHandle)
 end
 
 -- ============================================================
@@ -101,6 +109,26 @@ function Scheduler:Start(dungeonKey, packIndex)
     print("|cff00ccffTPW|r Started: " .. pack.displayName)
 end
 
+--- Start a single ability with an explicit barId (used by NameplateScanner per-mob).
+function Scheduler:StartAbility(ability, barId)
+    combatActive[1] = true
+    scheduleAbility(ability, barId)
+end
+
+--- Cancel all timers for a single barId and remove its icon (used by NameplateScanner on mob death).
+function Scheduler:StopAbility(barId)
+    local entry = barTimers[barId]
+    if entry then
+        for _, handle in ipairs(entry.handles) do
+            if not handle:IsCancelled() then
+                handle:Cancel()
+            end
+        end
+        barTimers[barId] = nil
+    end
+    ns.IconDisplay.CancelIcon(barId)
+end
+
 function Scheduler:Stop()
     dbg("Stop: cancelled " .. #activeTimers .. " timers")
     combatActive[1] = false
@@ -111,6 +139,7 @@ function Scheduler:Stop()
         end
     end
     wipe(activeTimers)
+    wipe(barTimers)
 
     local ok, err = pcall(ns.IconDisplay.CancelAll)
     if not ok then
