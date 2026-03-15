@@ -11,6 +11,12 @@ local activeTimers = {}
 -- but table mutation is visible to all existing closures via the same reference.
 local combatActive = { false }
 
+-- Debug logging (toggle for testing)
+local DEBUG = true
+local function dbg(msg)
+    if DEBUG then print("|cff888888TPW-dbg|r " .. msg) end
+end
+
 -- Incrementing ID for display timer bars
 local timerCounter = 0
 
@@ -25,9 +31,12 @@ scheduleAbility = function(ability)
     local preWarnOffset = ability.first_cast - 5
     if preWarnOffset < 0 then preWarnOffset = 0 end
 
+    dbg("Schedule: " .. ability.name .. " pre-warn at " .. preWarnOffset .. "s, cast at " .. ability.first_cast .. "s")
+
     if preWarnOffset > 0 then
         local preHandle = C_Timer.NewTimer(preWarnOffset, function()
             if not combatActive[1] then return end
+            dbg("Fire pre-warn: " .. ability.name)
             ns.BossWarnings.Show(ability.name .. " in 5 sec", 4)
         end)
         table.insert(activeTimers, preHandle)
@@ -36,6 +45,7 @@ scheduleAbility = function(ability)
     -- Cast alert timer
     local castHandle = C_Timer.NewTimer(ability.first_cast, function()
         if not combatActive[1] then return end
+        dbg("Fire cast: " .. ability.name .. ", next in " .. ability.cooldown .. "s")
         ns.BossWarnings.Show(ability.name, 3)
 
         -- Reschedule for next repeat using cooldown as the new first_cast
@@ -72,6 +82,7 @@ function Scheduler:Start(dungeonKey, packIndex)
     end
 
     combatActive[1] = true
+    dbg("Start: " .. pack.displayName .. " (" .. #pack.mobs .. " mobs)")
 
     for _, mob in ipairs(pack.mobs) do
         for _, ability in ipairs(mob.abilities) do
@@ -83,6 +94,7 @@ function Scheduler:Start(dungeonKey, packIndex)
 end
 
 function Scheduler:Stop()
+    dbg("Stop: cancelled " .. #activeTimers .. " timers")
     combatActive[1] = false
 
     for _, handle in ipairs(activeTimers) do

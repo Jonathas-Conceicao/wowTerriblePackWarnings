@@ -3,6 +3,12 @@ local addonName, ns = ...
 ns.BossWarnings = {}
 local BW = ns.BossWarnings
 
+-- Debug logging (toggle for testing)
+local DEBUG = true
+local function dbg(msg)
+    if DEBUG then print("|cff888888TPW-dbg|r " .. msg) end
+end
+
 -- Active adapter name, set on first detection
 local activeAdapter = nil
 
@@ -132,6 +138,7 @@ end
 
 function BW.Show(text, duration)
     DetectAdapter()
+    dbg("Show [" .. activeAdapter .. "]: " .. text)
     if activeAdapter == "EncounterTimeline" then
         ET_Show(text, duration)
     elseif activeAdapter == "DBM" then
@@ -143,6 +150,7 @@ end
 
 function BW.ShowTimer(id, text, duration, spellID)
     DetectAdapter()
+    dbg("ShowTimer [" .. activeAdapter .. "]: " .. text .. " (" .. duration .. "s)")
     if activeAdapter == "EncounterTimeline" then
         ET_ShowTimer(id, text, duration, spellID)
     elseif activeAdapter == "DBM" then
