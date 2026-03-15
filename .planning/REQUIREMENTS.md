@@ -14,7 +14,7 @@ Requirements for custom display rework. Replaces DBM/ET/RaidNotice adapters with
 - [x] **DISP-03**: Untimed skills display as static icons (no sweep, no countdown), one icon regardless of mob count
 - [x] **DISP-04**: Red glow border on timed squares when 5 seconds remain before cast
 - [x] **DISP-05**: Text-to-speech announces ability name 5 seconds before timed cast fires
-- [ ] **DISP-06**: Remove DBM/EncounterTimeline/RaidNotice display adapters (custom display replaces all)
+- [x] **DISP-06**: Remove DBM/EncounterTimeline/RaidNotice display adapters (custom display replaces all)
 - [ ] **DISP-07**: When all mobs of a tracked skill's class die, clear all instances of that skill from display
 - [x] **DISP-08**: Timed skills show one icon per mob instance; untimed skills show one icon total
 
@@ -50,7 +50,7 @@ Requirements for custom display rework. Replaces DBM/ET/RaidNotice adapters with
 | DISP-03 | Phase 5 | Complete |
 | DISP-04 | Phase 5 | Complete |
 | DISP-05 | Phase 5 | Complete |
-| DISP-06 | Phase 5 | Pending |
+| DISP-06 | Phase 5 | Complete |
 | DISP-07 | Phase 6 | Pending |
 | DISP-08 | Phase 5 | Complete |
 | DATA-06 | Phase 4 | Complete |
