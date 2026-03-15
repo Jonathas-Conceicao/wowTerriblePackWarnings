@@ -45,27 +45,27 @@ Requirements for custom display rework. Replaces DBM/ET/RaidNotice adapters with
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DISP-01 | TBD | Pending |
-| DISP-02 | TBD | Pending |
-| DISP-03 | TBD | Pending |
-| DISP-04 | TBD | Pending |
-| DISP-05 | TBD | Pending |
-| DISP-06 | TBD | Pending |
-| DISP-07 | TBD | Pending |
-| DISP-08 | TBD | Pending |
-| DATA-06 | TBD | Pending |
-| DATA-07 | TBD | Pending |
-| DATA-08 | TBD | Pending |
-| DATA-09 | TBD | Pending |
-| DETC-01 | TBD | Pending |
-| DETC-02 | TBD | Pending |
-| DETC-03 | TBD | Pending |
-| DETC-04 | TBD | Pending |
+| DISP-01 | Phase 5 | Pending |
+| DISP-02 | Phase 5 | Pending |
+| DISP-03 | Phase 5 | Pending |
+| DISP-04 | Phase 5 | Pending |
+| DISP-05 | Phase 5 | Pending |
+| DISP-06 | Phase 5 | Pending |
+| DISP-07 | Phase 6 | Pending |
+| DISP-08 | Phase 5 | Pending |
+| DATA-06 | Phase 4 | Pending |
+| DATA-07 | Phase 4 | Pending |
+| DATA-08 | Phase 4 | Pending |
+| DATA-09 | Phase 4 | Pending |
+| DETC-01 | Phase 6 | Pending |
+| DETC-02 | Phase 6 | Pending |
+| DETC-03 | Phase 6 | Pending |
+| DETC-04 | Phase 6 | Pending |
 
 **Coverage:**
 - v0.0.2 requirements: 16 total
-- Mapped to phases: 0
-- Unmapped: 16
+- Mapped to phases: 16
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-15*
