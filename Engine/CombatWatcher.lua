@@ -73,7 +73,11 @@ function CombatWatcher:ManualStart(packIndex)
         currentPackIndex = packIndex
     end
 
-    ns.Scheduler:Start(selectedDungeon, currentPackIndex)
+    local dungeon = ns.PackDatabase[selectedDungeon]
+    local pack = dungeon and dungeon[currentPackIndex]
+    if not pack then return end
+
+    ns.NameplateScanner:Start(pack)
     state = "active"
     if ns.PackUI and ns.PackUI.Refresh then ns.PackUI:Refresh() end
 end
@@ -82,7 +86,11 @@ function CombatWatcher:OnCombatStart()
     -- Guard: only trigger from ready state to prevent double-starts and end-state triggers
     if state ~= "ready" then return end
 
-    ns.Scheduler:Start(selectedDungeon, currentPackIndex)
+    local dungeon = ns.PackDatabase[selectedDungeon]
+    local pack = dungeon and dungeon[currentPackIndex]
+    if not pack then return end
+
+    ns.NameplateScanner:Start(pack)
     state = "active"
     if ns.PackUI and ns.PackUI.Refresh then ns.PackUI:Refresh() end
 end
@@ -97,18 +105,25 @@ function CombatWatcher:OnCombatEnd()
     if nextIndex > #dungeon then
         state = "end"
         currentPackIndex = nextIndex
-        ns.Scheduler:Stop()
-        print("|cff00ccffTPW|r All packs completed.")
     else
         state = "ready"
         currentPackIndex = nextIndex
-        ns.Scheduler:Stop()
+    end
+
+    -- Scanner must stop before Scheduler to clean up per-mob state first
+    ns.NameplateScanner:Stop()
+    ns.Scheduler:Stop()
+
+    if state == "end" then
+        print("|cff00ccffTPW|r All packs completed.")
+    else
         print("|cff00ccffTPW|r Next: " .. dungeon[currentPackIndex].displayName)
     end
     if ns.PackUI and ns.PackUI.Refresh then ns.PackUI:Refresh() end
 end
 
 function CombatWatcher:Reset()
+    ns.NameplateScanner:Stop()
     ns.Scheduler:Stop()
 
     selectedDungeon  = nil
