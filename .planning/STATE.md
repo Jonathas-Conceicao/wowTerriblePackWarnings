@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.0.2
 milestone_name: Display Rework
-status: roadmapped
-stopped_at: Roadmap created
-last_updated: "2026-03-15"
-last_activity: 2026-03-15 — Roadmap created for v0.0.2
+status: executing
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-03-15T19:59:33Z"
+last_activity: 2026-03-15 — Completed 04-01 data schema restructure
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 1
+  completed_plans: 1
+  percent: 33
 ---
 
 # Project State
@@ -21,21 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-15)
 
 **Core value:** When a player selects a pack and pulls, they see accurate, timed ability warnings for that pack's dangerous mob abilities via custom spell icon display.
-**Current focus:** v0.0.2 Display Rework — Phase 4 ready to plan
+**Current focus:** v0.0.2 Display Rework — Phase 4, Plan 1 complete
 
 ## Current Position
 
 Phase: 4 of 6 (Data Schema and Pack Update)
-Plan: 0 of ? in current phase
-Status: Ready to plan
-Last activity: 2026-03-15 — Roadmap created for v0.0.2
+Plan: 1 of 1 in current phase (complete)
+Status: Phase 4 complete, ready for Phase 5
+Last activity: 2026-03-15 — Completed 04-01 data schema restructure
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8 (v0.0.1)
+- Total plans completed: 9 (8 v0.0.1 + 1 v0.0.2)
 - Average duration: —
 - Total execution time: —
 
@@ -46,6 +46,7 @@ Progress: [░░░░░░░░░░] 0%
 | 1 (v0.0.1) | 2 | — | — |
 | 2 (v0.0.1) | 4 | — | — |
 | 3 (v0.0.1) | 2 | — | — |
+| 4 (v0.0.2) | 1 | 1min | 1min |
 
 ## Accumulated Context
 
@@ -56,6 +57,7 @@ Recent decisions affecting current work:
 
 - [v0.0.2]: Replace all 3 legacy display adapters with custom spell icon squares
 - [v0.0.2]: Use nameplate UnitClass for mob detection instead of mob names or NPC IDs
+- [04-01]: Flattened mobs->abilities to direct pack.abilities list with mobClass and timed/untimed support
 
 ### Pending Todos
 
@@ -68,5 +70,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-15
-Stopped at: Roadmap created for v0.0.2
+Stopped at: Completed 04-01-PLAN.md
 Resume file: None

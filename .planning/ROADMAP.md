@@ -26,7 +26,7 @@ See: `.planning/milestones/v0.0.1-ROADMAP.md` for full details.
 - Integer phases (4, 5, 6): Planned milestone work
 - Decimal phases (4.1, 5.1): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 4: Data Schema and Pack Update** - Restructure ability data to support timed/untimed skills, mob class filters, and updated Windrunner Spire pack
+- [x] **Phase 4: Data Schema and Pack Update** - Restructure ability data to support timed/untimed skills, mob class filters, and updated Windrunner Spire pack (completed 2026-03-15)
 - [ ] **Phase 5: Custom Spell Icon Display** - Render horizontal spell icon squares with cooldown sweeps, countdowns, red glow, TTS, replacing all legacy adapters
 - [ ] **Phase 6: Nameplate Detection and Mob Lifecycle** - Scan nameplates to detect mob classes, spawn per-mob timer instances, and clear icons when mobs die
 
@@ -41,7 +41,7 @@ See: `.planning/milestones/v0.0.1-ROADMAP.md` for full details.
   2. Each ability entry carries a mobClass field (e.g. "PALADIN") used for nameplate filtering
   3. Mob name is no longer part of the ability data schema
   4. Windrunner Spire Pack 1 contains Spellguard's Protection (spellID 1253686, PALADIN, 50s) and Spirit Bolt (spellID 1216135, WARRIOR, untimed)
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 04-01-PLAN.md -- Flat ability schema, Scheduler/CombatWatcher iteration patch
@@ -86,6 +86,6 @@ Phases execute in numeric order: 4 → 5 → 6
 | 1. Foundation and Data | v0.0.1 | 2/2 | Complete | 2026-03-14 |
 | 2. Warning Engine and Combat Integration | v0.0.1 | 4/4 | Complete | 2026-03-15 |
 | 3. Pack Selection UI | v0.0.1 | 2/2 | Complete | 2026-03-15 |
-| 4. Data Schema and Pack Update | v0.0.2 | 0/1 | Not started | - |
+| 4. Data Schema and Pack Update | 1/1 | Complete   | 2026-03-15 | - |
 | 5. Custom Spell Icon Display | v0.0.2 | 0/? | Not started | - |
 | 6. Nameplate Detection and Mob Lifecycle | v0.0.2 | 0/? | Not started | - |

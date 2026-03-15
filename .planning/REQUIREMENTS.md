@@ -20,10 +20,10 @@ Requirements for custom display rework. Replaces DBM/ET/RaidNotice adapters with
 
 ### Data
 
-- [ ] **DATA-06**: Each ability entry supports optional timer (nil cooldown = untimed/icon-only)
-- [ ] **DATA-07**: Each ability entry includes mobClass filter (UnitClass value, e.g. "PALADIN") for nameplate detection
-- [ ] **DATA-08**: Mob name field dropped from data schema (filter by class, not name)
-- [ ] **DATA-09**: Update Windrunner Spire Pack 1: Spellguard's Protection (1253686, PALADIN, 50s) and Spirit Bolt (1216135, WARRIOR, untimed)
+- [x] **DATA-06**: Each ability entry supports optional timer (nil cooldown = untimed/icon-only)
+- [x] **DATA-07**: Each ability entry includes mobClass filter (UnitClass value, e.g. "PALADIN") for nameplate detection
+- [x] **DATA-08**: Mob name field dropped from data schema (filter by class, not name)
+- [x] **DATA-09**: Update Windrunner Spire Pack 1: Spellguard's Protection (1253686, PALADIN, 50s) and Spirit Bolt (1216135, WARRIOR, untimed)
 
 ### Detection
 
@@ -53,10 +53,10 @@ Requirements for custom display rework. Replaces DBM/ET/RaidNotice adapters with
 | DISP-06 | Phase 5 | Pending |
 | DISP-07 | Phase 6 | Pending |
 | DISP-08 | Phase 5 | Pending |
-| DATA-06 | Phase 4 | Pending |
-| DATA-07 | Phase 4 | Pending |
-| DATA-08 | Phase 4 | Pending |
-| DATA-09 | Phase 4 | Pending |
+| DATA-06 | Phase 4 | Complete |
+| DATA-07 | Phase 4 | Complete |
+| DATA-08 | Phase 4 | Complete |
+| DATA-09 | Phase 4 | Complete |
 | DETC-01 | Phase 6 | Pending |
 | DETC-02 | Phase 6 | Pending |
 | DETC-03 | Phase 6 | Pending |
