@@ -14,7 +14,7 @@ Wire nameplate scanning to detect mob classes during combat, spawn per-mob timer
 ## Implementation Decisions
 
 ### Mob Detection
-- **Periodic scan** of `C_NamePlate.GetNamePlates()` every **0.5 seconds** during combat
+- **Periodic scan** of `C_NamePlate.GetNamePlates()` every **0.25 seconds** during combat
 - For each nameplate: check `UnitAffectingCombat(unit)` — only start timers for mobs actually in combat (ignore idle patrol mobs)
 - Match mob's `UnitClass(unit)` against ability `mobClass` field from pack data
 - When a matching mob enters combat → spawn independent timer icon via `IconDisplay.ShowIcon`
@@ -22,7 +22,7 @@ Wire nameplate scanning to detect mob classes during combat, spawn per-mob timer
 - Untimed abilities: show one static icon on first matching mob detection, regardless of count
 
 ### Mob Death Detection
-- **No events** — purely gameloop-driven via the same 0.5s scan
+- **No events** — purely gameloop-driven via the same 0.25s scan
 - Each scan counts how many in-combat nameplates exist per class
 - If the count for a class **decreases** between scans → that many mobs died → remove that many timer icons
 - When count reaches 0 for a class → clear all icons for that class's skills
@@ -36,7 +36,7 @@ Wire nameplate scanning to detect mob classes during combat, spawn per-mob timer
 ### Claude's Discretion
 - Where the scanner module lives (new file vs extending CombatWatcher)
 - How to track individual mob → timer mappings (table structure)
-- Whether to use C_Timer.NewTicker for the 0.5s poll or OnUpdate
+- Whether to use C_Timer.NewTicker for the 0.25s poll or OnUpdate
 - How to coordinate with existing CombatWatcher state machine
 
 </decisions>
@@ -45,7 +45,7 @@ Wire nameplate scanning to detect mob classes during combat, spawn per-mob timer
 ## Specific Ideas
 
 - The NameplateSummary.lua reference script (C:\Users\jonat\Repositories\WeakerScripts\Samples\NameplateSummary.lua) shows the pattern: iterate plates, check UnitCanAttack, check UnitAffectingCombat, read UnitClass
-- The 0.5s poll rate should be fast enough to catch new mobs joining combat without noticeable delay
+- The 0.25s poll rate should be fast enough to catch new mobs joining combat without noticeable delay
 
 </specifics>
 
@@ -65,7 +65,7 @@ Wire nameplate scanning to detect mob classes during combat, spawn per-mob timer
 ### Integration Points
 - CombatWatcher:OnCombatStart → start scanning
 - CombatWatcher:OnCombatEnd → stop scanning, clear all
-- 0.5s poll detects count decrease → remove timer icons, clear all if count reaches 0
+- 0.25s poll detects count decrease → remove timer icons, clear all if count reaches 0
 - Scheduler.lua → needs rework to not auto-start all timers; scanner controls when individual timers spawn
 
 </code_context>
