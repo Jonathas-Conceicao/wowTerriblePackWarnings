@@ -9,14 +9,14 @@ Requirements for custom display rework. Replaces DBM/ET/RaidNotice adapters with
 
 ### Display
 
-- [ ] **DISP-01**: Horizontal row of square spell icons at top-left of screen, growing rightward
-- [ ] **DISP-02**: Each timed square shows the spell icon (from spellID) with cooldown sweep animation and integer countdown
-- [ ] **DISP-03**: Untimed skills display as static icons (no sweep, no countdown), one icon regardless of mob count
-- [ ] **DISP-04**: Red glow border on timed squares when 5 seconds remain before cast
-- [ ] **DISP-05**: Text-to-speech announces ability name 5 seconds before timed cast fires
+- [x] **DISP-01**: Horizontal row of square spell icons at top-left of screen, growing rightward
+- [x] **DISP-02**: Each timed square shows the spell icon (from spellID) with cooldown sweep animation and integer countdown
+- [x] **DISP-03**: Untimed skills display as static icons (no sweep, no countdown), one icon regardless of mob count
+- [x] **DISP-04**: Red glow border on timed squares when 5 seconds remain before cast
+- [x] **DISP-05**: Text-to-speech announces ability name 5 seconds before timed cast fires
 - [ ] **DISP-06**: Remove DBM/EncounterTimeline/RaidNotice display adapters (custom display replaces all)
 - [ ] **DISP-07**: When all mobs of a tracked skill's class die, clear all instances of that skill from display
-- [ ] **DISP-08**: Timed skills show one icon per mob instance; untimed skills show one icon total
+- [x] **DISP-08**: Timed skills show one icon per mob instance; untimed skills show one icon total
 
 ### Data
 
@@ -45,14 +45,14 @@ Requirements for custom display rework. Replaces DBM/ET/RaidNotice adapters with
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DISP-01 | Phase 5 | Pending |
-| DISP-02 | Phase 5 | Pending |
-| DISP-03 | Phase 5 | Pending |
-| DISP-04 | Phase 5 | Pending |
-| DISP-05 | Phase 5 | Pending |
+| DISP-01 | Phase 5 | Complete |
+| DISP-02 | Phase 5 | Complete |
+| DISP-03 | Phase 5 | Complete |
+| DISP-04 | Phase 5 | Complete |
+| DISP-05 | Phase 5 | Complete |
 | DISP-06 | Phase 5 | Pending |
 | DISP-07 | Phase 6 | Pending |
-| DISP-08 | Phase 5 | Pending |
+| DISP-08 | Phase 5 | Complete |
 | DATA-06 | Phase 4 | Complete |
 | DATA-07 | Phase 4 | Complete |
 | DATA-08 | Phase 4 | Complete |
