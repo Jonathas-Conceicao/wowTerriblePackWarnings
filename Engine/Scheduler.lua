@@ -92,7 +92,10 @@ function Scheduler:Stop()
     end
     wipe(activeTimers)
 
-    ns.BossWarnings.CancelAllTimers()
+    local ok, err = pcall(ns.BossWarnings.CancelAllTimers)
+    if not ok then
+        print("|cff00ccffTPW|r Warning: CancelAllTimers error: " .. tostring(err))
+    end
 
     timerCounter = 0
 end

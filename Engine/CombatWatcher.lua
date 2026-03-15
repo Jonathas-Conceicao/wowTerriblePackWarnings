@@ -59,17 +59,19 @@ end
 function CombatWatcher:OnCombatEnd()
     if state ~= "active" then return end
 
-    ns.Scheduler:Stop()
-
-    -- Auto-advance to next pack
-    currentPackIndex = currentPackIndex + 1
-
+    -- Transition state BEFORE Stop() to prevent re-triggering on error
     local dungeon = ns.PackDatabase[selectedDungeon]
-    if currentPackIndex > #dungeon then
+    local nextIndex = currentPackIndex + 1
+
+    if nextIndex > #dungeon then
         state = "end"
+        currentPackIndex = nextIndex
+        ns.Scheduler:Stop()
         print("|cff00ccffTPW|r All packs completed.")
     else
         state = "ready"
+        currentPackIndex = nextIndex
+        ns.Scheduler:Stop()
         print("|cff00ccffTPW|r Next: " .. dungeon[currentPackIndex].displayName)
     end
 end
