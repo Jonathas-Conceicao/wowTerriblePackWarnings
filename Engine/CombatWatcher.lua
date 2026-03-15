@@ -66,6 +66,7 @@ function CombatWatcher:ManualStart(packIndex)
 
     ns.Scheduler:Start(selectedDungeon, currentPackIndex)
     state = "active"
+    if ns.PackUI and ns.PackUI.Refresh then ns.PackUI:Refresh() end
 end
 
 function CombatWatcher:OnCombatStart()
@@ -74,6 +75,7 @@ function CombatWatcher:OnCombatStart()
 
     ns.Scheduler:Start(selectedDungeon, currentPackIndex)
     state = "active"
+    if ns.PackUI and ns.PackUI.Refresh then ns.PackUI:Refresh() end
 end
 
 function CombatWatcher:OnCombatEnd()

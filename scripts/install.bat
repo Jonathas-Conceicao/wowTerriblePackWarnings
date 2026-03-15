@@ -21,4 +21,7 @@ copy /Y "%SOURCE%Engine\CombatWatcher.lua" "%DEST%\Engine\"
 if not exist "%DEST%\Display" mkdir "%DEST%\Display"
 copy /Y "%SOURCE%Display\BossWarnings.lua" "%DEST%\Display\"
 
+if not exist "%DEST%\UI" mkdir "%DEST%\UI"
+copy /Y "%SOURCE%UI\PackFrame.lua" "%DEST%\UI\"
+
 echo Done! /reload in WoW to load the addon.

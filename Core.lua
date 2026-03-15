@@ -64,6 +64,6 @@ SlashCmdList["TERRIBLEPACKWARNINGS"] = function(msg)
         print("|cff00ccffTPW|r Commands: select <dungeon>, start [pack#], stop, status, help")
     else
         -- Bare /tpw or unrecognized command — toggle pack selection window
-        if ns.PackUI then ns.PackUI.Toggle() end
+        if ns.PackUI and ns.PackUI.Toggle then ns.PackUI.Toggle() end
     end
 end

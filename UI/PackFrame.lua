@@ -9,6 +9,15 @@ local DUNGEON_NAMES = {
     windrunner_spire = "Windrunner Spire",
 }
 
+-- Accordion state: which dungeons are expanded
+local expandedDungeons = {}
+
+-- Row pool
+local rows = {}
+local ROW_HEIGHT = 22
+local HEADER_INDENT = 8
+local PACK_INDENT = 24
+
 ------------------------------------------------------------------------
 -- Main Frame
 ------------------------------------------------------------------------
@@ -35,6 +44,144 @@ frame:SetScript("OnDragStop", function(self)
 end)
 
 ------------------------------------------------------------------------
+-- Scroll Frame (simple scroll child approach)
+------------------------------------------------------------------------
+local scrollFrame = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
+scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -30)
+scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -34, 10)
+
+local scrollChild = CreateFrame("Frame", nil, scrollFrame)
+scrollChild:SetWidth(250)
+scrollFrame:SetScrollChild(scrollChild)
+
+------------------------------------------------------------------------
+-- Row Creation
+------------------------------------------------------------------------
+local function CreateRow(parent, index)
+    local row = CreateFrame("Button", nil, parent)
+    row:SetHeight(ROW_HEIGHT)
+
+    -- Hover highlight
+    local highlight = row:CreateTexture(nil, "HIGHLIGHT")
+    highlight:SetAllPoints()
+    highlight:SetColorTexture(1, 1, 1, 0.1)
+
+    -- Text label
+    row.text = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    row.text:SetPoint("LEFT", row, "LEFT", 4, 0)
+    row.text:SetPoint("RIGHT", row, "RIGHT", -4, 0)
+    row.text:SetJustifyH("LEFT")
+
+    return row
+end
+
+------------------------------------------------------------------------
+-- Row Appearance (state-based styling)
+------------------------------------------------------------------------
+local function UpdateRowAppearance(row, data)
+    local curState, activeDungeon, activePackIndex = ns.CombatWatcher:GetState()
+    local sameDungeon = (data.dungeonKey == activeDungeon)
+
+    local prefix = "   "
+    local r, g, b = 1, 1, 1
+
+    if sameDungeon and data.packIndex == activePackIndex and curState == "active" then
+        -- Active / fighting
+        prefix = "   |TInterface\\LFGFrame\\BattlenetWorking0:14|t "
+        r, g, b = 1, 0.5, 0
+    elseif sameDungeon and data.packIndex == activePackIndex and (curState == "ready" or curState == "end") then
+        -- Selected / ready
+        prefix = "   |TInterface\\Buttons\\UI-CheckBox-Check:14|t "
+        r, g, b = 0, 1, 0
+    elseif sameDungeon and activePackIndex and data.packIndex < activePackIndex then
+        -- Completed
+        prefix = "   |TInterface\\Buttons\\UI-CheckBox-Check:14|t "
+        r, g, b = 0.5, 0.5, 0.5
+    end
+
+    row.text:SetText(prefix .. data.displayName)
+    row.text:SetTextColor(r, g, b)
+end
+
+------------------------------------------------------------------------
+-- List Population
+------------------------------------------------------------------------
+local function PopulateList()
+    -- Hide all existing rows
+    for _, row in ipairs(rows) do
+        row:Hide()
+    end
+
+    local yOffset = 0
+    local rowIndex = 0
+
+    for dungeonKey, packs in pairs(ns.PackDatabase) do
+        -- Dungeon header row
+        rowIndex = rowIndex + 1
+        local headerRow = rows[rowIndex]
+        if not headerRow then
+            headerRow = CreateRow(scrollChild, rowIndex)
+            rows[rowIndex] = headerRow
+        end
+
+        headerRow:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", HEADER_INDENT, -yOffset)
+        headerRow:SetPoint("TOPRIGHT", scrollChild, "TOPRIGHT", -HEADER_INDENT, -yOffset)
+
+        local displayName = DUNGEON_NAMES[dungeonKey] or dungeonKey
+        local isExpanded = expandedDungeons[dungeonKey]
+        local arrow = isExpanded and "|TInterface\\Buttons\\UI-MinusButton-UP:14|t " or "|TInterface\\Buttons\\UI-PlusButton-UP:14|t "
+
+        -- Color active dungeon gold
+        local _, activeDungeon = ns.CombatWatcher:GetState()
+        if dungeonKey == activeDungeon then
+            headerRow.text:SetText(arrow .. displayName)
+            headerRow.text:SetTextColor(1, 0.82, 0)
+        else
+            headerRow.text:SetText(arrow .. displayName)
+            headerRow.text:SetTextColor(1, 1, 1)
+        end
+
+        headerRow:SetScript("OnClick", function()
+            expandedDungeons[dungeonKey] = not expandedDungeons[dungeonKey]
+            PopulateList()
+        end)
+        headerRow:Show()
+        yOffset = yOffset + ROW_HEIGHT
+
+        -- Pack rows (if expanded)
+        if isExpanded then
+            for i, pack in ipairs(packs) do
+                rowIndex = rowIndex + 1
+                local packRow = rows[rowIndex]
+                if not packRow then
+                    packRow = CreateRow(scrollChild, rowIndex)
+                    rows[rowIndex] = packRow
+                end
+
+                packRow:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", PACK_INDENT, -yOffset)
+                packRow:SetPoint("TOPRIGHT", scrollChild, "TOPRIGHT", -HEADER_INDENT, -yOffset)
+
+                local data = {
+                    dungeonKey  = dungeonKey,
+                    packIndex   = i,
+                    displayName = pack.displayName,
+                }
+                UpdateRowAppearance(packRow, data)
+
+                packRow:SetScript("OnClick", function()
+                    ns.CombatWatcher:SelectPack(dungeonKey, i)
+                end)
+                packRow:Show()
+                yOffset = yOffset + ROW_HEIGHT
+            end
+        end
+    end
+
+    -- Set scroll child height
+    scrollChild:SetHeight(math.max(yOffset, 1))
+end
+
+------------------------------------------------------------------------
 -- Position Restore
 ------------------------------------------------------------------------
 local function RestorePosition()
@@ -43,103 +190,6 @@ local function RestorePosition()
         frame:ClearAllPoints()
         frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", pos.x, pos.y)
     end
-end
-
--- Expose for external calls
-PackUI.RestorePosition = RestorePosition
-
-------------------------------------------------------------------------
--- ScrollBox Tree List (Accordion)
-------------------------------------------------------------------------
-local ScrollBox = CreateFrame("Frame", nil, frame.Inset, "WowScrollBoxList")
-ScrollBox:SetPoint("TOPLEFT", frame.Inset, "TOPLEFT", 4, -4)
-ScrollBox:SetPoint("BOTTOMRIGHT", frame.Inset, "BOTTOMRIGHT", -20, 4)
-
-local ScrollBar = CreateFrame("EventFrame", nil, frame.Inset, "MinimalScrollBar")
-ScrollBar:SetPoint("TOPLEFT", ScrollBox, "TOPRIGHT", 2, 0)
-ScrollBar:SetPoint("BOTTOMLEFT", ScrollBox, "BOTTOMRIGHT", 2, 0)
-
-local ScrollView = CreateScrollBoxListTreeListView()
-ScrollUtil.InitScrollBoxListWithScrollBar(ScrollBox, ScrollBar, ScrollView)
-
-------------------------------------------------------------------------
--- Row Appearance (state-based styling)
-------------------------------------------------------------------------
-local function UpdateRowAppearance(button, data)
-    local curState, activeDungeon, activePackIndex = ns.CombatWatcher:GetState()
-    local sameDungeon = (data.dungeonKey == activeDungeon)
-
-    if sameDungeon and data.packIndex == activePackIndex and curState == "active" then
-        -- Active / fighting
-        button:SetText("   |TInterface\\LFGFrame\\BattlenetWorking0:16|t " .. data.displayName)
-        button:GetFontString():SetTextColor(1, 0.5, 0)
-    elseif sameDungeon and data.packIndex == activePackIndex and (curState == "ready" or curState == "end") then
-        -- Selected / ready (or end-state on final pack)
-        button:SetText("   |TInterface\\Buttons\\UI-CheckBox-Check:16|t " .. data.displayName)
-        button:GetFontString():SetTextColor(0, 1, 0)
-    elseif sameDungeon and activePackIndex and data.packIndex < activePackIndex then
-        -- Completed (earlier pack in same dungeon)
-        button:SetText("   |TInterface\\Buttons\\UI-CheckBox-Check:16|t " .. data.displayName)
-        button:GetFontString():SetTextColor(0.5, 0.5, 0.5)
-    else
-        -- Default
-        button:SetText("   " .. data.displayName)
-        button:GetFontString():SetTextColor(1, 1, 1)
-    end
-end
-
-------------------------------------------------------------------------
--- Element Initializer
-------------------------------------------------------------------------
-local function ElementInitializer(button, node)
-    local data = node:GetData()
-    if data.isDungeon then
-        -- Dungeon header row: highlight active dungeon in gold, others white
-        local _, activeDungeon = ns.CombatWatcher:GetState()
-        button:SetText(data.displayName)
-        if data.key == activeDungeon then
-            button:GetFontString():SetTextColor(1, 0.82, 0) -- gold
-        else
-            button:GetFontString():SetTextColor(1, 1, 1) -- white
-        end
-        button:SetScript("OnClick", function()
-            node:ToggleCollapsed()
-            ScrollBox:Update()
-        end)
-    else
-        -- Pack leaf row: click selects pack
-        UpdateRowAppearance(button, data)
-        button:SetScript("OnClick", function()
-            ns.CombatWatcher:SelectPack(data.dungeonKey, data.packIndex)
-        end)
-    end
-end
-
-ScrollView:SetElementInitializer("UIPanelButtonTemplate", ElementInitializer)
-
-------------------------------------------------------------------------
--- Data Population
-------------------------------------------------------------------------
-local DataProvider
-
-local function PopulateList()
-    DataProvider = CreateTreeDataProvider()
-    for dungeonKey, packs in pairs(ns.PackDatabase) do
-        local dungeonNode = DataProvider:Insert({
-            isDungeon   = true,
-            displayName = DUNGEON_NAMES[dungeonKey] or dungeonKey,
-            key         = dungeonKey,
-        })
-        for i, pack in ipairs(packs) do
-            dungeonNode:Insert({
-                isDungeon   = false,
-                displayName = pack.displayName,
-                dungeonKey  = dungeonKey,
-                packIndex   = i,
-            })
-        end
-    end
-    ScrollView:SetDataProvider(DataProvider)
 end
 
 ------------------------------------------------------------------------
@@ -164,8 +214,10 @@ end
 ------------------------------------------------------------------------
 -- Initialize
 ------------------------------------------------------------------------
--- Data files load before UI in TOC, and Core.lua ADDON_LOADED sets ns.db
--- before PackFrame.lua file body executes, so both PackDatabase and db
--- are available at this point.
+-- Expand all dungeons by default
+for dungeonKey in pairs(ns.PackDatabase) do
+    expandedDungeons[dungeonKey] = true
+end
+
 PopulateList()
 RestorePosition()
