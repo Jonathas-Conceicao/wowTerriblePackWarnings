@@ -17,6 +17,7 @@ copy /Y "%SOURCE%Data\WindrunnerSpire.lua" "%DEST%\Data\"
 if not exist "%DEST%\Engine" mkdir "%DEST%\Engine"
 copy /Y "%SOURCE%Engine\Scheduler.lua" "%DEST%\Engine\"
 copy /Y "%SOURCE%Engine\CombatWatcher.lua" "%DEST%\Engine\"
+copy /Y "%SOURCE%Engine\NameplateScanner.lua" "%DEST%\Engine\"
 
 if not exist "%DEST%\Display" mkdir "%DEST%\Display"
 copy /Y "%SOURCE%Display\IconDisplay.lua" "%DEST%\Display\"

@@ -54,7 +54,19 @@ SlashCmdList["TERRIBLEPACKWARNINGS"] = function(msg)
     elseif cmd == "start" then
         ns.CombatWatcher:ManualStart(tonumber(arg) or nil)
     elseif cmd == "stop" then
+        ns.NameplateScanner:Stop()
         ns.Scheduler:Stop()
+        ns.IconDisplay.CancelAll()
+        ns.CombatWatcher:OnCombatEnd()
+    elseif cmd == "sim" then
+        -- Simulate combat start → wait N seconds → combat end
+        local duration = tonumber(arg) or 10
+        print("|cff00ccffTPW|r Simulating " .. duration .. "s combat...")
+        ns.CombatWatcher:OnCombatStart()
+        C_Timer.After(duration, function()
+            print("|cff00ccffTPW|r Sim combat ended.")
+            ns.CombatWatcher:OnCombatEnd()
+        end)
     elseif cmd == "status" then
         local s, d, i = ns.CombatWatcher:GetState()
         print("|cff00ccffTPW|r State: " .. s

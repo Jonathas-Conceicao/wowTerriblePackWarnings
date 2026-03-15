@@ -11,10 +11,10 @@ end
 ----------------------------------------------------------------------
 -- Constants
 ----------------------------------------------------------------------
-local ICON_SIZE    = 40   -- square pixel size
+local ICON_SIZE    = 80   -- square pixel size
 local ICON_PADDING = 4    -- gap between icons
-local ANCHOR_X     = 8    -- left margin from screen edge
-local ANCHOR_Y     = -8   -- top margin from screen edge
+local ANCHOR_X     = 200   -- left offset from screen edge
+local ANCHOR_Y     = 900   -- vertical offset from screen edge
 local GLOW_WIDTH   = 2    -- red border thickness
 
 ----------------------------------------------------------------------
@@ -31,7 +31,7 @@ local slotsByKey  = {}    -- instanceKey -> slot frame
 local function LayoutSlots()
     for i, slot in ipairs(activeSlots) do
         slot:ClearAllPoints()
-        slot:SetPoint("TOPLEFT", UIParent, "TOPLEFT",
+        slot:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT",
             ANCHOR_X + (i - 1) * (ICON_SIZE + ICON_PADDING),
             ANCHOR_Y)
     end
@@ -42,21 +42,20 @@ end
 -- @param duration number|nil  if provided, creates a cooldown sweep
 -- @return frame   the slot frame
 local function CreateIconSlot(spellID, duration)
-    local slot = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
+    local slot = CreateFrame("Frame", nil, UIParent)
     slot:SetSize(ICON_SIZE, ICON_SIZE)
-    slot:SetFrameStrata("MEDIUM")
-
-    -- Dark border backdrop
-    slot:SetBackdrop({
-        edgeFile = "Interface\\Buttons\\WHITE8X8",
-        edgeSize = 1,
-    })
-    slot:SetBackdropBorderColor(0, 0, 0, 1)
+    slot:SetFrameStrata("HIGH")
+    slot:SetFrameLevel(100)
 
     -- Spell icon texture
     local tex = slot:CreateTexture(nil, "BACKGROUND")
     tex:SetAllPoints()
-    local icon = C_Spell.GetSpellTexture(spellID)
+    local iconOk, icon = pcall(function() return C_Spell.GetSpellTexture(spellID) end)
+    if not iconOk then
+        dbg("GetSpellTexture FAILED for " .. tostring(spellID) .. ": " .. tostring(icon))
+        icon = nil
+    end
+    dbg("Icon texture for spellID " .. tostring(spellID) .. " = " .. tostring(icon))
     if icon then
         tex:SetTexture(icon)
     else
@@ -168,6 +167,9 @@ function ns.IconDisplay.ShowIcon(instanceKey, spellID, ttsMessage, duration)
         return
     end
 
+    dbg("ShowIcon creating: " .. instanceKey .. " spellID=" .. tostring(spellID)
+        .. " dur=" .. tostring(duration))
+
     local slot = CreateIconSlot(spellID, duration)
     slot.ttsMessage = ttsMessage
     slot.instanceKey = instanceKey
@@ -178,8 +180,10 @@ function ns.IconDisplay.ShowIcon(instanceKey, spellID, ttsMessage, duration)
     LayoutSlots()
     slot:Show()
 
-    dbg("ShowIcon: " .. instanceKey .. " spellID=" .. tostring(spellID)
-        .. " dur=" .. tostring(duration))
+    dbg("ShowIcon done: visible=" .. tostring(slot:IsShown())
+        .. " alpha=" .. tostring(slot:GetAlpha())
+        .. " w=" .. tostring(slot:GetWidth())
+        .. " slots=" .. tostring(#activeSlots))
 end
 
 --- ShowStaticIcon: display an untimed spell icon (no sweep, no countdown)

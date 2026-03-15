@@ -107,23 +107,20 @@ function Scanner:Tick()
                 if classOk and classBase then
                     newCounts[classBase] = (newCounts[classBase] or 0) + 1
                 end
+                -- Debug: log every class detected (first scan only)
+                if classOk and not prevCounts[classBase or "?"] then
+                    dbg("Scan found class: " .. tostring(classBase) .. " unit=" .. tostring(npUnit))
+                end
             end
         end
     end
 
-    -- Reconcile increases first (new mobs entered combat)
+    -- Reconcile: only add new timers when visible mob count exceeds tracked timer count
+    -- This prevents camera turns from spawning duplicate icons
     for classBase, count in pairs(newCounts) do
-        local prev = prevCounts[classBase] or 0
-        if count > prev then
-            Scanner:OnMobsAdded(classBase, count - prev)
-        end
-    end
-
-    -- Reconcile decreases (mobs died)
-    for classBase, prev in pairs(prevCounts) do
-        local count = newCounts[classBase] or 0
-        if count < prev then
-            Scanner:OnMobsRemoved(classBase, prev - count)
+        local tracked = classBarIds[classBase] and #classBarIds[classBase] or 0
+        if count > tracked then
+            Scanner:OnMobsAdded(classBase, count - tracked)
         end
     end
 
