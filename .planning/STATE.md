@@ -69,6 +69,10 @@ Recent decisions affecting current work:
 - [06-02]: Scanner Stop called before Scheduler Stop on combat end for correct cleanup order
 - [06-02]: ManualStart uses scanner path so /tpw start tests the same detection pipeline
 
+### Roadmap Evolution
+
+- Phase 7 added: complete dungeon route
+
 ### Pending Todos
 
 None yet.

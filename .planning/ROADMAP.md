@@ -90,3 +90,13 @@ Phases execute in numeric order: 4 → 5 → 6
 | 4. Data Schema and Pack Update | 1/1 | Complete   | 2026-03-15 | - |
 | 5. Custom Spell Icon Display | v0.0.2 | 2/2 | Complete | 2026-03-15 |
 | 6. Nameplate Detection and Mob Lifecycle | v0.0.2 | 2/2 | Complete | 2026-03-15 |
+
+### Phase 7: complete dungeon route
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 6
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 7 to break down)
