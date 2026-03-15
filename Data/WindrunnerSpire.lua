@@ -13,6 +13,7 @@ packs[#packs + 1] = {
             mobClass   = "PALADIN",
             first_cast = 50,
             cooldown   = 50,
+            ttsMessage = "Shield",
         },
         {
             name     = "Spirit Bolt",
