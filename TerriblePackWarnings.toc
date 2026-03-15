@@ -12,3 +12,4 @@ Engine\Scheduler.lua
 Engine\CombatWatcher.lua
 Display\BossWarnings.lua
 Data\WindrunnerSpire.lua
+UI\PackFrame.lua
