@@ -22,10 +22,11 @@ Wire nameplate scanning to detect mob classes during combat, spawn per-mob timer
 - Untimed abilities: show one static icon on first matching mob detection, regardless of count
 
 ### Mob Death Detection
-- Use **NAME_PLATE_UNIT_REMOVED** event to detect mob deaths
-- Nameplate disappearance = assume mob is dead (combat log events are blocked/secret values in Midnight API)
-- If a nameplate disappears because mob runs out of range, still treat as "dead" — accept this trade-off
-- **Count-based clearing**: track how many nameplates of each class currently exist. When count reaches 0, clear all icons for that class's skills.
+- **No events** — purely gameloop-driven via the same 0.5s scan
+- Each scan counts how many in-combat nameplates exist per class
+- If the count for a class **decreases** between scans → that many mobs died → remove that many timer icons
+- When count reaches 0 for a class → clear all icons for that class's skills
+- No NAME_PLATE_UNIT_REMOVED or combat log events used — everything is poll-based
 
 ### Scan Lifecycle
 - Scanning starts when CombatWatcher enters "active" state (combat start)
@@ -64,7 +65,7 @@ Wire nameplate scanning to detect mob classes during combat, spawn per-mob timer
 ### Integration Points
 - CombatWatcher:OnCombatStart → start scanning
 - CombatWatcher:OnCombatEnd → stop scanning, clear all
-- NAME_PLATE_UNIT_REMOVED event → decrement class count, clear icons if count reaches 0
+- 0.5s poll detects count decrease → remove timer icons, clear all if count reaches 0
 - Scheduler.lua → needs rework to not auto-start all timers; scanner controls when individual timers spawn
 
 </code_context>
