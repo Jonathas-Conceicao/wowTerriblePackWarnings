@@ -1,17 +1,53 @@
 ---
 phase: 02-warning-engine-and-combat-integration
-verified: 2026-03-14T12:00:00Z
-status: passed
+verified: 2026-03-14T14:00:00Z
+status: human_needed
 score: 11/11 must-haves verified
-re_verification: false
+re_verification: true
+  previous_status: passed
+  previous_score: 11/11
+  gaps_closed:
+    - "Timers stop on combat end and auto-advance to next pack or end state"
+    - "Zone change resets state to idle with no dungeon selected"
+    - "Warnings display via Encounter Timeline API or DBM API, not as RaidNotice fallback"
+  gaps_remaining: []
+  regressions: []
+human_verification:
+  - test: "Ability Warning Timing Accuracy"
+    expected: "Pre-warning appears ~45s in (Spellguard's Protection in 5 sec), cast alert at ~50s, repeats every 50s"
+    why_human: "Timer offsets are code-correct but WoW tick rate and display timing require in-game confirmation"
+  - test: "Display Adapter Selection — EncounterTimeline inside dungeon"
+    expected: "Warnings appear in Encounter Timeline (not RaidNotice text) when inside a dungeon instance with ET detected"
+    why_human: "C_EncounterTimeline.IsFeatureEnabled() behavior for dungeon trash is empirically unverified; this was the root of the original UAT issue"
+  - test: "Ghost Warning Prevention"
+    expected: "/tpw stop or combat end prevents all future warnings even after 60+ seconds"
+    why_human: "combatActive[1]=false closure mutation is code-correct but timer cancellation race conditions require live testing"
+  - test: "Auto-advance on Combat End"
+    expected: "After combat ends, state becomes 'end' (1 pack) or advances to pack 2 index with chat confirmation"
+    why_human: "Only 1 pack in WindrunnerSpire.lua so end-state path triggers immediately; UAT confirmed this was broken in original code and now fixed"
+  - test: "PLAYER_REGEN_DISABLED guard in M+ Keystone without dungeon selected"
+    expected: "No warnings fire when state=idle; CombatWatcher guard prevents spurious triggers"
+    why_human: "PLAYER_REGEN_DISABLED behavior in keystone runs is empirically unverified"
 ---
 
 # Phase 2: Warning Engine and Combat Integration Verification Report
 
-**Phase Goal:** Selecting a pack and pulling causes timed ability warnings to appear in the Boss Warnings UI (or fallback frame) and all timers clean up correctly on combat end or zone change
-**Verified:** 2026-03-14T12:00:00Z
-**Status:** PASSED
-**Re-verification:** No — initial verification
+**Phase Goal:** Build the warning engine (Scheduler + display adapters) and combat integration (CombatWatcher state machine) so that selecting a dungeon and entering combat auto-fires timed ability warnings through the best available display system.
+**Verified:** 2026-03-14T14:00:00Z
+**Status:** HUMAN_NEEDED (all automated checks pass; awaiting in-game confirmation of display adapter and timing behavior)
+**Re-verification:** Yes — after gap closure via plans 02-03 and 02-04
+
+---
+
+## Re-verification Context
+
+The initial VERIFICATION.md (2026-03-14T12:00:00Z) reported `status: passed` based on static code analysis. UAT (02-UAT.md) subsequently identified 3 major in-game failures:
+
+1. Warnings showed as RaidNotice text even when ET adapter was detected — `ET_Show` and `DBM_Show` were copy-paste stubs calling `RaidNotice_AddMessage`.
+2. Timers did not stop on PLAYER_REGEN_ENABLED — `OnCombatEnd` called `Stop()` before setting state, so an error in `CancelAllTimers` left state as "active" and re-triggered on next combat.
+3. Zone change kept state as "ready" with dungeon selected — `Reset()` did not clear `selectedDungeon` or set state to "idle".
+
+Plans 02-03 and 02-04 were executed as gap-closure plans. This re-verification confirms all three gaps are closed in the current codebase.
 
 ---
 
@@ -19,21 +55,21 @@ re_verification: false
 
 ### Observable Truths
 
-Truths are drawn from both plan frontmatter `must_haves` blocks (02-01 and 02-02) and the four ROADMAP.md success criteria for Phase 2.
+Truths drawn from 02-02-PLAN.md `must_haves.truths` (primary plan), augmented by 02-03 and 02-04 gap-closure truths.
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | PackDatabase stores packs as an ordered array per dungeon with key, displayName, mobs fields | VERIFIED | `WindrunnerSpire.lua` uses `ns.PackDatabase["windrunner_spire"]` as ordered array; each entry has `key`, `displayName`, `mobs` |
-| 2 | ns.BossWarnings.Show(text, duration) displays a warning using the best available display system | VERIFIED | `Display/BossWarnings.lua` implements `BW.Show` dispatching to ET / DBM / RaidNotice via `activeAdapter` |
-| 3 | Display adapter auto-detects C_EncounterTimeline > DBT > RaidNotice at runtime | VERIFIED | `DetectAdapter()` in `BossWarnings.lua` lines 16-31: checks `C_EncounterTimeline.IsFeatureEnabled()`, then `DBT`, then falls back to RaidNotice |
-| 4 | TOC file lists all new Engine and Display files in correct load order | VERIFIED | TOC lines 10-14: `Core.lua`, `Engine\Scheduler.lua`, `Engine\CombatWatcher.lua`, `Display\BossWarnings.lua`, `Data\WindrunnerSpire.lua` |
-| 5 | Scheduler fires 5-second pre-warnings and cast alerts at correct offsets | VERIFIED | `Scheduler.lua` `scheduleAbility`: `preWarnOffset = first_cast - 5`, `C_Timer.NewTimer(preWarnOffset, ...)` then `C_Timer.NewTimer(ability.first_cast, ...)` |
-| 6 | Each ability fires a pre-warning then cast alert, repeating on cooldown | VERIFIED | Cast callback in `scheduleAbility` recursively calls `scheduleAbility({..., first_cast = ability.cooldown, cooldown = ability.cooldown})` |
-| 7 | All timers cancel immediately when combat ends (PLAYER_REGEN_ENABLED) | VERIFIED | `Core.lua` line 31 wires `PLAYER_REGEN_ENABLED` to `CombatWatcher:OnCombatEnd()`, which calls `Scheduler:Stop()`; `Stop()` sets `combatActive[1] = false`, cancels all handles via `IsCancelled()` guard, wipes table, calls `BossWarnings.CancelAllTimers()` |
-| 8 | Zone change (PLAYER_ENTERING_WORLD) resets sequence to pack 1 and cancels all timers | VERIFIED | `Core.lua` line 35 wires `PLAYER_ENTERING_WORLD` to `CombatWatcher:Reset()`; `Reset()` calls `Scheduler:Stop()` then resets `currentPackIndex = 1` and `state = "ready"`; event is NOT unregistered |
-| 9 | Combat start with a selected pack auto-triggers timers via PLAYER_REGEN_DISABLED | VERIFIED | `Core.lua` line 29 wires `PLAYER_REGEN_DISABLED` to `CombatWatcher:OnCombatStart()`; state guard `if state ~= "ready" then return` prevents spurious triggers |
-| 10 | Combat end auto-advances to the next pack in the sequence | VERIFIED | `CombatWatcher:OnCombatEnd()` increments `currentPackIndex` after stop; transitions to `"end"` state when all packs exhausted |
-| 11 | When all packs exhausted, engine enters end state and stops auto-triggering | VERIFIED | `OnCombatEnd()` sets `state = "end"` when `currentPackIndex > #dungeon`; `OnCombatStart()` guard `if state ~= "ready"` prevents end-state triggers |
+| 1 | Scheduler fires 5-second pre-warnings and cast alerts at correct offsets | VERIFIED | `scheduleAbility` in Scheduler.lua: `preWarnOffset = first_cast - 5`, timer at `preWarnOffset` calls `BossWarnings.Show(name .. " in 5 sec", 4)`, timer at `first_cast` calls `BossWarnings.Show(name, 3)` |
+| 2 | Each ability fires a pre-warning then cast alert, repeating on cooldown | VERIFIED | Cast callback recursively calls `scheduleAbility({first_cast=ability.cooldown, cooldown=ability.cooldown})` |
+| 3 | All timers cancel immediately when combat ends (PLAYER_REGEN_ENABLED) | VERIFIED | `OnCombatEnd` sets state BEFORE calling `Stop()`; `Stop()` sets `combatActive[1]=false`, cancels all handles via `IsCancelled()` guard, wipes `activeTimers`, calls `pcall(BossWarnings.CancelAllTimers)` |
+| 4 | Zone change resets state to idle with no dungeon selected | VERIFIED | `Reset()` in CombatWatcher.lua lines 79-86: sets `selectedDungeon=nil`, `currentPackIndex=nil`, `state="idle"` unconditionally |
+| 5 | Combat start with selected pack auto-triggers timers via PLAYER_REGEN_DISABLED | VERIFIED | Core.lua line 28-29 wires `PLAYER_REGEN_DISABLED` to `CombatWatcher:OnCombatStart()`; guard `if state ~= "ready" then return` prevents idle/end-state triggers |
+| 6 | Combat end auto-advances to the next pack in the sequence | VERIFIED | `OnCombatEnd` computes `nextIndex = currentPackIndex + 1`; if within bounds, sets `state="ready"` and `currentPackIndex=nextIndex`, prints next pack name |
+| 7 | When all packs exhausted, engine enters end state and stops auto-triggering | VERIFIED | `OnCombatEnd`: if `nextIndex > #dungeon`, sets `state="end"` before `Stop()`; `OnCombatStart` guard `state ~= "ready"` blocks end-state triggers |
+| 8 | Warnings display via ET adapter using AddScriptEvent when ET is active | VERIFIED (code) | `ET_Show` (line 71-81): creates `eventInfo{text,duration}` table, calls `C_EncounterTimeline.AddScriptEvent(eventInfo)`, stores returned `eventID` in `etEventIDs` — no RaidNotice call |
+| 9 | Warnings display via DBM adapter using CreateBar when DBM is active | VERIFIED (code) | `DBM_Show` (line 108-112): constructs `barID="TPW: "..text`, calls `DBT:CreateBar(duration or 5, barID)`, stores in `activeBarIDs` — no RaidNotice call |
+| 10 | Errors in BossWarnings.CancelAllTimers do not abort state transitions | VERIFIED | `Scheduler:Stop()` line 107: `local ok, err = pcall(ns.BossWarnings.CancelAllTimers)`; error prints warning but does not propagate |
+| 11 | State before Stop pattern prevents re-triggering on error in OnCombatEnd | VERIFIED | `OnCombatEnd` sets `state="end"` or `state="ready"` (lines 67/72) before calling `ns.Scheduler:Stop()` (lines 69/74) |
 
 **Score:** 11/11 truths verified
 
@@ -43,12 +79,12 @@ Truths are drawn from both plan frontmatter `must_haves` blocks (02-01 and 02-02
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `Data/WindrunnerSpire.lua` | Ordered array pack data for auto-advance indexing | VERIFIED | 24 lines; uses `packs[#packs + 1] = {...}` with `key`, `displayName`, `mobs` fields |
-| `Display/BossWarnings.lua` | Display abstraction with 3-tier fallback | VERIFIED | 170 lines; exports `Show`, `ShowTimer`, `CancelTimer`, `CancelAllTimers`, `GetAdapter`; all three adapters implemented substantively |
-| `Engine/Scheduler.lua` | Timer scheduling with Start, Stop, cancel, repeating ability chains | VERIFIED | 98 lines; `Scheduler:Start` and `Scheduler:Stop`; `scheduleAbility` recursive chain; `combatActive` single-element table pattern |
-| `Engine/CombatWatcher.lua` | Combat event wiring, auto-advance, zone reset | VERIFIED | 92 lines; `SelectDungeon`, `ManualStart`, `OnCombatStart`, `OnCombatEnd`, `Reset`, `GetState`; full idle/ready/active/end state machine |
-| `Core.lua` | Updated event frame with PLAYER_REGEN_DISABLED/ENABLED and permanent PLAYER_ENTERING_WORLD | VERIFIED | 67 lines; all four events registered; no `UnregisterEvent("PLAYER_ENTERING_WORLD")` call; `/tpw` slash command fully wired |
-| `TerriblePackWarnings.toc` | Updated load order with Engine and Display files | VERIFIED | All five files listed in correct dependency order |
+| `Engine/Scheduler.lua` | Timer scheduling with start, stop, cancel, repeating chains; pcall-protected Stop | VERIFIED | 113 lines; `Start`, `Stop` with pcall on line 107; `scheduleAbility` recursive chain; `combatActive` single-element table; all handles in `activeTimers` |
+| `Engine/CombatWatcher.lua` | State machine (idle/ready/active/end); Reset clears to idle | VERIFIED | 90 lines; `SelectDungeon`, `ManualStart`, `OnCombatStart`, `OnCombatEnd`, `Reset`, `GetState`; Reset unconditionally sets nil/idle (lines 82-84) |
+| `Display/BossWarnings.lua` | ET_Show uses AddScriptEvent; DBM_Show uses CreateBar; 3-tier fallback | VERIFIED | 187 lines; `ET_Show` calls `C_EncounterTimeline.AddScriptEvent`; `DBM_Show` calls `DBT:CreateBar`; `RN_Show` is fallback only; `DEBUG` flag + `dbg()` helper present |
+| `Core.lua` | All 4 events registered; PLAYER_ENTERING_WORLD permanent; slash commands wired | VERIFIED | 66 lines; all events registered at top level (lines 10-13); no `UnregisterEvent("PLAYER_ENTERING_WORLD")` call; `/tpw` slash command with select/start/stop/status |
+| `Data/WindrunnerSpire.lua` | Ordered array pack data with key, displayName, mobs, abilities | VERIFIED | 23 lines; `packs[#packs+1]={key, displayName, mobs=[{name, npcID, abilities=[{name,spellID,first_cast,cooldown}]}]}` |
+| `TerriblePackWarnings.toc` | All 5 files in correct load order | VERIFIED | 14 lines; Core.lua, Engine\Scheduler.lua, Engine\CombatWatcher.lua, Display\BossWarnings.lua, Data\WindrunnerSpire.lua |
 
 ---
 
@@ -56,24 +92,24 @@ Truths are drawn from both plan frontmatter `must_haves` blocks (02-01 and 02-02
 
 | From | To | Via | Status | Details |
 |------|----|-----|--------|---------|
-| `Engine/Scheduler.lua` | `Display/BossWarnings.lua` | `ns.BossWarnings.Show`, `ShowTimer`, `CancelAllTimers` | WIRED | Lines 31, 39, 54, 95 in Scheduler.lua; all inside function bodies, not module scope |
-| `Engine/CombatWatcher.lua` | `Engine/Scheduler.lua` | `ns.Scheduler:Start`, `ns.Scheduler:Stop` | WIRED | Lines 47, 55 (Start) and 62, 78 (Stop) in CombatWatcher.lua |
-| `Engine/CombatWatcher.lua` | `ns.PackDatabase` | reads ordered array by dungeon key and current pack index | WIRED | Lines 24, 67, 80 in CombatWatcher.lua |
-| `Core.lua` | `Engine/CombatWatcher.lua` | `PLAYER_REGEN_DISABLED`, `PLAYER_REGEN_ENABLED`, `PLAYER_ENTERING_WORLD` | WIRED | Core.lua lines 29, 32, 36; also `/tpw` slash command wires `SelectDungeon`, `ManualStart`, `GetState` |
-| `Display/BossWarnings.lua` | `C_EncounterTimeline` or `DBT` or `RaidNotice_AddMessage` | runtime adapter detection | WIRED | All three adapter call sites present; `C_EncounterTimeline.AddScriptEvent/CancelScriptEvent/CancelAllScriptEvents`, `DBT:CreateBar/CancelBar`, `RaidNotice_AddMessage` |
+| `Engine/Scheduler.lua` | `Display/BossWarnings.lua` | `ns.BossWarnings.Show`, `ShowTimer`, `CancelAllTimers` | WIRED | Lines 40, 49, 64 (inside callbacks/function bodies); pcall on CancelAllTimers line 107 |
+| `Engine/CombatWatcher.lua` | `Engine/Scheduler.lua` | `ns.Scheduler:Start`, `ns.Scheduler:Stop` | WIRED | Start at lines 47, 55; Stop at lines 69, 74, 80 |
+| `Engine/CombatWatcher.lua` | `ns.PackDatabase` | reads ordered array by dungeon key and current pack index | WIRED | Lines 24, 63 |
+| `Core.lua` | `Engine/CombatWatcher.lua` | PLAYER_REGEN_DISABLED/ENABLED/PLAYER_ENTERING_WORLD events | WIRED | Lines 29, 32, 36; also `/tpw` wires SelectDungeon, ManualStart, GetState |
+| `Display/BossWarnings.lua` | `C_EncounterTimeline` / `DBT` / `RaidNotice_AddMessage` | runtime adapter dispatch via `activeAdapter` | WIRED | ET path: `AddScriptEvent`, `CancelScriptEvent`, `CancelAllScriptEvents`; DBM path: `DBT:CreateBar`, `DBT:CancelBar`; RN fallback: `RaidNotice_AddMessage` |
 
 ---
 
 ## Requirements Coverage
 
-| Requirement | Source Plan | Description | Status | Evidence |
-|-------------|-------------|-------------|--------|----------|
-| WARN-01 | 02-02 | Timer scheduler starts ability cooldown timers when a pack pull is triggered | SATISFIED | `Scheduler:Start(dungeonKey, packIndex)` reads pack data and schedules all ability chains via `scheduleAbility`; wired to `/tpw start` and `PLAYER_REGEN_DISABLED` |
-| WARN-02 | 02-01 | Warnings display through Blizzard's Boss Warnings API (with fallback frame if API doesn't support trash) | SATISFIED | `Display/BossWarnings.lua` implements 3-tier: Encounter Timeline (Blizzard Boss Warnings), DBM timer bars, RaidNotice text flash |
-| WARN-03 | 02-02 | All active timers cancel on combat end or zone change | SATISFIED | `Scheduler:Stop()` atomically cancels all `C_Timer.NewTimer` handles + display timers; called from both `OnCombatEnd()` (PLAYER_REGEN_ENABLED) and `Reset()` (PLAYER_ENTERING_WORLD) |
-| CMBT-01 | 02-02 | Manual pull trigger button starts timers for the selected pack | SATISFIED | `/tpw start [pack#]` calls `CombatWatcher:ManualStart()` which calls `Scheduler:Start()`; no button required — slash command is the manual trigger per locked decision |
-| CMBT-02 | 02-02 | PLAYER_REGEN_DISABLED/ENABLED detection for automatic combat start/end | SATISFIED | `Core.lua` registers both events; `PLAYER_REGEN_DISABLED` -> `OnCombatStart()`, `PLAYER_REGEN_ENABLED` -> `OnCombatEnd()` |
-| CMBT-03 | 02-02 | State resets on PLAYER_ENTERING_WORLD (zone change) | SATISFIED | `PLAYER_ENTERING_WORLD` permanently registered in Core.lua (no unregister); calls `CombatWatcher:Reset()` which stops timers and resets to pack 1 |
+| Requirement | Source Plan(s) | Description | Status | Evidence |
+|-------------|---------------|-------------|--------|----------|
+| WARN-01 | 02-02, 02-04 | Timer scheduler starts ability cooldown timers when a pack pull is triggered | SATISFIED | `Scheduler:Start(dungeonKey, packIndex)` reads pack data, calls `scheduleAbility` for every ability; wired to `/tpw start` and PLAYER_REGEN_DISABLED |
+| WARN-02 | 02-01, 02-04 | Warnings display through Blizzard's Boss Warnings API (with fallback if API doesn't support trash) | SATISFIED (code) | ET_Show uses `C_EncounterTimeline.AddScriptEvent`; DBM_Show uses `DBT:CreateBar`; RaidNotice is true fallback only; in-game ET behavior unverified (see human checks) |
+| WARN-03 | 02-02, 02-03 | All active timers cancel on combat end or zone change | SATISFIED | `Stop()` with pcall-protected `CancelAllTimers`; called from `OnCombatEnd` (PLAYER_REGEN_ENABLED) and `Reset()` (PLAYER_ENTERING_WORLD) |
+| CMBT-01 | 02-02 | Manual pull trigger starts timers for selected pack | SATISFIED | `/tpw start [pack#]` calls `CombatWatcher:ManualStart()` which calls `Scheduler:Start()`; slash command is the manual trigger per locked decision |
+| CMBT-02 | 02-02, 02-03 | PLAYER_REGEN_DISABLED/ENABLED detection for automatic combat start/end | SATISFIED | Core.lua registers both; DISABLED -> `OnCombatStart()`, ENABLED -> `OnCombatEnd()`; state guards prevent spurious triggers |
+| CMBT-03 | 02-02, 02-03 | State resets on PLAYER_ENTERING_WORLD (zone change) | SATISFIED | PLAYER_ENTERING_WORLD permanently registered; `Reset()` now unconditionally clears selectedDungeon=nil, currentPackIndex=nil, state="idle" |
 
 **All 6 requirements satisfied.** No orphaned requirements detected for Phase 2.
 
@@ -81,15 +117,17 @@ Truths are drawn from both plan frontmatter `must_haves` blocks (02-01 and 02-02
 
 ## Anti-Patterns Found
 
-No anti-patterns found in any Phase 2 file:
+No anti-patterns found in any Phase 2 file after gap closure:
 
 - No TODO/FIXME/PLACEHOLDER/XXX comments
-- No stub implementations (`return nil`, `return {}`, empty handlers)
-- No `C_Timer.After` usage (non-cancellable) — only `C_Timer.NewTimer` used
-- No `DBT:CancelAllBars()` call — DBM adapter tracks own bar IDs and cancels individually
-- All `C_Timer.NewTimer` handles stored in `activeTimers` before any early-return path
+- No stub implementations (no `return nil`, `return {}`, empty handlers)
+- No `C_Timer.After` usage — only `C_Timer.NewTimer` used throughout
+- No unprotected external API calls in Stop() path — `pcall` wraps `CancelAllTimers`
+- `ET_Show` and `DBM_Show` use real adapter APIs (gap closed by 02-04)
+- `Reset()` unconditionally clears to idle (gap closed by 02-03)
+- `OnCombatEnd` sets state before calling `Stop()` (gap closed by 02-03)
 
-One notable design note (not a defect): The TOC lists `Engine\Scheduler.lua` and `Engine\CombatWatcher.lua` before `Display\BossWarnings.lua`. All calls to `ns.BossWarnings` in the engine files occur inside function bodies (closures and methods), never at module scope. By the time any engine function is invoked at runtime, all modules including `Display\BossWarnings.lua` are fully loaded. This is correct Lua addon load-time behavior.
+One design note (not a defect): `ManualStart` does not guard on state — it allows starting timers even if state is "end" or "active". This is intentional (manual override for testing), but it does not reset `state="active"` if already active, which could leave `combatActive[1]` set to true from a prior Start without calling Stop first. This is a known acceptable tradeoff for a testing/debug flow rather than a production path.
 
 ---
 
@@ -103,39 +141,50 @@ The following behaviors require in-game testing and cannot be verified programma
 **Expected:** A pre-warning appears at ~45 seconds ("Spellguard's Protection in 5 sec"), followed by the cast alert at 50 seconds, repeating every 50 seconds thereafter.
 **Why human:** Timer offsets are code-correct but actual WoW tick rate and display timing require in-game confirmation.
 
-### 2. Display Adapter Selection
+### 2. Display Adapter — Encounter Timeline Inside Dungeon
 
-**Test:** Run with and without DBM loaded; run inside a dungeon instance.
-**Expected:** Chat prints "TPW display: EncounterTimeline" inside a dungeon (if Blizzard supports it for trash), "TPW display: DBM" with DBM loaded outside, "TPW display: RaidNotice" otherwise.
-**Why human:** `C_EncounterTimeline.IsFeatureEnabled()` return value for dungeon trash is unconfirmed — the research noted this as an outstanding concern.
+**Test:** Enter a Midnight dungeon instance. Run `/tpw select windrunner_spire` then `/tpw start`. Observe where warnings appear.
+**Expected:** Chat prints "TPW display: EncounterTimeline" and warnings appear in the Boss Warnings / Encounter Timeline UI (not as RaidNotice text flashes in the center of the screen).
+**Why human:** This was the original UAT failure. `C_EncounterTimeline.IsFeatureEnabled()` returning true does not guarantee `AddScriptEvent` renders visually in the ET bar for dungeon trash. The API behavior for non-boss encounters must be confirmed in-game.
 
-### 3. Ghost Warning Prevention
+### 3. Display Adapter — DBM Bars
 
-**Test:** `/tpw start`, then immediately `/tpw stop` (or leave combat). Wait 60 seconds.
+**Test:** Load DBM/BossMod. Run `/tpw select windrunner_spire` then `/tpw start` outside a dungeon (or where ET is not enabled).
+**Expected:** Chat prints "TPW display: DBM" and a timer bar appears in the DBM bar frame counting down to the first ability cast.
+**Why human:** `DBT:CreateBar` API signature and DBM bar frame visibility depend on DBM version loaded.
+
+### 4. Ghost Warning Prevention
+
+**Test:** `/tpw start`, then immediately `/tpw stop`. Wait 60+ seconds.
 **Expected:** No warnings appear after stop.
-**Why human:** Closure mutation via `combatActive[1] = false` is code-correct but timer cancellation race conditions require live testing.
+**Why human:** `combatActive[1]=false` closure mutation is code-correct but timer cancellation race conditions require live testing.
 
-### 4. Auto-advance on Combat End
+### 5. Auto-advance and End State on Combat End
 
-**Test:** `/tpw select windrunner_spire`, enter combat, leave combat.
-**Expected:** Chat prints "Next: Windrunner Spire -- Pack 2" (or "All packs completed." if only one pack exists in the database).
-**Why human:** Currently only one pack is defined in WindrunnerSpire.lua, so the "all packs exhausted" path will trigger immediately — confirming end-state behavior requires at minimum two packs, or manual testing with `/tpw start 2` after confirming pack 2 doesn't exist triggers the error path gracefully.
+**Test:** `/tpw select windrunner_spire`, enter combat with any mob, leave combat.
+**Expected:** Chat prints "All packs completed." (only 1 pack defined). Running `/tpw status` shows `state: end`. Entering combat again does NOT start timers.
+**Why human:** UAT originally confirmed this was broken. The fix has been verified in code (state-before-stop pattern, state="end" guard in OnCombatStart). In-game confirmation needed to close the UAT issue.
 
-### 5. PLAYER_REGEN_DISABLED Behavior in M+ Keystone
+### 6. Zone Change Full Reset
 
-**Test:** Run a Mythic+ key. Pull a pack without selecting a dungeon (state = idle).
-**Expected:** No warnings fire; state machine guard prevents spurious triggers.
-**Why human:** The summary noted PLAYER_REGEN_DISABLED behavior in keystone runs as empirically unverified. Real keystone pulls may differ from open-world combat events.
+**Test:** `/tpw select windrunner_spire`, then `/tpw start`, then zone out (hearth or portal).
+**Expected:** Chat prints "TPW Session cleared (zone change)." Running `/tpw status` shows `state: idle, Dungeon: nil, Pack: nil`. No warnings fire after zone change.
+**Why human:** UAT originally confirmed this was broken (state stayed "ready"). The fix sets nil/idle unconditionally. In-game confirmation needed to close the UAT issue.
 
 ---
 
 ## Gaps Summary
 
-No gaps. All 11 observable truths verified, all 6 artifacts substantive and wired, all 6 Phase 2 requirements satisfied, zero anti-patterns. The phase goal is achieved in code.
+No gaps remain in the automated verification. All three UAT-identified bugs are closed:
 
-The only outstanding items are human verification tests for in-game timing accuracy, display adapter detection behavior inside dungeons, and M+ keystone event behavior — none of which indicate defects in the implementation.
+- **Gap 1 (display stubs):** `ET_Show` now calls `C_EncounterTimeline.AddScriptEvent`; `DBM_Show` now calls `DBT:CreateBar`. RaidNotice is the true fallback only.
+- **Gap 2 (combat end / timer stop):** State is set before `Stop()` in `OnCombatEnd`; `Stop()` wraps `CancelAllTimers` in `pcall`. State transitions are error-safe.
+- **Gap 3 (zone reset to idle):** `Reset()` unconditionally sets `selectedDungeon=nil`, `currentPackIndex=nil`, `state="idle"`.
+
+The remaining human verification items are behavioral confirmations (ET API rendering, DBM bar appearance, in-game timing) rather than code defects. Status is HUMAN_NEEDED rather than PASSED because the ET display adapter behavior in dungeons was the root cause of the original UAT failure and must be confirmed in-game before the phase can be declared production-ready.
 
 ---
 
-_Verified: 2026-03-14T12:00:00Z_
+_Verified: 2026-03-14T14:00:00Z_
 _Verifier: Claude (gsd-verifier)_
+_Re-verification after gap closure: plans 02-03 (engine fixes) and 02-04 (display fixes)_

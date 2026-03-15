@@ -98,7 +98,7 @@ end
 -- ============================================================
 
 local function DBM_ShowTimer(id, text, duration, spellID)
-    local barID = "TPW_" .. id
+    local barID = "TPW: " .. text
     DBT:CreateBar(duration, barID, spellID)
     activeBarIDs[id] = barID
 end
@@ -119,8 +119,14 @@ local function DBM_CancelAllTimers()
 end
 
 local function DBM_Show(text, duration)
-    -- Text alerts complement the existing timer bar — use RaidNotice flash
+    -- Text alerts complement the existing timer bar — use RaidNotice flash + DBM sound
     RN_Show(text, duration)
+    -- Play DBM alert sound (Interface\\AddOns\\DBM-Core\\sounds\\Alert)
+    if DBM and DBM.PlaySpecialWarningSound then
+        DBM:PlaySpecialWarningSound(1) -- default "watch out" alert
+    else
+        PlaySoundFile("Interface\\AddOns\\DBM-Core\\sounds\\AirHorn.ogg", "Master")
+    end
 end
 
 -- ============================================================

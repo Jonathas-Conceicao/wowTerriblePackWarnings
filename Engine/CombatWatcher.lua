@@ -4,6 +4,15 @@ ns.CombatWatcher = {}
 local CombatWatcher = ns.CombatWatcher
 
 -- ============================================================
+-- Zone-to-dungeon auto-detection
+-- ============================================================
+
+-- Maps instance name (from GetInstanceInfo()) to PackDatabase key
+local ZONE_DUNGEON_MAP = {
+    ["Windrunner Spire"] = "windrunner_spire",
+}
+
+-- ============================================================
 -- State
 -- ============================================================
 
@@ -105,7 +114,19 @@ function CombatWatcher:Reset()
     selectedDungeon  = nil
     currentPackIndex = nil
     state            = "idle"
-    print("|cff00ccffTPW|r Session cleared (zone change).")
+
+    -- Auto-detect dungeon from current zone
+    local instanceName = GetInstanceInfo()
+    local dungeonKey = ZONE_DUNGEON_MAP[instanceName]
+    if dungeonKey and ns.PackDatabase[dungeonKey] then
+        selectedDungeon  = dungeonKey
+        currentPackIndex = 1
+        state            = "ready"
+        print("|cff00ccffTPW|r Auto-detected: " .. instanceName .. " (" .. #ns.PackDatabase[dungeonKey] .. " packs)")
+    else
+        print("|cff00ccffTPW|r Session cleared (zone change).")
+    end
+
     if ns.PackUI and ns.PackUI.Refresh then ns.PackUI:Refresh() end
 end
 
