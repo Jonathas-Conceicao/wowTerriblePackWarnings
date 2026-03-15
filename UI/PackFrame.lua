@@ -63,23 +63,55 @@ local ScrollView = CreateScrollBoxListTreeListView()
 ScrollUtil.InitScrollBoxListWithScrollBar(ScrollBox, ScrollBar, ScrollView)
 
 ------------------------------------------------------------------------
+-- Row Appearance (state-based styling)
+------------------------------------------------------------------------
+local function UpdateRowAppearance(button, data)
+    local curState, activeDungeon, activePackIndex = ns.CombatWatcher:GetState()
+    local sameDungeon = (data.dungeonKey == activeDungeon)
+
+    if sameDungeon and data.packIndex == activePackIndex and curState == "active" then
+        -- Active / fighting
+        button:SetText("   |TInterface\\LFGFrame\\BattlenetWorking0:16|t " .. data.displayName)
+        button:GetFontString():SetTextColor(1, 0.5, 0)
+    elseif sameDungeon and data.packIndex == activePackIndex and (curState == "ready" or curState == "end") then
+        -- Selected / ready (or end-state on final pack)
+        button:SetText("   |TInterface\\Buttons\\UI-CheckBox-Check:16|t " .. data.displayName)
+        button:GetFontString():SetTextColor(0, 1, 0)
+    elseif sameDungeon and activePackIndex and data.packIndex < activePackIndex then
+        -- Completed (earlier pack in same dungeon)
+        button:SetText("   |TInterface\\Buttons\\UI-CheckBox-Check:16|t " .. data.displayName)
+        button:GetFontString():SetTextColor(0.5, 0.5, 0.5)
+    else
+        -- Default
+        button:SetText("   " .. data.displayName)
+        button:GetFontString():SetTextColor(1, 1, 1)
+    end
+end
+
+------------------------------------------------------------------------
 -- Element Initializer
 ------------------------------------------------------------------------
 local function ElementInitializer(button, node)
     local data = node:GetData()
     if data.isDungeon then
-        -- Dungeon header row
+        -- Dungeon header row: highlight active dungeon in gold, others white
+        local _, activeDungeon = ns.CombatWatcher:GetState()
         button:SetText(data.displayName)
-        button:GetFontString():SetTextColor(1, 0.82, 0) -- gold header text
+        if data.key == activeDungeon then
+            button:GetFontString():SetTextColor(1, 0.82, 0) -- gold
+        else
+            button:GetFontString():SetTextColor(1, 1, 1) -- white
+        end
         button:SetScript("OnClick", function()
             node:ToggleCollapsed()
             ScrollBox:Update()
         end)
     else
-        -- Pack leaf row (no-op click placeholder for Plan 02)
-        button:SetText("   " .. data.displayName)
-        button:GetFontString():SetTextColor(1, 1, 1) -- white
-        button:SetScript("OnClick", function() end)
+        -- Pack leaf row: click selects pack
+        UpdateRowAppearance(button, data)
+        button:SetScript("OnClick", function()
+            ns.CombatWatcher:SelectPack(data.dungeonKey, data.packIndex)
+        end)
     end
 end
 
@@ -125,10 +157,9 @@ function PackUI.Hide()
     frame:Hide()
 end
 
--- Expose internals for Plan 02 (Refresh, selection highlight)
-PackUI.ScrollBox = ScrollBox
-PackUI.ScrollView = ScrollView
-PackUI.GetDataProvider = function() return DataProvider end
+function PackUI:Refresh()
+    PopulateList()
+end
 
 ------------------------------------------------------------------------
 -- Initialize
