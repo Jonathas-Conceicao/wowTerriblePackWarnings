@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation and Data** - Loadable addon skeleton with correct TOC, namespace, a fully-specified pack/ability database for one dungeon, and dev tooling for local install and automated GitHub releases (completed 2026-03-14)
 - [ ] **Phase 2: Warning Engine and Combat Integration** - Timer scheduler, Boss Warnings display, and combat event wiring that delivers working in-game ability warnings (UAT gap closure in progress)
-- [ ] **Phase 3: Pack Selection UI** - Scrollable grouped pack list with click-to-select, active state indicator, and slash command entry point
+- [x] **Phase 3: Pack Selection UI** - Scrollable grouped pack list with click-to-select, active state indicator, and slash command entry point (completed 2026-03-15)
 
 ## Phase Details
 
@@ -61,7 +61,7 @@ Plans:
   2. Clicking a pack in the list selects it and highlights it as the active pack
   3. The highlighted pack persists visually until a different pack is selected or combat resets state
   4. A pull button or combat entry with the selected pack starts the warning engine without any console commands
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 03-01-PLAN.md — Window frame with accordion ScrollBox tree list, slash command toggle, position persistence
@@ -76,4 +76,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Foundation and Data | 2/2 | Complete    | 2026-03-14 |
 | 2. Warning Engine and Combat Integration | 3/4 | In Progress|  |
-| 3. Pack Selection UI | 1/2 | In Progress|  |
+| 3. Pack Selection UI | 2/2 | Complete   | 2026-03-15 |

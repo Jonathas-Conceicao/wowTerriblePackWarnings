@@ -32,8 +32,8 @@ Requirements for initial proof of concept. Each maps to roadmap phases.
 ### UI
 
 - [x] **UI-01**: Scrollable pack list grouped by dungeon area
-- [ ] **UI-02**: Click-to-select a pack from the list
-- [ ] **UI-03**: Visual indicator showing which pack is currently active/selected
+- [x] **UI-02**: Click-to-select a pack from the list
+- [x] **UI-03**: Visual indicator showing which pack is currently active/selected
 - [x] **UI-04**: Slash command `/tpw` to open the addon
 
 ## v2 Requirements
@@ -90,8 +90,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CMBT-02 | Phase 2 | Complete |
 | CMBT-03 | Phase 2 | Complete |
 | UI-01 | Phase 3 | Complete |
-| UI-02 | Phase 3 | Pending |
-| UI-03 | Phase 3 | Pending |
+| UI-02 | Phase 3 | Complete |
+| UI-03 | Phase 3 | Complete |
 | UI-04 | Phase 3 | Complete |
 
 **Coverage:**
