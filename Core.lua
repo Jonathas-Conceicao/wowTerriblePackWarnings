@@ -3,6 +3,7 @@ local addonName, ns = ...
 -- Initialize PackDatabase at module scope so data files can populate it
 -- during load time (before ADDON_LOADED fires)
 ns.PackDatabase = ns.PackDatabase or {}
+ns.AbilityDB = ns.AbilityDB or {}
 
 -- Event frame
 local frame = CreateFrame("Frame")
