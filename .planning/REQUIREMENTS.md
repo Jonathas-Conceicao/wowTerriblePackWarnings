@@ -49,22 +49,22 @@ Requirements for MDT import and dynamic route support.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-10 | TBD | Pending |
-| DATA-11 | TBD | Pending |
-| DATA-12 | TBD | Pending |
-| IMPORT-01 | TBD | Pending |
-| IMPORT-02 | TBD | Pending |
-| IMPORT-03 | TBD | Pending |
-| IMPORT-04 | TBD | Pending |
-| UI-09 | TBD | Pending |
-| UI-10 | TBD | Pending |
-| UI-11 | TBD | Pending |
-| UI-12 | TBD | Pending |
+| DATA-10 | Phase 8 | Pending |
+| DATA-11 | Phase 8 | Pending |
+| DATA-12 | Phase 9 | Pending |
+| IMPORT-01 | Phase 8 | Pending |
+| IMPORT-02 | Phase 9 | Pending |
+| IMPORT-03 | Phase 9 | Pending |
+| IMPORT-04 | Phase 9 | Pending |
+| UI-09 | Phase 10 | Pending |
+| UI-10 | Phase 10 | Pending |
+| UI-11 | Phase 10 | Pending |
+| UI-12 | Phase 10 | Pending |
 
 **Coverage:**
 - v0.0.3 requirements: 11 total
-- Mapped to phases: 0
-- Unmapped: 11
+- Mapped to phases: 11
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-16*
