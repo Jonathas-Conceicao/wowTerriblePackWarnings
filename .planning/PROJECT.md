@@ -45,7 +45,14 @@ When a player imports a route and pulls, they see accurate, timed ability warnin
 
 ### Active
 
-(None -- next milestone will define new requirements)
+- [ ] README, TOC project IDs, icon texture
+- [ ] CI/release script alignment with TerribleBuffTracker
+- [ ] Debug logging and commands removed
+- [ ] Code cleanup: unused vars, single-use functions, hot path audit
+
+## Current Milestone: v0.0.4 Cleanup and Small Improvements
+
+**Goal:** Polish the addon for broader testing — README, project IDs, CI alignment, debug removal, code cleanup.
 
 ### Out of Scope
 
@@ -84,4 +91,4 @@ When a player imports a route and pulls, they see accurate, timed ability warnin
 | Boss pull highlighting (dark red) | Quick visual identification of boss encounters | Good |
 
 ---
-*Last updated: 2026-03-16 after v0.0.3 milestone*
+*Last updated: 2026-03-16 after v0.0.4 milestone start*
