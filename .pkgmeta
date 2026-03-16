@@ -3,7 +3,7 @@ package-as: TerriblePackWarnings
 externals:
   Libs/LibStub: https://repos.curseforge.com/wow/libstub/trunk
   Libs/AceSerializer-3.0: https://repos.curseforge.com/wow/ace3/trunk/AceSerializer-3.0
-  Libs/LibDeflate: https://repos.curseforge.com/wow/libdeflate/trunk
+  # LibDeflate bundled directly (no CurseForge SVN repo available)
 
 ignore:
   - .git
