@@ -47,7 +47,10 @@ See: `.planning/milestones/v0.0.2-ROADMAP.md` for full details.
   1. Each npcID in the database maps to its abilities with cooldown, label, tts, and mobClass fields
   2. Multiple npcIDs can reference the same ability spell (shared ability support works)
   3. An MDT export string pasted in-game decodes into a Lua table without errors
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 08-01-PLAN.md — AbilityDB data rewrite and library bundling
+- [ ] 08-02-PLAN.md — MDT decode utility and /tpw decode command
 
 ### Phase 9: Import Pipeline
 **Goal**: Decoded MDT data produces a fully populated PackDatabase with per-pull ability warnings ready for combat
@@ -84,6 +87,6 @@ See: `.planning/milestones/v0.0.2-ROADMAP.md` for full details.
 | 5. Custom Spell Icon Display | v0.0.2 | 2/2 | Complete | 2026-03-15 |
 | 6. Nameplate Detection and Mob Lifecycle | v0.0.2 | 2/2 | Complete | 2026-03-15 |
 | 7. Complete Dungeon Route | v0.0.2 | 2/2 | Complete | 2026-03-16 |
-| 8. Ability Database and Decode Library | v0.0.3 | 0/? | Not started | - |
+| 8. Ability Database and Decode Library | v0.0.3 | 0/2 | In progress | - |
 | 9. Import Pipeline | v0.0.3 | 0/? | Not started | - |
 | 10. Route UI Overhaul | v0.0.3 | 0/? | Not started | - |
