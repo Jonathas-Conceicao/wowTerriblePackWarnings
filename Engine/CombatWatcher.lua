@@ -57,12 +57,26 @@ function CombatWatcher:SelectPack(dungeonKey, packIndex)
         return
     end
 
+    -- Stop any active scanner/timers for the previous pack
+    ns.NameplateScanner:Stop()
+    ns.Scheduler:Stop()
+
     selectedDungeon  = dungeonKey
     currentPackIndex = packIndex
-    state            = "ready"
+
+    -- If already in combat, start scanning for the new pack immediately
+    if UnitAffectingCombat("player") then
+        local pack = dungeon[packIndex]
+        if pack then
+            ns.NameplateScanner:Start(pack)
+        end
+        state = "active"
+    else
+        state = "ready"
+    end
 
     if ns.db and ns.db.debug then
-        print("|cff00ccffTPW|r Selected: " .. dungeon[packIndex].displayName)
+        print("|cff00ccffTPW|r Selected: " .. dungeon[packIndex].displayName .. " (" .. state .. ")")
     end
     if ns.PackUI and ns.PackUI.Refresh then ns.PackUI:Refresh() end
 end
