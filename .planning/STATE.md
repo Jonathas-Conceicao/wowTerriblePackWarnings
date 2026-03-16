@@ -1,19 +1,3 @@
----
-gsd_state_version: 1.0
-milestone: v0.0
-milestone_name: milestone
-status: executing
-stopped_at: Completed 10-01-PLAN.md
-last_updated: "2026-03-16T05:22:08.000Z"
-last_activity: 2026-03-16 -- Completed 09-01 DungeonEnemies data and import pipeline
-progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 5
-  completed_plans: 5
-  percent: 95
----
-
 # Project State
 
 ## Project Reference
@@ -21,36 +5,41 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-16)
 
 **Core value:** When a player imports a route and pulls, they see accurate, timed ability warnings via custom spell icon display.
-**Current focus:** Phase 9 - Import Pipeline
+**Current focus:** Phase 11 - Documentation and CI
 
 ## Current Position
 
-Phase: 9 of 10 (Import Pipeline)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-03-16 -- Completed 09-01 DungeonEnemies data and import pipeline
+Phase: 11 of 12 (Documentation and CI)
+Plan: 0 of ? in current phase
+Status: Ready to plan
+Last activity: 2026-03-16 -- v0.0.4 roadmap created
 
-Progress: [██████████] 95% (18/19 plans complete across all milestones)
+Progress: [██████████████████░░] 90% (19/19 prior plans complete, 0/? v0.0.4 plans)
+
+## Performance Metrics
+
+**Velocity:**
+- Total plans completed: 19 (across v0.0.1-v0.0.3)
+- Phases completed: 10
+- Milestones shipped: 3
 
 ## Accumulated Context
 
 ### Decisions
 
-- [v0.0.3]: Abilities keyed by npcID for MDT route matching; runtime detection still uses UnitClass
-- [v0.0.3]: Bundle LibDeflate + AceSerializer following MDT's own pattern
-- [v0.0.3]: Paste-only import (no MDT addon API integration for v0.0.3)
-- [v0.0.3]: NPC portraits in pack UI (round icons per mob)
-- [Phase 08]: Sourced LibStub/AceSerializer from MethodDungeonTools repo; duplicated shared abilities by value
-- [Phase 08]: Followed MDT StringToTable pattern exactly for decode chain; legacy format rejected with error
-- [Phase 09]: Guarded ns.AbilityDB with nil check; nil-safe Stop calls in Import.Clear
-- [Phase 09]: Defensive guard on RestoreFromSaved call; auto-expand new dungeon keys in Refresh
-- [Phase 10]: Portrait fallback uses AbilityDB mobClass class icons when displayId missing
-- [Phase 10]: Import popup is separate Frame (not StaticPopup) to support MDT strings >255 chars
+Decisions are logged in PROJECT.md Key Decisions table.
+Recent decisions affecting current work:
+
+- [v0.0.3]: Paste-only import (no slash command) -- WoW chat buffer too small
+- [v0.0.3]: Save processed pack data (not raw MDT string) -- instant load
+- [v0.0.4]: Two-phase cleanup: docs/CI first, then code cleanup
 
 ### Roadmap Evolution
 
-- Phase 7 added: complete dungeon route (v0.0.2)
-- Phases 8-10 added: v0.0.3 MDT Import roadmap
+- Phases 1-3: v0.0.1 MVP (shipped)
+- Phases 4-7: v0.0.2 Display Rework (shipped)
+- Phases 8-10: v0.0.3 MDT Import (shipped)
+- Phases 11-12: v0.0.4 Cleanup and Polish (current)
 
 ### Pending Todos
 
@@ -58,10 +47,10 @@ None yet.
 
 ### Blockers/Concerns
 
-- LibDeflate and AceSerializer need bundling (constraint says no external libraries, but MDT import requires these decoders -- following MDT's own bundling pattern)
+None.
 
 ## Session Continuity
 
-Last session: 2026-03-16T04:42:10.305Z
-Stopped at: Completed 10-01-PLAN.md
+Last session: 2026-03-16
+Stopped at: v0.0.4 roadmap created, ready to plan Phase 11
 Resume file: None

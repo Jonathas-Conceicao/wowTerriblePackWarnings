@@ -5,6 +5,7 @@
 - v0.0.1 MVP Proof of Concept -- Phases 1-3 (shipped 2026-03-15)
 - v0.0.2 Display Rework -- Phases 4-7 (shipped 2026-03-16)
 - v0.0.3 MDT Import -- Phases 8-10 (shipped 2026-03-16)
+- v0.0.4 Cleanup and Polish -- Phases 11-12 (in progress)
 
 ## Phases
 
@@ -42,6 +43,35 @@ See: `.planning/milestones/v0.0.3-ROADMAP.md` for full details.
 
 </details>
 
+### v0.0.4 Cleanup and Polish (In Progress)
+
+- [ ] **Phase 11: Documentation and CI** - README, TOC metadata, release workflow, and release script
+- [ ] **Phase 12: Code Cleanup** - Remove debug artifacts, unused code, and audit hot paths
+
+## Phase Details
+
+### Phase 11: Documentation and CI
+**Goal**: The addon is presentable and releasable -- README describes the project, TOC has correct project IDs, and CI can produce a release
+**Depends on**: Phase 10
+**Requirements**: DOC-01, DOC-02, CI-01, CI-02
+**Success Criteria** (what must be TRUE):
+  1. A user visiting the GitHub repo sees a README with project description, WIP notice, feature list, usage instructions, gallery screenshot, known issues, AI disclosure, and license
+  2. The TOC file contains CurseForge project ID 1487612, Wago ID ZKbxadN1, and references a blp icon texture
+  3. The GitHub Actions release workflow and .pkgmeta match TerribleBuffTracker patterns (secrets, ignore list, package-as)
+  4. Running scripts/release.bat produces a working release package end-to-end
+**Plans**: TBD
+
+### Phase 12: Code Cleanup
+**Goal**: Production code contains no debug artifacts, no dead code, and hot paths are documented for future optimization
+**Depends on**: Phase 11
+**Requirements**: CLEAN-01, CLEAN-02, CLEAN-03, CLEAN-04
+**Success Criteria** (what must be TRUE):
+  1. No DEBUG flags or dbg() calls exist anywhere in the shipped Lua files
+  2. The /tpw slash command handler has no show or hide debug subcommands
+  3. No unused global variables or single-use wrapper functions remain where inlining is clearer
+  4. The 0.25s nameplate scanner tick and any other game-loop hot paths have inline comments documenting their cost and review status
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -56,3 +86,5 @@ See: `.planning/milestones/v0.0.3-ROADMAP.md` for full details.
 | 8. Ability Database and Decode Library | v0.0.3 | 2/2 | Complete | 2026-03-16 |
 | 9. Import Pipeline | v0.0.3 | 2/2 | Complete | 2026-03-16 |
 | 10. Route UI Overhaul | v0.0.3 | 1/1 | Complete | 2026-03-16 |
+| 11. Documentation and CI | v0.0.4 | 0/? | Not started | - |
+| 12. Code Cleanup | v0.0.4 | 0/? | Not started | - |
