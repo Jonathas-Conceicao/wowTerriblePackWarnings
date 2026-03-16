@@ -4,20 +4,65 @@ local addonName, ns = ...
 ns.PackUI = {}
 local PackUI = ns.PackUI
 
--- Human-readable dungeon display names
-local DUNGEON_NAMES = {
-    windrunner_spire = "Windrunner Spire",
-    imported = "Imported Route",
+------------------------------------------------------------------------
+-- Constants
+------------------------------------------------------------------------
+local ROW_HEIGHT = 28
+local PORTRAIT_SIZE = 22
+local MAX_PORTRAITS = 8
+
+------------------------------------------------------------------------
+-- Lookup Tables (built once at file scope)
+------------------------------------------------------------------------
+local npcIdToDisplayId = {}
+for dungeonIdx, enemies in pairs(ns.DungeonEnemies) do
+    for _, enemy in pairs(enemies) do
+        if enemy.id and enemy.displayId then
+            npcIdToDisplayId[enemy.id] = enemy.displayId
+        end
+    end
+end
+
+local npcIdToClass = {}
+for npcID, entry in pairs(ns.AbilityDB or {}) do
+    if entry.mobClass then
+        npcIdToClass[npcID] = entry.mobClass
+    end
+end
+
+local CLASS_ICON = {
+    WARRIOR     = "Interface\\Icons\\ClassIcon_Warrior",
+    PALADIN     = "Interface\\Icons\\ClassIcon_Paladin",
+    HUNTER      = "Interface\\Icons\\ClassIcon_Hunter",
+    ROGUE       = "Interface\\Icons\\ClassIcon_Rogue",
+    PRIEST      = "Interface\\Icons\\ClassIcon_Priest",
+    DEATHKNIGHT = "Interface\\Icons\\ClassIcon_DeathKnight",
+    SHAMAN      = "Interface\\Icons\\ClassIcon_Shaman",
+    MAGE        = "Interface\\Icons\\ClassIcon_Mage",
+    WARLOCK     = "Interface\\Icons\\ClassIcon_Warlock",
+    MONK        = "Interface\\Icons\\ClassIcon_Monk",
+    DRUID       = "Interface\\Icons\\ClassIcon_Druid",
+    DEMONHUNTER = "Interface\\Icons\\ClassIcon_DemonHunter",
+    EVOKER      = "Interface\\Icons\\ClassIcon_Evoker",
 }
 
--- Accordion state: which dungeons are expanded
-local expandedDungeons = {}
-
--- Row pool
-local rows = {}
-local ROW_HEIGHT = 22
-local HEADER_INDENT = 8
-local PACK_INDENT = 24
+--- Set the best available portrait for an NPC.
+-- Fallback chain: creatureDisplayID -> class icon from AbilityDB -> question mark
+local function GetPortraitTexture(tex, npcID)
+    local displayId = npcIdToDisplayId[npcID]
+    if displayId and displayId > 0 then
+        SetPortraitTextureFromCreatureDisplayID(tex, displayId)
+        return
+    end
+    -- Fallback: class icon from AbilityDB mobClass
+    local mobClass = npcIdToClass[npcID]
+    if mobClass and CLASS_ICON[mobClass] then
+        tex:SetTexture(CLASS_ICON[mobClass])
+        return
+    end
+    -- Last resort: question mark
+    tex:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+end
 
 ------------------------------------------------------------------------
 -- Main Frame
@@ -45,63 +90,77 @@ frame:SetScript("OnDragStop", function(self)
 end)
 
 ------------------------------------------------------------------------
--- Scroll Frame (simple scroll child approach)
+-- Header (dungeon name + pull count)
+------------------------------------------------------------------------
+local header = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+header:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -28)
+header:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -14, -28)
+header:SetJustifyH("LEFT")
+
+local function UpdateHeader()
+    if ns.db and ns.db.importedRoute then
+        local route = ns.db.importedRoute
+        local pullCount = route.packs and #route.packs or 0
+        header:SetText(route.dungeonName .. " -- " .. pullCount .. " pulls")
+        header:SetTextColor(1, 0.82, 0)
+    else
+        header:SetText("No route imported")
+        header:SetTextColor(0.6, 0.6, 0.6)
+    end
+end
+
+------------------------------------------------------------------------
+-- Scroll Frame (anchored below header, above footer button area)
 ------------------------------------------------------------------------
 local scrollFrame = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
-scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -30)
-scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -34, 10)
+scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -46)
+scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -34, 35)
 
 local scrollChild = CreateFrame("Frame", nil, scrollFrame)
 scrollChild:SetWidth(250)
 scrollFrame:SetScrollChild(scrollChild)
 
 ------------------------------------------------------------------------
--- Row Creation
+-- Pull Row Creation
 ------------------------------------------------------------------------
-local function CreateRow(parent, index)
+local rows = {}
+
+local function CreatePullRow(parent)
     local row = CreateFrame("Button", nil, parent)
     row:SetHeight(ROW_HEIGHT)
+
+    -- Background for state coloring
+    row.bg = row:CreateTexture(nil, "BACKGROUND")
+    row.bg:SetAllPoints()
+    row.bg:SetColorTexture(0, 0, 0, 0)
 
     -- Hover highlight
     local highlight = row:CreateTexture(nil, "HIGHLIGHT")
     highlight:SetAllPoints()
     highlight:SetColorTexture(1, 1, 1, 0.1)
 
-    -- Text label
-    row.text = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    row.text:SetPoint("LEFT", row, "LEFT", 4, 0)
-    row.text:SetPoint("RIGHT", row, "RIGHT", -4, 0)
-    row.text:SetJustifyH("LEFT")
+    -- Pull number label
+    row.pullNum = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    row.pullNum:SetPoint("LEFT", row, "LEFT", 4, 0)
+    row.pullNum:SetWidth(20)
+    row.pullNum:SetJustifyH("CENTER")
 
-    return row
-end
-
-------------------------------------------------------------------------
--- Row Appearance (state-based styling)
-------------------------------------------------------------------------
-local function UpdateRowAppearance(row, data)
-    local curState, activeDungeon, activePackIndex = ns.CombatWatcher:GetState()
-    local sameDungeon = (data.dungeonKey == activeDungeon)
-
-    local prefix = "   "
-    local r, g, b = 1, 1, 1
-
-    if sameDungeon and data.packIndex == activePackIndex and curState == "active" then
-        -- Active / fighting
-        prefix = "   |TInterface\\LFGFrame\\BattlenetWorking0:14|t "
-        r, g, b = 1, 0.5, 0
-    elseif sameDungeon and data.packIndex == activePackIndex and (curState == "ready" or curState == "end") then
-        -- Selected / ready
-        prefix = "   |TInterface\\Buttons\\UI-CheckBox-Check:14|t "
-        r, g, b = 0, 1, 0
-    elseif sameDungeon and activePackIndex and data.packIndex < activePackIndex then
-        -- Completed
-        prefix = "   |TInterface\\Buttons\\UI-CheckBox-Check:14|t "
-        r, g, b = 0.5, 0.5, 0.5
+    -- Portrait textures (circular masked)
+    row.portraits = {}
+    for i = 1, MAX_PORTRAITS do
+        local tex = row:CreateTexture(nil, "ARTWORK")
+        tex:SetSize(PORTRAIT_SIZE, PORTRAIT_SIZE)
+        if i == 1 then
+            tex:SetPoint("LEFT", row.pullNum, "RIGHT", 4, 0)
+        else
+            tex:SetPoint("LEFT", row.portraits[i - 1], "RIGHT", 2, 0)
+        end
+        tex:SetMask("Interface\\CHARACTERFRAME\\TempPortraitAlphaMask")
+        tex:Hide()
+        row.portraits[i] = tex
     end
 
-    row.text:SetText(prefix .. data.displayName)
-    row.text:SetTextColor(r, g, b)
+    return row
 end
 
 ------------------------------------------------------------------------
@@ -113,72 +172,63 @@ local function PopulateList()
         row:Hide()
     end
 
-    local yOffset = 0
-    local rowIndex = 0
-
-    for dungeonKey, packs in pairs(ns.PackDatabase) do
-        -- Dungeon header row
-        rowIndex = rowIndex + 1
-        local headerRow = rows[rowIndex]
-        if not headerRow then
-            headerRow = CreateRow(scrollChild, rowIndex)
-            rows[rowIndex] = headerRow
-        end
-
-        headerRow:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", HEADER_INDENT, -yOffset)
-        headerRow:SetPoint("TOPRIGHT", scrollChild, "TOPRIGHT", -HEADER_INDENT, -yOffset)
-
-        local displayName = DUNGEON_NAMES[dungeonKey] or dungeonKey
-        local isExpanded = expandedDungeons[dungeonKey]
-        local arrow = isExpanded and "|TInterface\\Buttons\\UI-MinusButton-UP:14|t " or "|TInterface\\Buttons\\UI-PlusButton-UP:14|t "
-
-        -- Color active dungeon gold
-        local _, activeDungeon = ns.CombatWatcher:GetState()
-        if dungeonKey == activeDungeon then
-            headerRow.text:SetText(arrow .. displayName)
-            headerRow.text:SetTextColor(1, 0.82, 0)
-        else
-            headerRow.text:SetText(arrow .. displayName)
-            headerRow.text:SetTextColor(1, 1, 1)
-        end
-
-        headerRow:SetScript("OnClick", function()
-            expandedDungeons[dungeonKey] = not expandedDungeons[dungeonKey]
-            PopulateList()
-        end)
-        headerRow:Show()
-        yOffset = yOffset + ROW_HEIGHT
-
-        -- Pack rows (if expanded)
-        if isExpanded then
-            for i, pack in ipairs(packs) do
-                rowIndex = rowIndex + 1
-                local packRow = rows[rowIndex]
-                if not packRow then
-                    packRow = CreateRow(scrollChild, rowIndex)
-                    rows[rowIndex] = packRow
-                end
-
-                packRow:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", PACK_INDENT, -yOffset)
-                packRow:SetPoint("TOPRIGHT", scrollChild, "TOPRIGHT", -HEADER_INDENT, -yOffset)
-
-                local data = {
-                    dungeonKey  = dungeonKey,
-                    packIndex   = i,
-                    displayName = pack.displayName,
-                }
-                UpdateRowAppearance(packRow, data)
-
-                packRow:SetScript("OnClick", function()
-                    ns.CombatWatcher:SelectPack(dungeonKey, i)
-                end)
-                packRow:Show()
-                yOffset = yOffset + ROW_HEIGHT
-            end
-        end
+    local packs = ns.PackDatabase["imported"]
+    if not packs then
+        scrollChild:SetHeight(1)
+        return
     end
 
-    -- Set scroll child height
+    local curState, activeDungeon, activePackIndex = ns.CombatWatcher:GetState()
+    local yOffset = 0
+
+    for i, pack in ipairs(packs) do
+        local row = rows[i]
+        if not row then
+            row = CreatePullRow(scrollChild)
+            rows[i] = row
+        end
+
+        row:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 0, -yOffset)
+        row:SetPoint("TOPRIGHT", scrollChild, "TOPRIGHT", 0, -yOffset)
+
+        -- Pull number
+        row.pullNum:SetText(tostring(i))
+
+        -- Populate portraits from pack.npcIDs
+        local npcIDs = pack.npcIDs or {}
+        for p = 1, MAX_PORTRAITS do
+            local tex = row.portraits[p]
+            if p <= #npcIDs then
+                GetPortraitTexture(tex, npcIDs[p])
+                tex:Show()
+            else
+                tex:Hide()
+            end
+        end
+
+        -- State coloring
+        local sameDungeon = (activeDungeon == "imported")
+        if sameDungeon and i == activePackIndex and curState == "active" then
+            row.bg:SetColorTexture(1, 0.5, 0, 0.25)       -- orange: active/fighting
+        elseif sameDungeon and i == activePackIndex then
+            row.bg:SetColorTexture(0, 1, 0, 0.15)          -- green: selected
+        elseif sameDungeon and activePackIndex and i < activePackIndex then
+            row.bg:SetColorTexture(0.2, 0.2, 0.2, 0.3)    -- grey: completed
+        else
+            row.bg:SetColorTexture(0, 0, 0, 0)             -- transparent
+        end
+
+        -- Click to select pack
+        local packIndex = i
+        row:SetScript("OnClick", function()
+            ns.CombatWatcher:SelectPack("imported", packIndex)
+            ns.PackUI:Refresh()
+        end)
+
+        row:Show()
+        yOffset = yOffset + ROW_HEIGHT
+    end
+
     scrollChild:SetHeight(math.max(yOffset, 1))
 end
 
@@ -209,22 +259,13 @@ function PackUI.Hide()
 end
 
 function PackUI:Refresh()
-    -- Auto-expand newly added dungeon keys (e.g. imported route on restore)
-    for dungeonKey in pairs(ns.PackDatabase) do
-        if expandedDungeons[dungeonKey] == nil then
-            expandedDungeons[dungeonKey] = true
-        end
-    end
+    UpdateHeader()
     PopulateList()
 end
 
 ------------------------------------------------------------------------
 -- Initialize
 ------------------------------------------------------------------------
--- Expand all dungeons by default
-for dungeonKey in pairs(ns.PackDatabase) do
-    expandedDungeons[dungeonKey] = true
-end
-
+UpdateHeader()
 PopulateList()
 RestorePosition()
