@@ -14,5 +14,7 @@ Engine\NameplateScanner.lua
 Engine\CombatWatcher.lua
 Display\IconDisplay.lua
 Import\Decode.lua
+Data\DungeonEnemies.lua
 Data\WindrunnerSpire.lua
+Import\Pipeline.lua
 UI\PackFrame.lua

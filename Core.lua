@@ -23,6 +23,11 @@ frame:SetScript("OnEvent", function(self, event, ...)
         end
         ns.db = TerriblePackWarningsDB
 
+        -- Restore imported route from SavedVariables
+        if ns.Import and ns.Import.RestoreFromSaved then
+            ns.Import.RestoreFromSaved()
+        end
+
         print("|cff00ccffTerriblePackWarnings|r loaded. Type |cff00ff00/tpw|r to configure.")
         self:UnregisterEvent("ADDON_LOADED")
 
@@ -113,8 +118,16 @@ SlashCmdList["TERRIBLEPACKWARNINGS"] = function(msg)
             ns.IconDisplay.CancelIcon("debug_" .. spellID)
             print("|cff00ccffTPW|r Hidden spell " .. spellID)
         end
+    elseif cmd == "import" then
+        if arg == "" then
+            print("|cff00ccffTPW|r Usage: /tpw import <MDT export string>")
+        else
+            ns.Import.RunFromString(arg)
+        end
+    elseif cmd == "clear" then
+        ns.Import.Clear()
     elseif cmd == "help" then
-        print("|cff00ccffTPW|r Commands: select <dungeon>, start [pack#], stop, status, decode <string>, help")
+        print("|cff00ccffTPW|r Commands: select <dungeon>, start [pack#], stop, status, import <string>, clear, decode <string>, help")
     else
         -- Bare /tpw or unrecognized command — toggle pack selection window
         if ns.PackUI and ns.PackUI.Toggle then ns.PackUI.Toggle() end
