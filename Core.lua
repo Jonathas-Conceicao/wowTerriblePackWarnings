@@ -86,6 +86,23 @@ SlashCmdList["TERRIBLEPACKWARNINGS"] = function(msg)
             ns.IconDisplay.ShowIcon("debug_" .. spellID, spellID, tts, 30, label)
             print("|cff00ccffTPW|r Showing spell " .. spellID .. " for 30s")
         end
+    elseif cmd == "decode" then
+        if arg == "" then
+            print("|cff00ccffTPW|r Usage: /tpw decode <MDT export string>")
+        else
+            local ok, result = ns.MDTDecode(arg)
+            if ok then
+                print("|cff00ccffTPW|r Decode OK. Type: " .. type(result))
+                if type(result) == "table" then
+                    -- Print basic info about decoded data
+                    local count = 0
+                    for _ in pairs(result) do count = count + 1 end
+                    print("|cff00ccffTPW|r  Top-level keys: " .. count)
+                end
+            else
+                print("|cff00ccffTPW|r Decode failed: " .. tostring(result))
+            end
+        end
     elseif cmd == "hide" then
         -- Debug: hide a spell icon by spellID
         local spellID = tonumber(arg)
@@ -97,7 +114,7 @@ SlashCmdList["TERRIBLEPACKWARNINGS"] = function(msg)
             print("|cff00ccffTPW|r Hidden spell " .. spellID)
         end
     elseif cmd == "help" then
-        print("|cff00ccffTPW|r Commands: select <dungeon>, start [pack#], stop, status, help")
+        print("|cff00ccffTPW|r Commands: select <dungeon>, start [pack#], stop, status, decode <string>, help")
     else
         -- Bare /tpw or unrecognized command — toggle pack selection window
         if ns.PackUI and ns.PackUI.Toggle then ns.PackUI.Toggle() end
