@@ -1,5 +1,26 @@
 # Milestones
 
+## v0.0.3 MDT Import (Shipped: 2026-03-16)
+
+**Phases completed:** 3 phases, 5 plans
+**Code:** 1,812 lines of Lua across 10 files (+ 3 bundled libraries)
+**Timeline:** 2026-03-16
+
+**Key accomplishments:**
+- npcID-keyed ability database replacing hardcoded pack data — abilities linked to mobs, not packs
+- MDT export string decoding via bundled LibDeflate + AceSerializer (following MDT's own pattern)
+- Import pipeline: decoded MDT preset → pull extraction → npcID → AbilityDB matching → dynamic PackDatabase population
+- Route persistence via SavedVariables (processed pack data, instant load)
+- MDT-style pack UI: numbered pull rows with round NPC portrait icons (circular mask, 22px)
+- Import popup editbox for pasting MDT/Keystone.guru strings, Clear with confirmation dialog
+- Alternating row stripes, boss pull dark red highlighting, auto-scroll to active pull
+- DungeonEnemies data for all 9 Midnight M+ dungeons (206 mobs, 38 bosses flagged)
+- Portrait fallback chain: displayId → class icon from AbilityDB → question mark
+
+**Requirements:** 11/11 v0.0.3 requirements completed (DATA-10/11/12, IMPORT-01/02/03/04, UI-09/10/11/12)
+
+---
+
 ## v0.0.2 Display Rework (Shipped: 2026-03-16)
 
 **Phases completed:** 4 phases, 7 plans

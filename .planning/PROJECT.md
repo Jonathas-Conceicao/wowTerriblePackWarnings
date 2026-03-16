@@ -2,88 +2,86 @@
 
 ## What This Is
 
-A World of Warcraft addon for Midnight (12+ API) that brings ability warnings to dungeon trash packs in Mythic+ content. Players select a pack from a UI window, and the addon displays spell icon squares with cooldown sweeps, TTS callouts, and per-mob timer instances detected via nameplate scanning -- giving competitive M+ players the same threat awareness on trash that they get on bosses.
+A World of Warcraft addon for Midnight (12+ API) that brings ability warnings to dungeon trash packs in Mythic+ content. Players import an MDT/Keystone.guru route, and the addon displays spell icon squares with cooldown sweeps, TTS callouts, and per-mob timer instances detected via nameplate scanning -- giving competitive M+ players the same threat awareness on trash that they get on bosses.
 
 ## Core Value
 
-When a player selects a pack and pulls, they see accurate, timed ability warnings for that pack's dangerous mob abilities via custom spell icon display with per-mob detection.
+When a player imports a route and pulls, they see accurate, timed ability warnings for that pack's dangerous mob abilities via custom spell icon display with per-mob detection.
 
 ## Current State
 
-**Shipped:** v0.0.2 (2026-03-16)
-**Code:** 1,239 lines of Lua across 7 files
-**Tech stack:** Plain Lua, WoW FrameXML templates, C_VoiceChat TTS, nameplate scanning
+**Shipped:** v0.0.3 (2026-03-16)
+**Code:** 1,812 lines of Lua across 10 files + 3 bundled libraries
+**Tech stack:** Plain Lua, WoW FrameXML, C_VoiceChat TTS, nameplate scanning, LibDeflate + AceSerializer
 
 **What works:**
-- Full Windrunner Spire route: 17 packs with 4 tracked abilities
-- Custom spell icon display: horizontal squares with cooldown sweep, integer countdown, red glow at 5s
-- Nameplate-based mob detection: 0.25s poll, UnitClass matching, per-mob independent timers
-- Text-to-speech warnings with custom short callouts per ability
-- Icon labels and spell tooltip on mouseover
-- Pack selection UI with accordion list, combat state indicators, live refresh
-- Zone auto-detection, auto-advance through packs, combat lifecycle management
+- MDT/Keystone.guru route import via UI paste popup
+- npcID-keyed ability database with dynamic pack building from imported routes
+- MDT-style pack UI: numbered pulls with round NPC portrait icons, boss highlighting
+- Custom spell icon display: horizontal squares with cooldown sweep, TTS, red glow
+- Nameplate-based mob detection: 0.25s poll, UnitClass matching, per-mob timers
+- Route persistence via SavedVariables, auto-scroll to active pull
+- DungeonEnemies data for all 9 Midnight M+ dungeons
 
 ## Requirements
 
 ### Validated
 
 - Predefined pack/mob database for one Midnight dungeon -- v0.0.1
-- Pack selection UI (accordion list grouped by dungeon) -- v0.0.1
+- Pack selection UI -- v0.0.1
 - Ability timer system (cooldown-based, auto-repeating) -- v0.0.1
 - Addon structure (Lua, TOC, SavedVariables) -- v0.0.1
-- Custom spell icon display (horizontal squares, cooldown sweep, red glow) -- v0.0.2
-- Nameplate-based mob detection (filter by UnitClass) -- v0.0.2
-- Multi-instance timed tracking (one timer per mob of matching class) -- v0.0.2
+- Custom spell icon display (cooldown sweep, red glow) -- v0.0.2
+- Nameplate-based mob detection (UnitClass) -- v0.0.2
+- Multi-instance timed tracking -- v0.0.2
 - Text-to-speech pre-warnings -- v0.0.2
-- Untimed skill support (icon-only, no countdown) -- v0.0.2
-- Full dungeon route with 17 packs -- v0.0.2
+- Untimed skill support -- v0.0.2
 - Icon labels and spell tooltip -- v0.0.2
+- MDT route import via paste string -- v0.0.3
+- npcID-keyed ability database -- v0.0.3
+- Dynamic pack building from imported routes -- v0.0.3
+- MDT-style pull UI with NPC portraits -- v0.0.3
+- Import/Clear route management -- v0.0.3
 
 ### Active
 
-- [ ] MDT route import via paste string (LibDeflate + AceSerializer decoding)
-- [ ] Ability database keyed by npcID for dynamic pack building
-- [ ] UI overhaul: indexed pulls with round NPC portrait icons
-- [ ] Import/Clear buttons for route management
-
-## Current Milestone: v0.0.3 MDT Import
-
-**Goal:** Import MDT/Keystone.guru route strings to dynamically build pack data, replacing hardcoded dungeon routes. Overhaul pack UI with MDT-style pull display and NPC portraits.
+(None -- next milestone will define new requirements)
 
 ### Out of Scope
+
 - Combat log event parsing -- blocked by Midnight API restrictions
 - Auto-detection of current pack without route addon -- no reliable API
 - Community-contributed warning profiles -- future milestone
-- Multiple dungeon support -- v0.0.2 covers Windrunner Spire only
+- Route editing within TPW -- editing stays in MDT/Keystone.guru
 
 ## Context
 
 - **Platform:** World of Warcraft Midnight expansion (12+ API)
-- **API constraints:** Midnight restricts combat log reading and some real-time detection APIs. Nameplate scanning via C_NamePlate.GetNamePlates + UnitClass + UnitAffectingCombat works for mob detection.
-- **Display system:** Custom spell icon squares (replaced DBM/ET/RaidNotice in v0.0.2). Cooldown sweep via CooldownFrameTemplate. TTS via C_VoiceChat.SpeakText.
-- **Architecture:** Addon renders its own icon display and uses nameplate scanning for mob detection. No external addon dependencies.
-- **Related project:** MethodDungeonTools (local at C:\Users\jonat\Repositories\MethodDungeonTools) -- potential future integration target.
+- **API constraints:** Midnight restricts combat log reading. Nameplate scanning works for mob detection.
+- **Display system:** Custom spell icon squares with CooldownFrameTemplate sweep. TTS via C_VoiceChat.SpeakText.
+- **Import system:** LibDeflate + AceSerializer decode MDT export strings. DungeonEnemies data for 9 dungeons provides npcID → displayId mapping.
+- **Architecture:** Self-contained display + nameplate detection. Only external dependency is bundled decode libraries (LibStub pattern).
 
 ## Constraints
 
 - **API:** Midnight 12+ addon API only
-- **Framework:** Plain Lua + XML, no external libraries (Ace3, LibStub, etc.)
-- **Data:** Ability cooldown timers are approximate/predefined, not derived from real-time combat events
+- **Framework:** Plain Lua + XML + bundled libs (LibDeflate, AceSerializer via LibStub)
+- **Data:** Ability cooldown timers are approximate/predefined
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Manual pack selection over auto-detection | Midnight API blocks combat log scanning | Good -- zone auto-detect as bonus |
-| Predefined cooldown timers over cast bar triggers | Cast bar detection unavailable | Good -- predictable and consistent |
-| Plain Lua + XML, no libraries | Keep it simple, avoid dependency complexity | Good -- 1,239 LOC, no dependencies |
-| Custom icon display over DBM/ET adapters | DBM not universal, ET only works in boss fights | Good -- fully self-contained display |
-| Nameplate UnitClass for mob detection | NPC IDs blocked, class-based detection works | Good -- reliably detects mob types |
-| 0.25s poll for nameplate scanning | Event-based unreliable for combat state changes | Good -- responsive without performance issues |
-| Cleanup on combat end only (no mid-combat removal) | Camera turns cause false nameplate removals | Good -- avoids ghost timer issues |
-| Count-based mob tracking vs event-based | Compare visible count against tracked timers | Good -- prevents camera-turn duplicates |
-| TTS via C_VoiceChat.SpeakText | Native API, no bundled sound files needed | Good -- works in Midnight |
-| Simple red border glow (4 edge textures) | Avoid LibCustomGlow dependency | Good -- lightweight, no library needed |
+| Manual pack selection over auto-detection | Midnight API blocks combat log scanning | Good |
+| Custom icon display over DBM/ET adapters | DBM not universal, ET boss-only | Good |
+| Nameplate UnitClass for runtime detection | NPC IDs not available on nameplates | Good |
+| npcID for data linkage, UnitClass for runtime | MDT uses npcIDs, nameplates expose class | Good |
+| Bundle LibDeflate + AceSerializer via LibStub | Required for MDT string decode, follows industry pattern | Good |
+| Paste-only import (no slash command) | WoW chat buffer too small for MDT strings | Good -- discovered during UAT |
+| Save processed pack data (not raw MDT string) | Instant load, no re-decode on startup | Good |
+| Accept any dungeon import (no skill tracking if no AbilityDB) | Future-proofs for adding new dungeon abilities | Good |
+| Round NPC portraits with circular mask | Matches MDT visual style | Good |
+| Boss pull highlighting (dark red) | Quick visual identification of boss encounters | Good |
 
 ---
-*Last updated: 2026-03-16 after v0.0.3 milestone start*
+*Last updated: 2026-03-16 after v0.0.3 milestone*
