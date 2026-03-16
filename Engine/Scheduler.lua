@@ -14,12 +14,6 @@ local barTimers = {}
 -- but table mutation is visible to all existing closures via the same reference.
 local combatActive = { false }
 
--- Debug logging (toggle for testing)
-local DEBUG = true
-local function dbg(msg)
-    if DEBUG then print("|cff888888TPW-dbg|r " .. msg) end
-end
-
 -- Incrementing ID for display icon slots
 local timerCounter = 0
 
@@ -42,15 +36,12 @@ scheduleAbility = function(ability, existingBarId)
     local preWarnOffset = ability.first_cast - 5
     if preWarnOffset < 0 then preWarnOffset = 0 end
 
-    dbg("Schedule: " .. ability.name .. " pre-warn at " .. preWarnOffset .. "s, cast at " .. ability.first_cast .. "s")
-
     -- Ensure per-barId tracking table exists
     barTimers[barId] = barTimers[barId] or { handles = {} }
 
     if preWarnOffset > 0 then
         local preHandle = C_Timer.NewTimer(preWarnOffset, function()
             if not combatActive[1] then return end
-            dbg("Fire pre-warn: " .. ability.name)
             ns.IconDisplay.SetUrgent(barId)
         end)
         table.insert(activeTimers, preHandle)
@@ -60,7 +51,6 @@ scheduleAbility = function(ability, existingBarId)
     -- Cast alert timer — reschedule for next cycle
     local castHandle = C_Timer.NewTimer(ability.first_cast, function()
         if not combatActive[1] then return end
-        dbg("Fire cast: " .. ability.name .. ", next in " .. ability.cooldown .. "s")
 
         -- Reschedule for next repeat using cooldown as the new first_cast
         -- Reuse the same barId so ShowIcon resets the existing icon slot
@@ -94,7 +84,6 @@ function Scheduler:Start(dungeonKey, packIndex)
     end
 
     combatActive[1] = true
-    dbg("Start: " .. pack.displayName .. " (" .. #pack.abilities .. " abilities)")
 
     for _, ability in ipairs(pack.abilities) do
         if ability.cooldown then
@@ -102,7 +91,6 @@ function Scheduler:Start(dungeonKey, packIndex)
         else
             -- Untimed: show static icon (one per ability, regardless of mob count)
             ns.IconDisplay.ShowStaticIcon("static_" .. ability.spellID, ability.spellID, ability.label)
-            dbg("Static icon: " .. ability.name)
         end
     end
 
@@ -130,7 +118,6 @@ function Scheduler:StopAbility(barId)
 end
 
 function Scheduler:Stop()
-    dbg("Stop: cancelled " .. #activeTimers .. " timers")
     combatActive[1] = false
 
     for _, handle in ipairs(activeTimers) do
