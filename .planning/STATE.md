@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 11-01-PLAN.md -- Phase 11 done, ready for Phase 12
-last_updated: "2026-03-16T07:05:47.779Z"
-last_activity: 2026-03-16 -- Phase 11 plan 01 completed
+stopped_at: Completed 12-01-PLAN.md -- Phase 12 done, all cleanup complete
+last_updated: "2026-03-16T07:22:36.669Z"
+last_activity: 2026-03-16 -- Phase 12 plan 01 completed
 progress:
   total_phases: 2
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
-  percent: 95
+  completed_phases: 2
+  total_plans: 2
+  completed_plans: 2
+  percent: 100
 ---
 
 # Project State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-16)
 
 **Core value:** When a player imports a route and pulls, they see accurate, timed ability warnings via custom spell icon display.
-**Current focus:** Phase 11 - Documentation and CI
+**Current focus:** Phase 12 - Code Cleanup (complete)
 
 ## Current Position
 
-Phase: 11 of 12 (Documentation and CI)
+Phase: 12 of 12 (Code Cleanup)
 Plan: 1 of 1 in current phase
-Status: Phase 11 complete
-Last activity: 2026-03-16 -- Phase 11 plan 01 completed
+Status: Phase 12 complete -- all phases done
+Last activity: 2026-03-16 -- Phase 12 plan 01 completed
 
-Progress: [███████████████████░] 95% (20/21 plans complete, 1/1 v0.0.4 phase 11 done)
+Progress: [████████████████████] 100% (22/22 plans complete, v0.0.4 done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 20 (across v0.0.1-v0.0.4)
-- Phases completed: 11
+- Total plans completed: 22 (across v0.0.1-v0.0.4)
+- Phases completed: 12
 - Milestones shipped: 3
 
 ## Accumulated Context
@@ -51,6 +51,7 @@ Recent decisions affecting current work:
 - [v0.0.4]: Two-phase cleanup: docs/CI first, then code cleanup
 - [v0.0.4]: WTFPL license to match TerribleBuffTracker series
 - [v0.0.4]: Added Midnight season limitation context to README per user review
+- [Phase 12]: Kept debug logging as toggleable ns.db.debug flag instead of removing (user override)
 
 ### Roadmap Evolution
 
@@ -69,6 +70,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-16
-Stopped at: Completed 11-01-PLAN.md -- Phase 11 done, ready for Phase 12
+Last session: 2026-03-16T07:22:36.666Z
+Stopped at: Completed 12-01-PLAN.md -- Phase 12 done, all cleanup complete
 Resume file: None

@@ -17,10 +17,10 @@
 
 ### Code Cleanup
 
-- [ ] **CLEAN-01**: Remove all DEBUG flags and dbg() logging from production code
-- [ ] **CLEAN-02**: Remove /tpw show and /tpw hide debug commands
-- [ ] **CLEAN-03**: Remove unused variables, especially globals; remove single-use function/identifier definitions where inlining is clearer
-- [ ] **CLEAN-04**: Audit and document any hot paths in the game loop (0.25s nameplate scanner tick) for review
+- [x] **CLEAN-01**: Remove all DEBUG flags and dbg() logging from production code
+- [x] **CLEAN-02**: Remove /tpw show and /tpw hide debug commands
+- [x] **CLEAN-03**: Remove unused variables, especially globals; remove single-use function/identifier definitions where inlining is clearer
+- [x] **CLEAN-04**: Audit and document any hot paths in the game loop (0.25s nameplate scanner tick) for review
 
 ## Out of Scope
 
@@ -37,10 +37,10 @@
 | DOC-02 | Phase 11 | Complete |
 | CI-01 | Phase 11 | Complete |
 | CI-02 | Phase 11 | Complete |
-| CLEAN-01 | Phase 12 | Pending |
-| CLEAN-02 | Phase 12 | Pending |
-| CLEAN-03 | Phase 12 | Pending |
-| CLEAN-04 | Phase 12 | Pending |
+| CLEAN-01 | Phase 12 | Complete |
+| CLEAN-02 | Phase 12 | Complete |
+| CLEAN-03 | Phase 12 | Complete |
+| CLEAN-04 | Phase 12 | Complete |
 
 **Coverage:**
 - v0.0.4 requirements: 8 total

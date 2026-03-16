@@ -46,7 +46,7 @@ See: `.planning/milestones/v0.0.3-ROADMAP.md` for full details.
 ### v0.0.4 Cleanup and Polish (In Progress)
 
 - [x] **Phase 11: Documentation and CI** - README, TOC metadata, release workflow, and release script (completed 2026-03-16)
-- [ ] **Phase 12: Code Cleanup** - Remove debug artifacts, unused code, and audit hot paths
+- [x] **Phase 12: Code Cleanup** - Remove debug artifacts, unused code, and audit hot paths (completed 2026-03-16)
 
 ## Phase Details
 
@@ -72,7 +72,7 @@ Plans:
   2. The /tpw slash command handler has no show or hide debug subcommands
   3. No unused global variables or single-use wrapper functions remain where inlining is clearer
   4. The 0.25s nameplate scanner tick and any other game-loop hot paths have inline comments documenting their cost and review status
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
 - [ ] 12-01-PLAN.md -- Remove debug artifacts, dead code, and audit hot paths
 
@@ -91,4 +91,4 @@ Plans:
 | 9. Import Pipeline | v0.0.3 | 2/2 | Complete | 2026-03-16 |
 | 10. Route UI Overhaul | v0.0.3 | 1/1 | Complete | 2026-03-16 |
 | 11. Documentation and CI | v0.0.4 | Complete    | 2026-03-16 | 2026-03-16 |
-| 12. Code Cleanup | v0.0.4 | 0/1 | Not started | - |
+| 12. Code Cleanup | 1/1 | Complete   | 2026-03-16 | - |
