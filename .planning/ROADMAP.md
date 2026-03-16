@@ -45,7 +45,7 @@ See: `.planning/milestones/v0.0.3-ROADMAP.md` for full details.
 
 ### v0.0.4 Cleanup and Polish (In Progress)
 
-- [ ] **Phase 11: Documentation and CI** - README, TOC metadata, release workflow, and release script
+- [x] **Phase 11: Documentation and CI** - README, TOC metadata, release workflow, and release script (completed 2026-03-16)
 - [ ] **Phase 12: Code Cleanup** - Remove debug artifacts, unused code, and audit hot paths
 
 ## Phase Details
@@ -59,7 +59,7 @@ See: `.planning/milestones/v0.0.3-ROADMAP.md` for full details.
   2. The TOC file contains CurseForge project ID 1487612, Wago ID ZKbxadN1, and references a blp icon texture
   3. The GitHub Actions release workflow and .pkgmeta match TerribleBuffTracker patterns (secrets, ignore list, package-as)
   4. Running scripts/release.bat produces a working release package end-to-end
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
 - [x] 11-01-PLAN.md -- Create README, update TOC metadata, verify CI/release pipeline
 
@@ -88,5 +88,5 @@ Plans:
 | 8. Ability Database and Decode Library | v0.0.3 | 2/2 | Complete | 2026-03-16 |
 | 9. Import Pipeline | v0.0.3 | 2/2 | Complete | 2026-03-16 |
 | 10. Route UI Overhaul | v0.0.3 | 1/1 | Complete | 2026-03-16 |
-| 11. Documentation and CI | v0.0.4 | 1/1 | Complete | 2026-03-16 |
+| 11. Documentation and CI | v0.0.4 | Complete    | 2026-03-16 | 2026-03-16 |
 | 12. Code Cleanup | v0.0.4 | 0/? | Not started | - |
