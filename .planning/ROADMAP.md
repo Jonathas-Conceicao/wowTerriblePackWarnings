@@ -34,7 +34,7 @@ See: `.planning/milestones/v0.0.2-ROADMAP.md` for full details.
 ### v0.0.3 MDT Import (In Progress)
 
 - [x] **Phase 8: Ability Database and Decode Library** - NpcID-keyed ability data and LibDeflate+AceSerializer decoding (completed 2026-03-16)
-- [ ] **Phase 9: Import Pipeline** - Extract pulls from decoded data and dynamically build packs
+- [x] **Phase 9: Import Pipeline** - Extract pulls from decoded data and dynamically build packs (completed 2026-03-16)
 - [ ] **Phase 10: Route UI Overhaul** - MDT-style pull display with NPC portraits, import/clear controls
 
 ## Phase Details
@@ -91,5 +91,5 @@ Plans:
 | 6. Nameplate Detection and Mob Lifecycle | v0.0.2 | 2/2 | Complete | 2026-03-15 |
 | 7. Complete Dungeon Route | v0.0.2 | 2/2 | Complete | 2026-03-16 |
 | 8. Ability Database and Decode Library | 2/2 | Complete   | 2026-03-16 | - |
-| 9. Import Pipeline | 1/2 | In Progress|  | - |
+| 9. Import Pipeline | 2/2 | Complete   | 2026-03-16 | - |
 | 10. Route UI Overhaul | v0.0.3 | 0/? | Not started | - |
