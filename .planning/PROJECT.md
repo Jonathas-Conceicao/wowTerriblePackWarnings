@@ -41,11 +41,16 @@ When a player selects a pack and pulls, they see accurate, timed ability warning
 
 ### Active
 
-(None -- next milestone will define new requirements)
+- [ ] MDT route import via paste string (LibDeflate + AceSerializer decoding)
+- [ ] Ability database keyed by npcID for dynamic pack building
+- [ ] UI overhaul: indexed pulls with round NPC portrait icons
+- [ ] Import/Clear buttons for route management
+
+## Current Milestone: v0.0.3 MDT Import
+
+**Goal:** Import MDT/Keystone.guru route strings to dynamically build pack data, replacing hardcoded dungeon routes. Overhaul pack UI with MDT-style pull display and NPC portraits.
 
 ### Out of Scope
-
-- Route addon integration (MDT, Keystone.guru) -- future milestone
 - Combat log event parsing -- blocked by Midnight API restrictions
 - Auto-detection of current pack without route addon -- no reliable API
 - Community-contributed warning profiles -- future milestone
@@ -81,4 +86,4 @@ When a player selects a pack and pulls, they see accurate, timed ability warning
 | Simple red border glow (4 edge textures) | Avoid LibCustomGlow dependency | Good -- lightweight, no library needed |
 
 ---
-*Last updated: 2026-03-16 after v0.0.2 milestone*
+*Last updated: 2026-03-16 after v0.0.3 milestone start*
