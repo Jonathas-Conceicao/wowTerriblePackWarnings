@@ -7,6 +7,7 @@ local PackUI = ns.PackUI
 -- Human-readable dungeon display names
 local DUNGEON_NAMES = {
     windrunner_spire = "Windrunner Spire",
+    imported = "Imported Route",
 }
 
 -- Accordion state: which dungeons are expanded
@@ -208,6 +209,12 @@ function PackUI.Hide()
 end
 
 function PackUI:Refresh()
+    -- Auto-expand newly added dungeon keys (e.g. imported route on restore)
+    for dungeonKey in pairs(ns.PackDatabase) do
+        if expandedDungeons[dungeonKey] == nil then
+            expandedDungeons[dungeonKey] = true
+        end
+    end
     PopulateList()
 end
 
