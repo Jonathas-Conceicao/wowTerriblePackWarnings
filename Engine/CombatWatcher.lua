@@ -130,21 +130,18 @@ function CombatWatcher:Reset()
     ns.NameplateScanner:Stop()
     ns.Scheduler:Stop()
 
-    selectedDungeon  = nil
-    currentPackIndex = nil
-    state            = "idle"
-
-    -- Auto-detect dungeon from current zone
-    local instanceName = GetInstanceInfo()
-    local dungeonKey = ZONE_DUNGEON_MAP[instanceName]
-    if dungeonKey and ns.PackDatabase[dungeonKey] then
-        selectedDungeon  = dungeonKey
+    -- If an imported route exists, reset pack index to 1 (keep route loaded)
+    if ns.PackDatabase["imported"] and #ns.PackDatabase["imported"] > 0 then
+        selectedDungeon  = "imported"
         currentPackIndex = 1
         state            = "ready"
         if ns.db and ns.db.debug then
-            print("|cff00ccffTPW|r Auto-detected: " .. instanceName .. " (" .. #ns.PackDatabase[dungeonKey] .. " packs)")
+            print("|cff00ccffTPW|r Reset to pull 1 (imported route)")
         end
     else
+        selectedDungeon  = nil
+        currentPackIndex = nil
+        state            = "idle"
         if ns.db and ns.db.debug then print("|cff00ccffTPW|r Session cleared (zone change).") end
     end
 
