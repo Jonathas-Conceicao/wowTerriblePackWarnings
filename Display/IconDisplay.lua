@@ -41,7 +41,7 @@ end
 -- @param spellID  number  the spell whose icon to display
 -- @param duration number|nil  if provided, creates a cooldown sweep
 -- @return frame   the slot frame
-local function CreateIconSlot(spellID, duration)
+local function CreateIconSlot(spellID, duration, label)
     local slot = CreateFrame("Frame", nil, UIParent)
     slot:SetSize(ICON_SIZE, ICON_SIZE)
     slot:SetFrameStrata("HIGH")
@@ -72,6 +72,27 @@ local function CreateIconSlot(spellID, duration)
         cd:SetCooldown(GetTime(), duration)
         slot.cd = cd
     end
+
+    -- Label text (optional short text on icon bottom edge)
+    if label and label ~= "" then
+        local lbl = slot:CreateFontString(nil, "OVERLAY")
+        lbl:SetFont("Fonts\\FRIZQT__.TTF", 9, "OUTLINE")
+        lbl:SetPoint("BOTTOM", slot, "BOTTOM", 0, 3)
+        lbl:SetText(label)
+        lbl:SetTextColor(1, 1, 1, 1)
+        slot.label = lbl
+    end
+
+    -- Tooltip on mouseover
+    slot.spellID = spellID
+    slot:EnableMouse(true)
+    slot:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_BOTTOMLEFT")
+        GameTooltip:SetSpellByID(self.spellID)
+    end)
+    slot:SetScript("OnLeave", function(self)
+        GameTooltip:Hide()
+    end)
 
     return slot
 end
@@ -156,7 +177,7 @@ end
 -- @param spellID     number  spell ID for icon texture
 -- @param ttsMessage  string|nil  short TTS callout text
 -- @param duration    number  cooldown duration in seconds
-function ns.IconDisplay.ShowIcon(instanceKey, spellID, ttsMessage, duration)
+function ns.IconDisplay.ShowIcon(instanceKey, spellID, ttsMessage, duration, label)
     -- If already showing this key, reset its cooldown
     local existing = slotsByKey[instanceKey]
     if existing then
@@ -170,7 +191,7 @@ function ns.IconDisplay.ShowIcon(instanceKey, spellID, ttsMessage, duration)
     dbg("ShowIcon creating: " .. instanceKey .. " spellID=" .. tostring(spellID)
         .. " dur=" .. tostring(duration))
 
-    local slot = CreateIconSlot(spellID, duration)
+    local slot = CreateIconSlot(spellID, duration, label)
     slot.ttsMessage = ttsMessage
     slot.instanceKey = instanceKey
 
@@ -190,10 +211,10 @@ end
 -- Only one icon per instanceKey (untimed = one icon regardless of mob count)
 -- @param instanceKey string  unique key for this icon
 -- @param spellID     number  spell ID for icon texture
-function ns.IconDisplay.ShowStaticIcon(instanceKey, spellID)
+function ns.IconDisplay.ShowStaticIcon(instanceKey, spellID, label)
     if slotsByKey[instanceKey] then return end
 
-    local slot = CreateIconSlot(spellID, nil)
+    local slot = CreateIconSlot(spellID, nil, label)
     slot.instanceKey = instanceKey
 
     activeSlots[#activeSlots + 1] = slot
@@ -223,6 +244,11 @@ function ns.IconDisplay.CancelIcon(instanceKey)
     local slot = slotsByKey[instanceKey]
     if not slot then return end
 
+    -- Hide tooltip if it was anchored to this slot
+    if GameTooltip:GetOwner() == slot then
+        GameTooltip:Hide()
+    end
+
     slot:Hide()
     slotsByKey[instanceKey] = nil
 
@@ -241,6 +267,9 @@ end
 --- CancelAll: hide and clear all active icon slots
 function ns.IconDisplay.CancelAll()
     for _, slot in ipairs(activeSlots) do
+        if GameTooltip:GetOwner() == slot then
+            GameTooltip:Hide()
+        end
         slot:Hide()
     end
     activeSlots = {}
