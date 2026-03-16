@@ -61,7 +61,10 @@ Plans:
   2. Each pull's npcIDs are matched against the ability database to produce pack abilities with correct mobClasses
   3. PackDatabase is populated from imported route data (no hardcoded pack definitions used)
   4. Selecting an imported pack and pulling mobs triggers the existing warning/timer system
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 09-01-PLAN.md — DungeonEnemies data bundle and import pipeline module
+- [ ] 09-02-PLAN.md — Core.lua wiring, TOC load order, and PackFrame UI update
 
 ### Phase 10: Route UI Overhaul
 **Goal**: Player can paste an MDT string, see indexed pulls with NPC portraits, and manage imported routes
@@ -88,5 +91,5 @@ Plans:
 | 6. Nameplate Detection and Mob Lifecycle | v0.0.2 | 2/2 | Complete | 2026-03-15 |
 | 7. Complete Dungeon Route | v0.0.2 | 2/2 | Complete | 2026-03-16 |
 | 8. Ability Database and Decode Library | 2/2 | Complete   | 2026-03-16 | - |
-| 9. Import Pipeline | v0.0.3 | 0/? | Not started | - |
+| 9. Import Pipeline | v0.0.3 | 0/2 | Not started | - |
 | 10. Route UI Overhaul | v0.0.3 | 0/? | Not started | - |
