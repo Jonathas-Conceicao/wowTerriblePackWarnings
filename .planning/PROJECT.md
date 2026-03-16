@@ -2,25 +2,26 @@
 
 ## What This Is
 
-A World of Warcraft addon for Midnight (12+ API) that brings DBM-style ability warnings to dungeon trash packs in Mythic+ content. Players select the pack they're about to pull from a UI window or slash command, and the addon surfaces timed ability warnings through DBM timer bars (with Encounter Timeline and RaidNotice fallbacks) -- giving competitive M+ players the same threat awareness on trash that they get on bosses.
+A World of Warcraft addon for Midnight (12+ API) that brings ability warnings to dungeon trash packs in Mythic+ content. Players select a pack from a UI window, and the addon displays spell icon squares with cooldown sweeps, TTS callouts, and per-mob timer instances detected via nameplate scanning -- giving competitive M+ players the same threat awareness on trash that they get on bosses.
 
 ## Core Value
 
-When a player selects a pack and pulls, they see accurate, timed ability warnings for that pack's dangerous mob abilities via DBM bars or Blizzard's native warning UI.
+When a player selects a pack and pulls, they see accurate, timed ability warnings for that pack's dangerous mob abilities via custom spell icon display with per-mob detection.
 
 ## Current State
 
-**Shipped:** v0.0.1 (2026-03-15)
-**Code:** 768 lines of Lua across 6 files
-**Tech stack:** Plain Lua, WoW FrameXML templates, DBM/DBT API integration
+**Shipped:** v0.0.2 (2026-03-16)
+**Code:** 1,239 lines of Lua across 7 files
+**Tech stack:** Plain Lua, WoW FrameXML templates, C_VoiceChat TTS, nameplate scanning
 
 **What works:**
-- Windrunner Spire pack data with ability timers
-- 3-tier display: DBM bars > Encounter Timeline > RaidNotice fallback
-- Auto-combat trigger (PLAYER_REGEN_DISABLED) and auto-advance through packs
-- Zone auto-detection (auto-selects dungeon on zone entry)
+- Full Windrunner Spire route: 17 packs with 4 tracked abilities
+- Custom spell icon display: horizontal squares with cooldown sweep, integer countdown, red glow at 5s
+- Nameplate-based mob detection: 0.25s poll, UnitClass matching, per-mob independent timers
+- Text-to-speech warnings with custom short callouts per ability
+- Icon labels and spell tooltip on mouseover
 - Pack selection UI with accordion list, combat state indicators, live refresh
-- Position persistence, Escape-to-close, standard WoW panel behavior
+- Zone auto-detection, auto-advance through packs, combat lifecycle management
 
 ## Requirements
 
@@ -29,41 +30,38 @@ When a player selects a pack and pulls, they see accurate, timed ability warning
 - Predefined pack/mob database for one Midnight dungeon -- v0.0.1
 - Pack selection UI (accordion list grouped by dungeon) -- v0.0.1
 - Ability timer system (cooldown-based, auto-repeating) -- v0.0.1
-- Display integration (DBM bars, ET fallback, RaidNotice fallback) -- v0.0.1
 - Addon structure (Lua, TOC, SavedVariables) -- v0.0.1
+- Custom spell icon display (horizontal squares, cooldown sweep, red glow) -- v0.0.2
+- Nameplate-based mob detection (filter by UnitClass) -- v0.0.2
+- Multi-instance timed tracking (one timer per mob of matching class) -- v0.0.2
+- Text-to-speech pre-warnings -- v0.0.2
+- Untimed skill support (icon-only, no countdown) -- v0.0.2
+- Full dungeon route with 17 packs -- v0.0.2
+- Icon labels and spell tooltip -- v0.0.2
 
 ### Active
 
-- [ ] Custom spell icon display (horizontal squares, cooldown sweep, red glow)
-- [ ] Nameplate-based mob detection (filter by UnitClass)
-- [ ] Multi-instance timed tracking (one timer per mob of matching class)
-- [ ] Text-to-speech pre-warnings
-- [ ] Untimed skill support (icon-only, no countdown)
-- [ ] Updated Windrunner Spire data with mob class filters
-
-## Current Milestone: v0.0.2 Display Rework
-
-**Goal:** Replace DBM/ET/RaidNotice adapters with a custom WeakAura-style spell icon display that uses nameplate scanning to detect mobs and create independent timer instances per mob.
+(None -- next milestone will define new requirements)
 
 ### Out of Scope
 
 - Route addon integration (MDT, Keystone.guru) -- future milestone
 - Combat log event parsing -- blocked by Midnight API restrictions
-- Nameplate scanning -- blocked by Midnight API restrictions
 - Auto-detection of current pack without route addon -- no reliable API
 - Community-contributed warning profiles -- future milestone
+- Multiple dungeon support -- v0.0.2 covers Windrunner Spire only
 
 ## Context
 
 - **Platform:** World of Warcraft Midnight expansion (12+ API)
-- **API constraints:** Midnight severely restricts combat log reading, nameplate scanning, and other real-time detection APIs. The addon relies on predefined data and user interaction.
-- **Display system:** DBM is the primary display adapter (works everywhere including outside boss encounters). Encounter Timeline only renders during boss fights. RaidNotice is the universal fallback for text alerts.
-- **Architecture:** Addon is a data provider -- pushes ability data into external timer/warning systems (DBM, ET, RaidNotice). Does not render custom timer bars or frames.
+- **API constraints:** Midnight restricts combat log reading and some real-time detection APIs. Nameplate scanning via C_NamePlate.GetNamePlates + UnitClass + UnitAffectingCombat works for mob detection.
+- **Display system:** Custom spell icon squares (replaced DBM/ET/RaidNotice in v0.0.2). Cooldown sweep via CooldownFrameTemplate. TTS via C_VoiceChat.SpeakText.
+- **Architecture:** Addon renders its own icon display and uses nameplate scanning for mob detection. No external addon dependencies.
 - **Related project:** MethodDungeonTools (local at C:\Users\jonat\Repositories\MethodDungeonTools) -- potential future integration target.
 
 ## Constraints
 
-- **API:** Midnight 12+ addon API only -- no access to restricted combat/nameplate APIs
+- **API:** Midnight 12+ addon API only
 - **Framework:** Plain Lua + XML, no external libraries (Ace3, LibStub, etc.)
 - **Data:** Ability cooldown timers are approximate/predefined, not derived from real-time combat events
 
@@ -71,15 +69,16 @@ When a player selects a pack and pulls, they see accurate, timed ability warning
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Manual pack selection over auto-detection | Midnight API blocks combat log and nameplate scanning | Good -- works reliably with zone auto-detect as bonus |
-| Predefined cooldown timers over cast bar triggers | Cast bar detection unavailable in Midnight API | Good -- timers are predictable and consistent |
-| Plain Lua + XML, no libraries | Keep it simple for v1, avoid dependency complexity | Good -- 768 LOC, no dependency issues |
-| DBM-first display over Encounter Timeline | ET only renders during boss encounters, DBM works everywhere | Good -- discovered during UAT, pivoted successfully |
-| One dungeon for v1 | Prove the concept before scaling data | Good -- validated core loop works |
-| Data provider architecture | Push into existing timer systems, don't render own UI | Good -- leverages DBM bars players already know |
-| pcall-protect external API calls | ET API errors were aborting state transitions | Good -- prevents cascading failures |
-| State-before-action pattern | Update state machine before calling potentially-failing operations | Good -- prevents re-trigger bugs |
-| Zone auto-detection via GetInstanceInfo | Maps instance names to dungeon keys for automatic selection | Good -- reduces manual steps |
+| Manual pack selection over auto-detection | Midnight API blocks combat log scanning | Good -- zone auto-detect as bonus |
+| Predefined cooldown timers over cast bar triggers | Cast bar detection unavailable | Good -- predictable and consistent |
+| Plain Lua + XML, no libraries | Keep it simple, avoid dependency complexity | Good -- 1,239 LOC, no dependencies |
+| Custom icon display over DBM/ET adapters | DBM not universal, ET only works in boss fights | Good -- fully self-contained display |
+| Nameplate UnitClass for mob detection | NPC IDs blocked, class-based detection works | Good -- reliably detects mob types |
+| 0.25s poll for nameplate scanning | Event-based unreliable for combat state changes | Good -- responsive without performance issues |
+| Cleanup on combat end only (no mid-combat removal) | Camera turns cause false nameplate removals | Good -- avoids ghost timer issues |
+| Count-based mob tracking vs event-based | Compare visible count against tracked timers | Good -- prevents camera-turn duplicates |
+| TTS via C_VoiceChat.SpeakText | Native API, no bundled sound files needed | Good -- works in Midnight |
+| Simple red border glow (4 edge textures) | Avoid LibCustomGlow dependency | Good -- lightweight, no library needed |
 
 ---
-*Last updated: 2026-03-15 after v0.0.2 milestone start*
+*Last updated: 2026-03-16 after v0.0.2 milestone*
