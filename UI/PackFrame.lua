@@ -65,6 +65,75 @@ local function GetPortraitTexture(tex, npcID)
 end
 
 ------------------------------------------------------------------------
+-- Clear Confirmation Dialog (StaticPopup)
+------------------------------------------------------------------------
+StaticPopupDialogs["TPW_CONFIRM_CLEAR"] = {
+    text = "Clear imported route? This cannot be undone.",
+    button1 = "Clear",
+    button2 = "Cancel",
+    OnAccept = function()
+        ns.Import.Clear()
+    end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
+}
+
+------------------------------------------------------------------------
+-- Import Popup Frame (separate frame, NOT StaticPopup -- no 255 char limit)
+------------------------------------------------------------------------
+local importPopup = CreateFrame("Frame", "TPWImportPopup", UIParent, "BasicFrameTemplateWithInset")
+importPopup:SetSize(320, 200)
+importPopup:SetPoint("CENTER")
+importPopup:Hide()
+importPopup:SetFrameStrata("DIALOG")
+
+importPopup.TitleText:SetText("Import MDT Route")
+
+-- Escape to close
+tinsert(UISpecialFrames, "TPWImportPopup")
+
+-- Scroll frame inside popup for multi-line editbox
+local popupScroll = CreateFrame("ScrollFrame", nil, importPopup, "UIPanelScrollFrameTemplate")
+popupScroll:SetPoint("TOPLEFT", importPopup, "TOPLEFT", 12, -32)
+popupScroll:SetPoint("BOTTOMRIGHT", importPopup, "BOTTOMRIGHT", -34, 40)
+
+local editBox = CreateFrame("EditBox", nil, popupScroll)
+editBox:SetMultiLine(true)
+editBox:SetMaxLetters(0)
+editBox:SetAutoFocus(false)
+editBox:SetFontObject(ChatFontNormal)
+editBox:SetWidth(popupScroll:GetWidth() or 260)
+editBox:SetScript("OnEscapePressed", function() importPopup:Hide() end)
+popupScroll:SetScrollChild(editBox)
+
+importPopup:SetScript("OnShow", function()
+    editBox:SetText("")
+    editBox:SetFocus()
+end)
+
+-- Import button on popup
+local popupImportBtn = CreateFrame("Button", nil, importPopup, "GameMenuButtonTemplate")
+popupImportBtn:SetSize(80, 22)
+popupImportBtn:SetPoint("BOTTOMRIGHT", importPopup, "BOTTOMRIGHT", -12, 8)
+popupImportBtn:SetText("Import")
+popupImportBtn:SetScript("OnClick", function()
+    local str = editBox:GetText()
+    if str and str ~= "" then
+        ns.Import.RunFromString(str)
+    end
+    importPopup:Hide()
+end)
+
+-- Cancel button on popup
+local popupCancelBtn = CreateFrame("Button", nil, importPopup, "GameMenuButtonTemplate")
+popupCancelBtn:SetSize(80, 22)
+popupCancelBtn:SetPoint("RIGHT", popupImportBtn, "LEFT", -8, 0)
+popupCancelBtn:SetText("Cancel")
+popupCancelBtn:SetScript("OnClick", function() importPopup:Hide() end)
+
+------------------------------------------------------------------------
 -- Main Frame
 ------------------------------------------------------------------------
 local frame = CreateFrame("Frame", "TPWPackFrame", UIParent, "BasicFrameTemplateWithInset")
@@ -119,6 +188,21 @@ scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -34, 35)
 local scrollChild = CreateFrame("Frame", nil, scrollFrame)
 scrollChild:SetWidth(250)
 scrollFrame:SetScrollChild(scrollChild)
+
+------------------------------------------------------------------------
+-- Footer Buttons (Import / Clear)
+------------------------------------------------------------------------
+local importBtn = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
+importBtn:SetSize(80, 22)
+importBtn:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -12, 8)
+importBtn:SetText("Import")
+importBtn:SetScript("OnClick", function() importPopup:Show() end)
+
+local clearBtn = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
+clearBtn:SetSize(80, 22)
+clearBtn:SetPoint("RIGHT", importBtn, "LEFT", -8, 0)
+clearBtn:SetText("Clear")
+clearBtn:SetScript("OnClick", function() StaticPopup_Show("TPW_CONFIRM_CLEAR") end)
 
 ------------------------------------------------------------------------
 -- Pull Row Creation
