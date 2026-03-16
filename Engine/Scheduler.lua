@@ -94,7 +94,9 @@ function Scheduler:Start(dungeonKey, packIndex)
         end
     end
 
-    print("|cff00ccffTPW|r Started: " .. pack.displayName)
+    if ns.db and ns.db.debug then
+        print("|cff00ccffTPW|r Started: " .. pack.displayName)
+    end
 end
 
 --- Start a single ability with an explicit barId (used by NameplateScanner per-mob).

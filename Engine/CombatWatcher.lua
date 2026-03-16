@@ -40,7 +40,9 @@ function CombatWatcher:SelectDungeon(dungeonKey)
     currentPackIndex = 1
     state            = "ready"
 
-    print("|cff00ccffTPW|r Selected: " .. dungeonKey .. " (" .. #dungeon .. " packs)")
+    if ns.db and ns.db.debug then
+        print("|cff00ccffTPW|r Selected: " .. dungeonKey .. " (" .. #dungeon .. " packs)")
+    end
     if ns.PackUI and ns.PackUI.Refresh then ns.PackUI:Refresh() end
 end
 
@@ -59,7 +61,9 @@ function CombatWatcher:SelectPack(dungeonKey, packIndex)
     currentPackIndex = packIndex
     state            = "ready"
 
-    print("|cff00ccffTPW|r Selected: " .. dungeon[packIndex].displayName)
+    if ns.db and ns.db.debug then
+        print("|cff00ccffTPW|r Selected: " .. dungeon[packIndex].displayName)
+    end
     if ns.PackUI and ns.PackUI.Refresh then ns.PackUI:Refresh() end
 end
 
@@ -115,9 +119,9 @@ function CombatWatcher:OnCombatEnd()
     ns.Scheduler:Stop()
 
     if state == "end" then
-        print("|cff00ccffTPW|r All packs completed.")
+        if ns.db and ns.db.debug then print("|cff00ccffTPW|r All packs completed.") end
     else
-        print("|cff00ccffTPW|r Next: " .. dungeon[currentPackIndex].displayName)
+        if ns.db and ns.db.debug then print("|cff00ccffTPW|r Next: " .. dungeon[currentPackIndex].displayName) end
     end
     if ns.PackUI and ns.PackUI.Refresh then ns.PackUI:Refresh() end
 end
@@ -137,9 +141,11 @@ function CombatWatcher:Reset()
         selectedDungeon  = dungeonKey
         currentPackIndex = 1
         state            = "ready"
-        print("|cff00ccffTPW|r Auto-detected: " .. instanceName .. " (" .. #ns.PackDatabase[dungeonKey] .. " packs)")
+        if ns.db and ns.db.debug then
+            print("|cff00ccffTPW|r Auto-detected: " .. instanceName .. " (" .. #ns.PackDatabase[dungeonKey] .. " packs)")
+        end
     else
-        print("|cff00ccffTPW|r Session cleared (zone change).")
+        if ns.db and ns.db.debug then print("|cff00ccffTPW|r Session cleared (zone change).") end
     end
 
     if ns.PackUI and ns.PackUI.Refresh then ns.PackUI:Refresh() end
