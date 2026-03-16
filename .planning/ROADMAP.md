@@ -94,4 +94,4 @@ Plans:
 | 7. Complete Dungeon Route | v0.0.2 | 2/2 | Complete | 2026-03-16 |
 | 8. Ability Database and Decode Library | 2/2 | Complete   | 2026-03-16 | - |
 | 9. Import Pipeline | 2/2 | Complete   | 2026-03-16 | - |
-| 10. Route UI Overhaul | 1/1 | Complete   | 2026-03-16 | - |
+| 10. Route UI Overhaul | 1/1 | Complete    | 2026-03-16 | - |
