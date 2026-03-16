@@ -47,6 +47,13 @@ me to the best of my abilities.
 - Only supports dungeons with data packs (currently Windrunner's Spire)
 - WIP: many features still in development
 
+## Planned
+
+- Repositioning and sizing of the spell icon display through Edit Mode
+- Highlight untimed skill icons when any mob of the same class is casting
+- Ability data for more mobs and relevant casts across all Midnight S1 dungeons
+- Testing for Mythic Plus specific secret value restrictions
+
 ## License
 
 [GPL-2.0](LICENSE)
