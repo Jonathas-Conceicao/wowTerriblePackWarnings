@@ -21,10 +21,10 @@ local staticShown = {}
 -- Global incrementing ID for unique per-mob barIds
 local timerCounter = 0
 
--- Debug logging (matches established project pattern)
-local DEBUG = true
+-- Debug logging: reads shared toggle from SavedVariables (ns.db.debug)
+-- Toggle with /tpw debug. Persists through /reload.
 local function dbg(msg)
-    if DEBUG then print("|cff888888TPW-dbg|r " .. msg) end
+    if ns.db and ns.db.debug then print("|cff888888TPW-dbg|r " .. msg) end
 end
 
 -- ============================================================

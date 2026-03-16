@@ -44,10 +44,12 @@ frame:SetScript("OnEvent", function(self, event, ...)
 end)
 
 -- Slash command
--- /tpw select <dungeon>  — select a dungeon and reset to pack 1
--- /tpw start [pack#]     — manually start timers (optional pack index)
--- /tpw stop              — cancel all active timers
--- /tpw status            — print current state
+-- /tpw select <dungeon>  -- select a dungeon and reset to pack 1
+-- /tpw start [pack#]     -- manually start timers (optional pack index)
+-- /tpw stop              -- cancel all active timers
+-- /tpw status            -- print current state
+-- /tpw debug             -- toggle debug logging (persists through /reload)
+-- /tpw clear             -- clear imported route
 SLASH_TERRIBLEPACKWARNINGS1 = "/tpw"
 SlashCmdList["TERRIBLEPACKWARNINGS"] = function(msg)
     local cmd, arg = msg:match("^(%S+)%s*(.*)$")
@@ -69,42 +71,18 @@ SlashCmdList["TERRIBLEPACKWARNINGS"] = function(msg)
         print("|cff00ccffTPW|r State: " .. s
               .. ", Dungeon: " .. tostring(d)
               .. ", Pack: " .. tostring(i))
-    elseif cmd == "show" then
-        -- Debug: show a spell icon by spellID
-        local spellID = tonumber(arg)
-        if not spellID then
-            print("|cff00ccffTPW|r Usage: /tpw show <spellID>")
+    elseif cmd == "debug" then
+        -- Toggle debug logging (persists through /reload via SavedVariables)
+        ns.db.debug = not ns.db.debug
+        if ns.db.debug then
+            print("|cff00ccffTPW|r Debug logging |cff00ff00ON|r")
         else
-            -- Find ability in current pack data to get label/tts
-            local label, tts
-            for _, packs in pairs(ns.PackDatabase) do
-                for _, pack in ipairs(packs) do
-                    for _, ability in ipairs(pack.abilities) do
-                        if ability.spellID == spellID then
-                            label = ability.label
-                            tts = ability.ttsMessage
-                            break
-                        end
-                    end
-                end
-            end
-            ns.IconDisplay.ShowIcon("debug_" .. spellID, spellID, tts, 30, label)
-            print("|cff00ccffTPW|r Showing spell " .. spellID .. " for 30s")
-        end
-    elseif cmd == "hide" then
-        -- Debug: hide a spell icon by spellID
-        local spellID = tonumber(arg)
-        if not spellID then
-            ns.IconDisplay.CancelAll()
-            print("|cff00ccffTPW|r All icons cleared")
-        else
-            ns.IconDisplay.CancelIcon("debug_" .. spellID)
-            print("|cff00ccffTPW|r Hidden spell " .. spellID)
+            print("|cff00ccffTPW|r Debug logging |cffff0000OFF|r")
         end
     elseif cmd == "clear" then
         ns.Import.Clear()
     elseif cmd == "help" then
-        print("|cff00ccffTPW|r Commands: select <dungeon>, start [pack#], stop, status, show <spellID>, hide [spellID], clear, help")
+        print("|cff00ccffTPW|r Commands: select <dungeon>, start [pack#], stop, status, debug, clear, help")
     else
         -- Bare /tpw or unrecognized command — toggle pack selection window
         if ns.PackUI and ns.PackUI.Toggle then ns.PackUI.Toggle() end

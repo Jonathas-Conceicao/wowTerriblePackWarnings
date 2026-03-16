@@ -2,10 +2,10 @@ local addonName, ns = ...
 
 ns.IconDisplay = ns.IconDisplay or {}
 
---- Debug logging (toggle for testing)
-local DEBUG = true
+-- Debug logging: reads shared toggle from SavedVariables (ns.db.debug)
+-- Toggle with /tpw debug. Persists through /reload.
 local function dbg(msg)
-    if DEBUG then print("|cff888888TPW-dbg|r " .. msg) end
+    if ns.db and ns.db.debug then print("|cff888888TPW-dbg|r " .. msg) end
 end
 
 ----------------------------------------------------------------------
