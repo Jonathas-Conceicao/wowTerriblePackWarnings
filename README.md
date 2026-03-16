@@ -7,10 +7,11 @@ kills you.
 TerriblePackWarnings uses imported MDT routes to know which mobs are in
 each pack and what dangerous abilities they have. When you pull a
 tracked pack, spell icons with countdown timers appear on screen to warn
-you about incoming abilities. It's part of the "Terrible" addon family,
-where we build bad solutions to problems Blizzard won't solve for us.
+you about incoming abilities. The addon does its best to track skills
+and keep you informed, but with Midnight's API restrictions -- no combat
+log, no reliable cast detection, no buff tracking -- the result is
+**Terrible** at best. But that's the game we play now.
 
-**This addon is a work-in-progress and has not been published yet.**
 It is in early development -- expect rough edges, missing features, and
 things that don't work quite right.
 
@@ -28,11 +29,10 @@ me to the best of my abilities.
 
 ## Features
 
-- Import MDT routes via paste (no slash command -- WoW chat buffer too small)
+- Import MDT routes
 - Per-pack ability warnings with spell icons and countdown timers
 - Automatic mob detection via nameplate scanning
 - Combat-aware: warnings activate when you pull tracked packs
-- Supports custom dungeon data packs
 
 ## Usage
 
@@ -45,9 +45,8 @@ me to the best of my abilities.
 - Nameplate scanning requires nameplates to be visible (enemy nameplates
   must be enabled)
 - Only supports dungeons with data packs (currently Windrunner's Spire)
-- 0.25s nameplate scan interval may miss very brief nameplate appearances
 - WIP: many features still in development
 
 ## License
 
-[WTFPL](LICENSE)
+[GPL-2.0](LICENSE)
