@@ -11,14 +11,14 @@ Requirements for MDT import and dynamic route support.
 
 - [x] **DATA-10**: Ability database keyed by npcID — each npcID maps to its spells with cooldown, label, tts, mobClass
 - [x] **DATA-11**: Multiple npcIDs can share the same ability (e.g. 232122 and 232121 both have Interrupting Screech)
-- [ ] **DATA-12**: Packs are dynamically built from imported route data, not hardcoded in data files
+- [x] **DATA-12**: Packs are dynamically built from imported route data, not hardcoded in data files
 
 ### MDT Import
 
 - [x] **IMPORT-01**: Decode MDT export strings using LibDeflate + AceSerializer (bundled following MDT's own pattern)
-- [ ] **IMPORT-02**: Extract pull list with npcIDs from decoded preset data
-- [ ] **IMPORT-03**: Match pull npcIDs against ability database to build pack abilities with correct mobClasses
-- [ ] **IMPORT-04**: Populate PackDatabase from imported route (replaces hardcoded data files)
+- [x] **IMPORT-02**: Extract pull list with npcIDs from decoded preset data
+- [x] **IMPORT-03**: Match pull npcIDs against ability database to build pack abilities with correct mobClasses
+- [x] **IMPORT-04**: Populate PackDatabase from imported route (replaces hardcoded data files)
 
 ### UI Overhaul
 
@@ -51,11 +51,11 @@ Requirements for MDT import and dynamic route support.
 |-------------|-------|--------|
 | DATA-10 | Phase 8 | Complete |
 | DATA-11 | Phase 8 | Complete |
-| DATA-12 | Phase 9 | Pending |
+| DATA-12 | Phase 9 | Complete |
 | IMPORT-01 | Phase 8 | Complete |
-| IMPORT-02 | Phase 9 | Pending |
-| IMPORT-03 | Phase 9 | Pending |
-| IMPORT-04 | Phase 9 | Pending |
+| IMPORT-02 | Phase 9 | Complete |
+| IMPORT-03 | Phase 9 | Complete |
+| IMPORT-04 | Phase 9 | Complete |
 | UI-09 | Phase 10 | Pending |
 | UI-10 | Phase 10 | Pending |
 | UI-11 | Phase 10 | Pending |

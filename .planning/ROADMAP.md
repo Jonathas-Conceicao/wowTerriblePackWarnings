@@ -91,5 +91,5 @@ Plans:
 | 6. Nameplate Detection and Mob Lifecycle | v0.0.2 | 2/2 | Complete | 2026-03-15 |
 | 7. Complete Dungeon Route | v0.0.2 | 2/2 | Complete | 2026-03-16 |
 | 8. Ability Database and Decode Library | 2/2 | Complete   | 2026-03-16 | - |
-| 9. Import Pipeline | v0.0.3 | 0/2 | Not started | - |
+| 9. Import Pipeline | 1/2 | In Progress|  | - |
 | 10. Route UI Overhaul | v0.0.3 | 0/? | Not started | - |
