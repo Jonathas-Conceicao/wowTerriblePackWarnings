@@ -5,6 +5,9 @@
 ## Version: @project-version@
 ## URL: https://github.com/Jonathas-Conceicao/TerriblePackWarnings
 ## Category: Combat
+## X-Curse-Project-ID: 1487612
+## X-Wago-ID: ZKbxadN1
+## IconTexture: Interface\AddOns\TerriblePackWarnings\tpw_64x64
 ## SavedVariables: TerriblePackWarningsDB
 
 Libs\load_libs.xml
