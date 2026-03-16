@@ -1,6 +1,6 @@
 package-as: TerriblePackWarnings
 manual-changelog:
-  filename: CHANGELOG.md
+  filename: RELEASE_NOTES.md
   markup-type: markdown
 
 externals:
@@ -19,3 +19,5 @@ ignore:
   - LICENSE
   - scripts
   - "*.png"
+  - RELEASE_NOTES.md
+  - CHANGELOG.md
