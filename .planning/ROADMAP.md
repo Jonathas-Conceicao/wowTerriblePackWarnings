@@ -75,7 +75,9 @@ Plans:
   2. Import button opens a text editbox where player can paste an MDT/Keystone.guru export string
   3. Clear button removes all imported route data and empties the pack list
   4. UI header displays the imported dungeon name and total pull count
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 10-01-PLAN.md — PackFrame rewrite with pull rows, portraits, import popup, and clear confirmation
 
 ## Progress
 
@@ -92,4 +94,4 @@ Plans:
 | 7. Complete Dungeon Route | v0.0.2 | 2/2 | Complete | 2026-03-16 |
 | 8. Ability Database and Decode Library | 2/2 | Complete   | 2026-03-16 | - |
 | 9. Import Pipeline | 2/2 | Complete   | 2026-03-16 | - |
-| 10. Route UI Overhaul | v0.0.3 | 0/? | Not started | - |
+| 10. Route UI Overhaul | v0.0.3 | 0/1 | Not started | - |
