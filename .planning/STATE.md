@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-03-16)
 ## Current Position
 
 Phase: 11 of 12 (Documentation and CI)
-Plan: 0 of ? in current phase
-Status: Ready to plan
-Last activity: 2026-03-16 -- v0.0.4 roadmap created
+Plan: 1 of 1 in current phase
+Status: Phase 11 complete
+Last activity: 2026-03-16 -- Phase 11 plan 01 completed
 
-Progress: [██████████████████░░] 90% (19/19 prior plans complete, 0/? v0.0.4 plans)
+Progress: [███████████████████░] 95% (20/21 plans complete, 1/1 v0.0.4 phase 11 done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 19 (across v0.0.1-v0.0.3)
-- Phases completed: 10
+- Total plans completed: 20 (across v0.0.1-v0.0.4)
+- Phases completed: 11
 - Milestones shipped: 3
 
 ## Accumulated Context
@@ -33,6 +33,8 @@ Recent decisions affecting current work:
 - [v0.0.3]: Paste-only import (no slash command) -- WoW chat buffer too small
 - [v0.0.3]: Save processed pack data (not raw MDT string) -- instant load
 - [v0.0.4]: Two-phase cleanup: docs/CI first, then code cleanup
+- [v0.0.4]: WTFPL license to match TerribleBuffTracker series
+- [v0.0.4]: Added Midnight season limitation context to README per user review
 
 ### Roadmap Evolution
 
@@ -52,5 +54,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-16
-Stopped at: v0.0.4 roadmap created, ready to plan Phase 11
+Stopped at: Completed 11-01-PLAN.md -- Phase 11 done, ready for Phase 12
 Resume file: None

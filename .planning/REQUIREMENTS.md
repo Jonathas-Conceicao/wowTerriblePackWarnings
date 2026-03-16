@@ -7,13 +7,13 @@
 
 ### Documentation
 
-- [ ] **DOC-01**: README.md with project description, WIP notice, gallery (ws_fst_pack.png), features, usage, known issues, AI usage, license
-- [ ] **DOC-02**: TOC updated with CurseForge project ID 1487612, Wago ID ZKbxadN1, and blp icon texture
+- [x] **DOC-01**: README.md with project description, WIP notice, gallery (ws_fst_pack.png), features, usage, known issues, AI usage, license
+- [x] **DOC-02**: TOC updated with CurseForge project ID 1487612, Wago ID ZKbxadN1, and blp icon texture
 
 ### CI/Release
 
-- [ ] **CI-01**: Release workflow and .pkgmeta match TerribleBuffTracker patterns (secrets, ignore list, package-as)
-- [ ] **CI-02**: Release script (scripts/release.bat) works end-to-end
+- [x] **CI-01**: Release workflow and .pkgmeta match TerribleBuffTracker patterns (secrets, ignore list, package-as)
+- [x] **CI-02**: Release script (scripts/release.bat) works end-to-end
 
 ### Code Cleanup
 
@@ -33,10 +33,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DOC-01 | Phase 11 | Pending |
-| DOC-02 | Phase 11 | Pending |
-| CI-01 | Phase 11 | Pending |
-| CI-02 | Phase 11 | Pending |
+| DOC-01 | Phase 11 | Complete |
+| DOC-02 | Phase 11 | Complete |
+| CI-01 | Phase 11 | Complete |
+| CI-02 | Phase 11 | Complete |
 | CLEAN-01 | Phase 12 | Pending |
 | CLEAN-02 | Phase 12 | Pending |
 | CLEAN-03 | Phase 12 | Pending |
