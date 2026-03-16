@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 08-01-PLAN.md
-last_updated: "2026-03-16T03:19:54.048Z"
-last_activity: 2026-03-16 -- Completed 08-01 AbilityDB and decode library bundling
+stopped_at: Completed 08-02-PLAN.md
+last_updated: "2026-03-16T03:22:30Z"
+last_activity: 2026-03-16 -- Completed 08-02 MDT decode library and slash command
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
-  percent: 94
+  completed_plans: 2
+  percent: 100
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-16)
 ## Current Position
 
 Phase: 8 of 10 (Ability Database and Decode Library)
-Plan: 1 of 2 in current phase
+Plan: 2 of 2 in current phase (phase complete)
 Status: Executing
-Last activity: 2026-03-16 -- Completed 08-01 AbilityDB and decode library bundling
+Last activity: 2026-03-16 -- Completed 08-02 MDT decode library and slash command
 
-Progress: [█████████░] 94% (16/17 plans complete across all milestones)
+Progress: [██████████] 100% (17/17 plans complete across all milestones)
 
 ## Accumulated Context
 
@@ -41,6 +41,7 @@ Progress: [█████████░] 94% (16/17 plans complete across all 
 - [v0.0.3]: Paste-only import (no MDT addon API integration for v0.0.3)
 - [v0.0.3]: NPC portraits in pack UI (round icons per mob)
 - [Phase 08]: Sourced LibStub/AceSerializer from MethodDungeonTools repo; duplicated shared abilities by value
+- [Phase 08]: Followed MDT StringToTable pattern exactly for decode chain; legacy format rejected with error
 
 ### Roadmap Evolution
 
@@ -57,6 +58,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-16T03:19:54.045Z
-Stopped at: Completed 08-01-PLAN.md
+Last session: 2026-03-16T03:22:30Z
+Stopped at: Completed 08-02-PLAN.md
 Resume file: None

@@ -15,7 +15,7 @@ Requirements for MDT import and dynamic route support.
 
 ### MDT Import
 
-- [ ] **IMPORT-01**: Decode MDT export strings using LibDeflate + AceSerializer (bundled following MDT's own pattern)
+- [x] **IMPORT-01**: Decode MDT export strings using LibDeflate + AceSerializer (bundled following MDT's own pattern)
 - [ ] **IMPORT-02**: Extract pull list with npcIDs from decoded preset data
 - [ ] **IMPORT-03**: Match pull npcIDs against ability database to build pack abilities with correct mobClasses
 - [ ] **IMPORT-04**: Populate PackDatabase from imported route (replaces hardcoded data files)
@@ -52,7 +52,7 @@ Requirements for MDT import and dynamic route support.
 | DATA-10 | Phase 8 | Complete |
 | DATA-11 | Phase 8 | Complete |
 | DATA-12 | Phase 9 | Pending |
-| IMPORT-01 | Phase 8 | Pending |
+| IMPORT-01 | Phase 8 | Complete |
 | IMPORT-02 | Phase 9 | Pending |
 | IMPORT-03 | Phase 9 | Pending |
 | IMPORT-04 | Phase 9 | Pending |
