@@ -92,6 +92,12 @@ end
 -- ============================================================
 
 --- Single scan tick: count hostile in-combat mobs by class, reconcile changes.
+-- PERF: Runs every 0.25s via C_Timer.NewTicker while a pack is active.
+-- Per tick: iterates C_NamePlate.GetNamePlates() (typically 5-20 frames),
+-- calls UnitCanAttack + UnitAffectingCombat + UnitClass per visible nameplate.
+-- Cost: ~60 API calls/tick at 20 nameplates (3 calls each). Reconcile loop
+-- is O(unique_classes), typically 2-5 iterations. No allocations except the
+-- newCounts table (collected next tick). Reviewed 2026-03-16, acceptable.
 function Scanner:Tick()
     if not activePack then return end
 
@@ -145,6 +151,8 @@ function Scanner:Start(pack)
 
     dbg("NameplateScanner:Start — polling every 0.25s for " .. #pack.abilities .. " abilities")
 
+    -- PERF: 0.25s poll interval chosen as balance between detection latency
+    -- and CPU cost. See Scanner:Tick() for per-tick cost breakdown.
     tickerHandle = C_Timer.NewTicker(0.25, function()
         Scanner:Tick()
     end)

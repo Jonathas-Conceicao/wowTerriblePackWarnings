@@ -15,7 +15,7 @@ local MAX_PORTRAITS = 8
 -- Lookup Tables (built once at file scope)
 ------------------------------------------------------------------------
 local npcIdToDisplayId = {}
-for dungeonIdx, enemies in pairs(ns.DungeonEnemies) do
+for _, enemies in pairs(ns.DungeonEnemies) do
     for _, enemy in pairs(enemies) do
         if enemy.id and enemy.displayId then
             npcIdToDisplayId[enemy.id] = enemy.displayId
@@ -32,7 +32,7 @@ end
 
 -- Boss lookup: npcID -> true if isBoss flag in DungeonEnemies
 local npcIdIsBoss = {}
-for dungeonIdx, enemies in pairs(ns.DungeonEnemies) do
+for _, enemies in pairs(ns.DungeonEnemies) do
     for _, enemy in pairs(enemies) do
         if enemy.id and enemy.isBoss then
             npcIdIsBoss[enemy.id] = true
