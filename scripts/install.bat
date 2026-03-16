@@ -13,6 +13,7 @@ copy /Y "%SOURCE%Core.lua" "%DEST%\"
 
 if not exist "%DEST%\Data" mkdir "%DEST%\Data"
 copy /Y "%SOURCE%Data\WindrunnerSpire.lua" "%DEST%\Data\"
+copy /Y "%SOURCE%Data\DungeonEnemies.lua" "%DEST%\Data\"
 
 if not exist "%DEST%\Engine" mkdir "%DEST%\Engine"
 copy /Y "%SOURCE%Engine\Scheduler.lua" "%DEST%\Engine\"
@@ -30,5 +31,6 @@ xcopy /Y /E /I "%SOURCE%Libs" "%DEST%\Libs"
 
 if not exist "%DEST%\Import" mkdir "%DEST%\Import"
 copy /Y "%SOURCE%Import\Decode.lua" "%DEST%\Import\"
+copy /Y "%SOURCE%Import\Pipeline.lua" "%DEST%\Import\"
 
 echo Done! /reload in WoW to load the addon.

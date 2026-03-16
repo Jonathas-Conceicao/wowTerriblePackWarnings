@@ -30,6 +30,16 @@ for npcID, entry in pairs(ns.AbilityDB or {}) do
     end
 end
 
+-- Boss lookup: npcID -> true if isBoss flag in DungeonEnemies
+local npcIdIsBoss = {}
+for dungeonIdx, enemies in pairs(ns.DungeonEnemies) do
+    for _, enemy in pairs(enemies) do
+        if enemy.id and enemy.isBoss then
+            npcIdIsBoss[enemy.id] = true
+        end
+    end
+end
+
 local CLASS_ICON = {
     WARRIOR     = "Interface\\Icons\\ClassIcon_Warrior",
     PALADIN     = "Interface\\Icons\\ClassIcon_Paladin",
@@ -290,7 +300,16 @@ local function PopulateList()
             end
         end
 
-        -- State coloring
+        -- Check if pack contains a boss
+        local hasBoss = false
+        for _, npcID in ipairs(npcIDs) do
+            if npcIdIsBoss[npcID] then
+                hasBoss = true
+                break
+            end
+        end
+
+        -- State coloring (combat state > boss > alternating)
         local sameDungeon = (activeDungeon == "imported")
         if sameDungeon and i == activePackIndex and curState == "active" then
             row.bg:SetColorTexture(1, 0.5, 0, 0.25)       -- orange: active/fighting
@@ -298,6 +317,10 @@ local function PopulateList()
             row.bg:SetColorTexture(0, 1, 0, 0.15)          -- green: selected
         elseif sameDungeon and activePackIndex and i < activePackIndex then
             row.bg:SetColorTexture(0.2, 0.2, 0.2, 0.3)    -- grey: completed
+        elseif hasBoss then
+            row.bg:SetColorTexture(0.6, 0.2, 0.2, 0.3)    -- dark red: boss pull
+        elseif i % 2 == 0 then
+            row.bg:SetColorTexture(1, 1, 1, 0.05)          -- subtle alternating stripe
         else
             row.bg:SetColorTexture(0, 0, 0, 0)             -- transparent
         end
@@ -314,6 +337,21 @@ local function PopulateList()
     end
 
     scrollChild:SetHeight(math.max(yOffset, 1))
+
+    -- Auto-scroll to center the active/selected pack (delay 1 frame for layout)
+    C_Timer.After(0, function()
+        local scrollTarget = nil
+        if activeDungeon == "imported" and activePackIndex then
+            scrollTarget = activePackIndex
+        end
+        if scrollTarget and scrollTarget > 0 then
+            local frameHeight = scrollFrame:GetHeight() or 0
+            local maxScroll = scrollFrame:GetVerticalScrollRange() or 0
+            local targetOffset = (scrollTarget - 1) * ROW_HEIGHT - (frameHeight / 2) + (ROW_HEIGHT / 2)
+            targetOffset = math.max(0, math.min(targetOffset, maxScroll))
+            scrollFrame:SetVerticalScroll(targetOffset)
+        end
+    end)
 end
 
 ------------------------------------------------------------------------
