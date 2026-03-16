@@ -80,7 +80,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 4 → 5 → 6
+Phases execute in numeric order: 4 → 5 → 6 → 7
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -90,13 +90,15 @@ Phases execute in numeric order: 4 → 5 → 6
 | 4. Data Schema and Pack Update | 1/1 | Complete   | 2026-03-15 | - |
 | 5. Custom Spell Icon Display | v0.0.2 | 2/2 | Complete | 2026-03-15 |
 | 6. Nameplate Detection and Mob Lifecycle | v0.0.2 | 2/2 | Complete | 2026-03-15 |
+| 7. Complete Dungeon Route | v0.0.2 | 0/2 | Planning | - |
 
-### Phase 7: complete dungeon route
+### Phase 7: Complete Dungeon Route
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** Populate all 17 Windrunner Spire packs for a full dungeon route, add label text on icons, and tooltip on mouseover
+**Requirements**: ROUTE-01, ROUTE-02, ROUTE-03
 **Depends on:** Phase 6
-**Plans:** 0 plans
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 7 to break down)
+- [ ] 07-01-PLAN.md -- Expand WindrunnerSpire.lua to 17 packs with full ability data
+- [ ] 07-02-PLAN.md -- Add label FontString, spell tooltip, and label propagation
