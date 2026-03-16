@@ -11,6 +11,8 @@ frame:RegisterEvent("ADDON_LOADED")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:RegisterEvent("PLAYER_REGEN_DISABLED")
 frame:RegisterEvent("PLAYER_REGEN_ENABLED")
+frame:RegisterEvent("NAME_PLATE_UNIT_ADDED")
+frame:RegisterEvent("NAME_PLATE_UNIT_REMOVED")
 
 frame:SetScript("OnEvent", function(self, event, ...)
     if event == "ADDON_LOADED" then
@@ -40,6 +42,14 @@ frame:SetScript("OnEvent", function(self, event, ...)
     elseif event == "PLAYER_ENTERING_WORLD" then
         -- NOTE: intentionally NOT unregistered — must fire on every zone change to reset state
         ns.CombatWatcher:Reset()
+
+    elseif event == "NAME_PLATE_UNIT_ADDED" then
+        local unitToken = ...
+        ns.NameplateScanner:OnNameplateAdded(unitToken)
+
+    elseif event == "NAME_PLATE_UNIT_REMOVED" then
+        local unitToken = ...
+        ns.NameplateScanner:OnNameplateRemoved(unitToken)
     end
 end)
 

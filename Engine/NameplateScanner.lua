@@ -21,10 +21,33 @@ local staticShown = {}
 -- Global incrementing ID for unique per-mob barIds
 local timerCounter = 0
 
+-- Nameplate cache: unitToken -> { hostile = bool, classBase = string }
+-- Populated on NAME_PLATE_UNIT_ADDED, cleared on NAME_PLATE_UNIT_REMOVED.
+-- UnitCanAttack and UnitClass are stable for a given mob in dungeon content,
+-- so we cache them to avoid redundant API calls in the 0.25s hot loop.
+local plateCache = {}
+
 -- Debug logging: reads shared toggle from SavedVariables (ns.db.debug)
 -- Toggle with /tpw debug. Persists through /reload.
 local function dbg(msg)
     if ns.db and ns.db.debug then print("|cff888888TPW-dbg|r " .. msg) end
+end
+
+-- ============================================================
+-- Nameplate cache management (called from Core.lua events)
+-- ============================================================
+
+function Scanner:OnNameplateAdded(unitToken)
+    local hostile = UnitCanAttack("player", unitToken)
+    local _, classBase = UnitClass(unitToken)
+    plateCache[unitToken] = {
+        hostile   = hostile,
+        classBase = classBase,
+    }
+end
+
+function Scanner:OnNameplateRemoved(unitToken)
+    plateCache[unitToken] = nil
 end
 
 -- ============================================================
@@ -93,11 +116,11 @@ end
 
 --- Single scan tick: count hostile in-combat mobs by class, reconcile changes.
 -- PERF: Runs every 0.25s via C_Timer.NewTicker while a pack is active.
--- Per tick: iterates C_NamePlate.GetNamePlates() (typically 5-20 frames),
--- calls UnitCanAttack + UnitAffectingCombat + UnitClass per visible nameplate.
--- Cost: ~60 API calls/tick at 20 nameplates (3 calls each). Reconcile loop
--- is O(unique_classes), typically 2-5 iterations. No allocations except the
--- newCounts table (collected next tick). Reviewed 2026-03-16, acceptable.
+-- Per tick: iterates C_NamePlate.GetNamePlates() (typically 5-20 frames).
+-- UnitCanAttack and UnitClass are cached at NAME_PLATE_UNIT_ADDED (stable per mob).
+-- Only UnitAffectingCombat is called per tick (dynamic combat state).
+-- Cost: ~20 API calls/tick at 20 nameplates (1 call each). Reconcile loop
+-- is O(unique_classes), typically 2-5 iterations. Reviewed 2026-03-16.
 function Scanner:Tick()
     if not activePack then return end
 
@@ -106,16 +129,16 @@ function Scanner:Tick()
     local plates = C_NamePlate.GetNamePlates()
     for _, plate in ipairs(plates) do
         local npUnit = plate.namePlateUnitToken or plate.unitToken
-        if npUnit and UnitCanAttack("player", npUnit) then
-            local inCombatOk, inCombat = pcall(UnitAffectingCombat, npUnit)
-            if inCombatOk and inCombat then
-                local classOk, _, classBase = pcall(UnitClass, npUnit)
-                if classOk and classBase then
-                    newCounts[classBase] = (newCounts[classBase] or 0) + 1
-                end
-                -- Debug: log every class detected (first scan only)
-                if classOk and not prevCounts[classBase or "?"] then
-                    dbg("Scan found class: " .. tostring(classBase) .. " unit=" .. tostring(npUnit))
+        if npUnit then
+            local cached = plateCache[npUnit]
+            if cached and cached.hostile and cached.classBase then
+                local inCombatOk, inCombat = pcall(UnitAffectingCombat, npUnit)
+                if inCombatOk and inCombat then
+                    newCounts[cached.classBase] = (newCounts[cached.classBase] or 0) + 1
+                    -- Debug: log every class detected (first scan only)
+                    if not prevCounts[cached.classBase] then
+                        dbg("Scan found class: " .. cached.classBase .. " unit=" .. tostring(npUnit))
+                    end
                 end
             end
         end
@@ -174,6 +197,8 @@ function Scanner:Stop()
     wipe(prevCounts)
     wipe(classBarIds)
     wipe(staticShown)
+    -- Note: plateCache is NOT wiped here — it's managed by nameplate events
+    -- and stays valid across combat sessions
 
     dbg("NameplateScanner:Stop — scanner halted")
 end
