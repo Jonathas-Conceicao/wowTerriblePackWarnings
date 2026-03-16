@@ -9,8 +9,8 @@ Requirements for MDT import and dynamic route support.
 
 ### Data Rework
 
-- [ ] **DATA-10**: Ability database keyed by npcID — each npcID maps to its spells with cooldown, label, tts, mobClass
-- [ ] **DATA-11**: Multiple npcIDs can share the same ability (e.g. 232122 and 232121 both have Interrupting Screech)
+- [x] **DATA-10**: Ability database keyed by npcID — each npcID maps to its spells with cooldown, label, tts, mobClass
+- [x] **DATA-11**: Multiple npcIDs can share the same ability (e.g. 232122 and 232121 both have Interrupting Screech)
 - [ ] **DATA-12**: Packs are dynamically built from imported route data, not hardcoded in data files
 
 ### MDT Import
@@ -49,8 +49,8 @@ Requirements for MDT import and dynamic route support.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-10 | Phase 8 | Pending |
-| DATA-11 | Phase 8 | Pending |
+| DATA-10 | Phase 8 | Complete |
+| DATA-11 | Phase 8 | Complete |
 | DATA-12 | Phase 9 | Pending |
 | IMPORT-01 | Phase 8 | Pending |
 | IMPORT-02 | Phase 9 | Pending |

@@ -87,6 +87,6 @@ Plans:
 | 5. Custom Spell Icon Display | v0.0.2 | 2/2 | Complete | 2026-03-15 |
 | 6. Nameplate Detection and Mob Lifecycle | v0.0.2 | 2/2 | Complete | 2026-03-15 |
 | 7. Complete Dungeon Route | v0.0.2 | 2/2 | Complete | 2026-03-16 |
-| 8. Ability Database and Decode Library | v0.0.3 | 0/2 | In progress | - |
+| 8. Ability Database and Decode Library | 1/2 | In Progress|  | - |
 | 9. Import Pipeline | v0.0.3 | 0/? | Not started | - |
 | 10. Route UI Overhaul | v0.0.3 | 0/? | Not started | - |
