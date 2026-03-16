@@ -1,5 +1,25 @@
 # Milestones
 
+## v0.0.4 Cleanup and Polish (Shipped: 2026-03-16)
+
+**Phases completed:** 2 phases, 2 plans
+**Code:** 1,839 lines of Lua across 10 files
+
+**Key accomplishments:**
+- README with WIP notice, gallery, AI disclosure, GPL-2.0 license
+- TOC metadata: CurseForge 1487612, Wago ZKbxadN1, blp addon icon
+- Debug logging toggleable via /tpw debug (SavedVariables, defaults OFF)
+- All status messages guarded behind debug flag — silent by default
+- Nameplate cache: UnitCanAttack/UnitClass cached at events, hot path reduced from ~60 to ~20 API calls/tick
+- Zone re-entry resets imported route to pull 1
+- Mid-combat pack select starts scanner immediately
+- CHANGELOG.md for release notes
+- Dead code removal and PERF audit comments
+
+**Requirements:** 8/8 v0.0.4 requirements completed (DOC-01/02, CI-01/02, CLEAN-01/02/03/04)
+
+---
+
 ## v0.0.3 MDT Import (Shipped: 2026-03-16)
 
 **Phases completed:** 3 phases, 5 plans
