@@ -22,10 +22,10 @@ Requirements for MDT import and dynamic route support.
 
 ### UI Overhaul
 
-- [ ] **UI-09**: Pack list shows indexed pulls with round NPC portrait icons per mob in each pack
-- [ ] **UI-10**: Import button opens text editbox for pasting MDT/KSG export string
-- [ ] **UI-11**: Clear button removes all imported route data, leaving pack list empty
-- [ ] **UI-12**: Display imported dungeon name and pull count in the UI header
+- [x] **UI-09**: Pack list shows indexed pulls with round NPC portrait icons per mob in each pack
+- [x] **UI-10**: Import button opens text editbox for pasting MDT/KSG export string
+- [x] **UI-11**: Clear button removes all imported route data, leaving pack list empty
+- [x] **UI-12**: Display imported dungeon name and pull count in the UI header
 
 ## Ability-to-NPC Mapping (Reference Data)
 
@@ -56,10 +56,10 @@ Requirements for MDT import and dynamic route support.
 | IMPORT-02 | Phase 9 | Complete |
 | IMPORT-03 | Phase 9 | Complete |
 | IMPORT-04 | Phase 9 | Complete |
-| UI-09 | Phase 10 | Pending |
-| UI-10 | Phase 10 | Pending |
-| UI-11 | Phase 10 | Pending |
-| UI-12 | Phase 10 | Pending |
+| UI-09 | Phase 10 | Complete |
+| UI-10 | Phase 10 | Complete |
+| UI-11 | Phase 10 | Complete |
+| UI-12 | Phase 10 | Complete |
 
 **Coverage:**
 - v0.0.3 requirements: 11 total

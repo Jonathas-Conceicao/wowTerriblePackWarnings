@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 09-02-PLAN.md
-last_updated: "2026-03-16T04:14:05.064Z"
+stopped_at: Completed 10-01-PLAN.md
+last_updated: "2026-03-16T04:42:10.311Z"
 last_activity: 2026-03-16 -- Completed 09-01 DungeonEnemies data and import pipeline
 progress:
   total_phases: 3
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  completed_phases: 3
+  total_plans: 5
+  completed_plans: 5
   percent: 95
 ---
 
@@ -44,6 +44,8 @@ Progress: [██████████] 95% (18/19 plans complete across all 
 - [Phase 08]: Followed MDT StringToTable pattern exactly for decode chain; legacy format rejected with error
 - [Phase 09]: Guarded ns.AbilityDB with nil check; nil-safe Stop calls in Import.Clear
 - [Phase 09]: Defensive guard on RestoreFromSaved call; auto-expand new dungeon keys in Refresh
+- [Phase 10]: Portrait fallback uses AbilityDB mobClass class icons when displayId missing
+- [Phase 10]: Import popup is separate Frame (not StaticPopup) to support MDT strings >255 chars
 
 ### Roadmap Evolution
 
@@ -60,6 +62,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-16T04:11:05.668Z
-Stopped at: Completed 09-02-PLAN.md
+Last session: 2026-03-16T04:42:10.305Z
+Stopped at: Completed 10-01-PLAN.md
 Resume file: None

@@ -35,7 +35,7 @@ See: `.planning/milestones/v0.0.2-ROADMAP.md` for full details.
 
 - [x] **Phase 8: Ability Database and Decode Library** - NpcID-keyed ability data and LibDeflate+AceSerializer decoding (completed 2026-03-16)
 - [x] **Phase 9: Import Pipeline** - Extract pulls from decoded data and dynamically build packs (completed 2026-03-16)
-- [ ] **Phase 10: Route UI Overhaul** - MDT-style pull display with NPC portraits, import/clear controls
+- [x] **Phase 10: Route UI Overhaul** - MDT-style pull display with NPC portraits, import/clear controls (completed 2026-03-16)
 
 ## Phase Details
 
@@ -94,4 +94,4 @@ Plans:
 | 7. Complete Dungeon Route | v0.0.2 | 2/2 | Complete | 2026-03-16 |
 | 8. Ability Database and Decode Library | 2/2 | Complete   | 2026-03-16 | - |
 | 9. Import Pipeline | 2/2 | Complete   | 2026-03-16 | - |
-| 10. Route UI Overhaul | v0.0.3 | 0/1 | Not started | - |
+| 10. Route UI Overhaul | 1/1 | Complete   | 2026-03-16 | - |
