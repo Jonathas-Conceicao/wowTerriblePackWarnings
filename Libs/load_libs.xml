@@ -1,0 +1,5 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+    <Script file='LibStub\LibStub.lua'/>
+    <Script file='AceSerializer-3.0\AceSerializer-3.0.lua'/>
+    <Script file='LibDeflate\LibDeflate.lua'/>
+</Ui>

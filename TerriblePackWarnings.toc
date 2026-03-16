@@ -7,10 +7,12 @@
 ## Category: Combat
 ## SavedVariables: TerriblePackWarningsDB
 
+Libs\load_libs.xml
 Core.lua
 Engine\Scheduler.lua
 Engine\NameplateScanner.lua
 Engine\CombatWatcher.lua
 Display\IconDisplay.lua
+Import\Decode.lua
 Data\WindrunnerSpire.lua
 UI\PackFrame.lua

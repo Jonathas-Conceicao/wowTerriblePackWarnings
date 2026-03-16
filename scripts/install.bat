@@ -25,4 +25,10 @@ copy /Y "%SOURCE%Display\IconDisplay.lua" "%DEST%\Display\"
 if not exist "%DEST%\UI" mkdir "%DEST%\UI"
 copy /Y "%SOURCE%UI\PackFrame.lua" "%DEST%\UI\"
 
+if not exist "%DEST%\Libs" mkdir "%DEST%\Libs"
+xcopy /Y /E /I "%SOURCE%Libs" "%DEST%\Libs"
+
+if not exist "%DEST%\Import" mkdir "%DEST%\Import"
+copy /Y "%SOURCE%Import\Decode.lua" "%DEST%\Import\"
+
 echo Done! /reload in WoW to load the addon.
