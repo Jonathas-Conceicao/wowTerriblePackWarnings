@@ -51,7 +51,7 @@ function Scanner:OnMobsAdded(classBase, delta)
                 -- Untimed: one static icon per ability, regardless of mob count
                 if not staticShown[ability.spellID] then
                     staticShown[ability.spellID] = true
-                    ns.IconDisplay.ShowStaticIcon("static_" .. ability.spellID, ability.spellID)
+                    ns.IconDisplay.ShowStaticIcon("static_" .. ability.spellID, ability.spellID, ability.label)
                     dbg("OnMobsAdded: static icon for " .. ability.name)
                 end
             end

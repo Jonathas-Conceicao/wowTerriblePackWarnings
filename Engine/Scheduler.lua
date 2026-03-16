@@ -36,7 +36,7 @@ scheduleAbility = function(ability, existingBarId)
     end
 
     -- Show the icon immediately with cooldown sweep
-    ns.IconDisplay.ShowIcon(barId, ability.spellID, ability.ttsMessage, ability.first_cast)
+    ns.IconDisplay.ShowIcon(barId, ability.spellID, ability.ttsMessage, ability.first_cast, ability.label)
 
     -- Pre-warning: 5 seconds before the cast — set urgent glow + TTS
     local preWarnOffset = ability.first_cast - 5
@@ -101,7 +101,7 @@ function Scheduler:Start(dungeonKey, packIndex)
             scheduleAbility(ability)
         else
             -- Untimed: show static icon (one per ability, regardless of mob count)
-            ns.IconDisplay.ShowStaticIcon("static_" .. ability.spellID, ability.spellID)
+            ns.IconDisplay.ShowStaticIcon("static_" .. ability.spellID, ability.spellID, ability.label)
             dbg("Static icon: " .. ability.name)
         end
     end
