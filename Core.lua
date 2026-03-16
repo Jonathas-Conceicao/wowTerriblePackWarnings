@@ -63,6 +63,38 @@ SlashCmdList["TERRIBLEPACKWARNINGS"] = function(msg)
         print("|cff00ccffTPW|r State: " .. s
               .. ", Dungeon: " .. tostring(d)
               .. ", Pack: " .. tostring(i))
+    elseif cmd == "show" then
+        -- Debug: show a spell icon by spellID
+        local spellID = tonumber(arg)
+        if not spellID then
+            print("|cff00ccffTPW|r Usage: /tpw show <spellID>")
+        else
+            -- Find ability in current pack data to get label/tts
+            local label, tts
+            for _, packs in pairs(ns.PackDatabase) do
+                for _, pack in ipairs(packs) do
+                    for _, ability in ipairs(pack.abilities) do
+                        if ability.spellID == spellID then
+                            label = ability.label
+                            tts = ability.ttsMessage
+                            break
+                        end
+                    end
+                end
+            end
+            ns.IconDisplay.ShowIcon("debug_" .. spellID, spellID, tts, 30, label)
+            print("|cff00ccffTPW|r Showing spell " .. spellID .. " for 30s")
+        end
+    elseif cmd == "hide" then
+        -- Debug: hide a spell icon by spellID
+        local spellID = tonumber(arg)
+        if not spellID then
+            ns.IconDisplay.CancelAll()
+            print("|cff00ccffTPW|r All icons cleared")
+        else
+            ns.IconDisplay.CancelIcon("debug_" .. spellID)
+            print("|cff00ccffTPW|r Hidden spell " .. spellID)
+        end
     elseif cmd == "help" then
         print("|cff00ccffTPW|r Commands: select <dungeon>, start [pack#], stop, status, help")
     else
