@@ -214,6 +214,14 @@ clearBtn:SetPoint("RIGHT", importBtn, "LEFT", -8, 0)
 clearBtn:SetText("Clear")
 clearBtn:SetScript("OnClick", function() StaticPopup_Show("TPW_CONFIRM_CLEAR") end)
 
+local configBtn = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
+configBtn:SetSize(80, 22)
+configBtn:SetPoint("RIGHT", clearBtn, "LEFT", -8, 0)
+configBtn:SetText("Config")
+configBtn:SetScript("OnClick", function()
+    if ns.ConfigUI and ns.ConfigUI.Toggle then ns.ConfigUI.Toggle() end
+end)
+
 ------------------------------------------------------------------------
 -- Pull Row Creation
 ------------------------------------------------------------------------
@@ -295,8 +303,23 @@ local function PopulateList()
             if p <= #npcIDs then
                 GetPortraitTexture(tex, npcIDs[p])
                 tex:Show()
+                -- Count overlay
+                if not tex.countLabel then
+                    tex.countLabel = row:CreateFontString(nil, "OVERLAY")
+                    tex.countLabel:SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
+                    tex.countLabel:SetPoint("BOTTOMRIGHT", tex, "BOTTOMRIGHT", 0, 0)
+                    tex.countLabel:SetTextColor(1, 1, 1, 1)
+                end
+                local count = pack.mobCounts and pack.mobCounts[npcIDs[p]] or 1
+                if count > 1 then
+                    tex.countLabel:SetText("x" .. count)
+                    tex.countLabel:Show()
+                else
+                    tex.countLabel:Hide()
+                end
             else
                 tex:Hide()
+                if tex.countLabel then tex.countLabel:Hide() end
             end
         end
 
