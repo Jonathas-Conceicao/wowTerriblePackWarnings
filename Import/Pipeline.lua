@@ -15,6 +15,44 @@ local DUNGEON_IDX_MAP = {
     [155] = { key = "nexus_point_xenas",       name = "Nexus Point Xenas" },
     [160] = { key = "murder_row",              name = "Murder Row" },
 }
+-- Expose on ns so ConfigFrame and other files can read dungeon names
+ns.DUNGEON_IDX_MAP = DUNGEON_IDX_MAP
+
+--- Merge per-skill user overrides from ns.db.skillConfig with AbilityDB defaults.
+-- Returns a merged ability table, or nil if the skill is disabled by the user.
+-- IMPORTANT: checks cfg.enabled == false (strict equality) — nil means "use default = enabled".
+-- @param npcID    number   NPC ID of the mob
+-- @param ability  table    ability entry from ns.AbilityDB[npcID].abilities
+-- @param mobClass string   mob class string (e.g. "PALADIN")
+-- @return table|nil  merged ability table, or nil if disabled
+local function MergeSkillConfig(npcID, ability, mobClass)
+    local cfg = ns.db.skillConfig
+        and ns.db.skillConfig[npcID]
+        and ns.db.skillConfig[npcID][ability.spellID]
+    if not cfg then
+        -- No override: return ability unchanged (copy to avoid mutating AbilityDB)
+        return {
+            name       = ability.name,
+            spellID    = ability.spellID,
+            mobClass   = mobClass,
+            first_cast = ability.first_cast,
+            cooldown   = ability.cooldown,
+            label      = ability.label,
+            ttsMessage = ability.ttsMessage,
+        }
+    end
+    if cfg.enabled == false then return nil end  -- disabled: omit from pack
+    return {
+        name       = ability.name,
+        spellID    = ability.spellID,
+        mobClass   = mobClass,
+        first_cast = ability.first_cast,
+        cooldown   = ability.cooldown,
+        label      = cfg.label      ~= nil and cfg.label      or ability.label,
+        ttsMessage = cfg.ttsMessage ~= nil and cfg.ttsMessage or ability.ttsMessage,
+        soundKitID = cfg.soundKitID,  -- nil means TTS mode
+    }
+end
 
 --- Build a single pack from one MDT pull entry.
 -- @param pullIdx     number   1-based pull index (used for displayName)
@@ -31,6 +69,19 @@ local function BuildPack(pullIdx, pullData, dungeonIdx)
     local enemies = ns.DungeonEnemies[dungeonIdx]
     if not enemies then return pack end
 
+    -- First pass: count clone instances per npcID (before deduplication)
+    local mobCounts = {}
+    for enemyIdx, clones in pairs(pullData) do
+        if tonumber(enemyIdx) and enemies[enemyIdx] then
+            local npcID = enemies[enemyIdx].id
+            local cloneCount = 0
+            for _ in pairs(clones) do cloneCount = cloneCount + 1 end
+            mobCounts[npcID] = (mobCounts[npcID] or 0) + cloneCount
+        end
+    end
+    pack.mobCounts = mobCounts
+
+    -- Second pass: deduplicate npcIDs and build ability list with skillConfig merging
     local seenNpc = {}
     local seenAbility = {}
 
@@ -45,18 +96,13 @@ local function BuildPack(pullIdx, pullData, dungeonIdx)
                 local entry = ns.AbilityDB and ns.AbilityDB[npcID]
                 if entry then
                     for _, ability in ipairs(entry.abilities) do
-                        local key = ability.spellID .. "_" .. entry.mobClass
-                        if not seenAbility[key] then
-                            seenAbility[key] = true
-                            table.insert(pack.abilities, {
-                                name       = ability.name,
-                                spellID    = ability.spellID,
-                                mobClass   = entry.mobClass,
-                                first_cast = ability.first_cast,
-                                cooldown   = ability.cooldown,
-                                label      = ability.label,
-                                ttsMessage = ability.ttsMessage,
-                            })
+                        local merged = MergeSkillConfig(npcID, ability, entry.mobClass)
+                        if merged then
+                            local key = merged.spellID .. "_" .. merged.mobClass
+                            if not seenAbility[key] then
+                                seenAbility[key] = true
+                                table.insert(pack.abilities, merged)
+                            end
                         end
                     end
                 end
