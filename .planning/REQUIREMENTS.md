@@ -68,29 +68,29 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-13 | — | Pending |
-| DATA-14 | — | Pending |
-| DATA-15 | — | Pending |
-| CFG-01 | — | Pending |
-| CFG-02 | — | Pending |
-| CFG-03 | — | Pending |
-| CFG-04 | — | Pending |
-| CFG-05 | — | Pending |
-| ALERT-01 | — | Pending |
-| ALERT-02 | — | Pending |
-| ALERT-03 | — | Pending |
-| HILITE-01 | — | Pending |
-| HILITE-02 | — | Pending |
-| ROUTE-01 | — | Pending |
-| ROUTE-02 | — | Pending |
-| ROUTE-03 | — | Pending |
-| ROUTE-04 | — | Pending |
+| CFG-01 | Phase 13 | Pending |
+| CFG-02 | Phase 13 | Pending |
+| CFG-03 | Phase 13 | Pending |
+| CFG-04 | Phase 13 | Pending |
+| CFG-05 | Phase 13 | Pending |
+| ROUTE-04 | Phase 13 | Pending |
+| DATA-13 | Phase 14 | Pending |
+| DATA-14 | Phase 14 | Pending |
+| DATA-15 | Phase 14 | Pending |
+| ROUTE-01 | Phase 15 | Pending |
+| ROUTE-02 | Phase 15 | Pending |
+| ROUTE-03 | Phase 15 | Pending |
+| HILITE-01 | Phase 16 | Pending |
+| HILITE-02 | Phase 16 | Pending |
+| ALERT-01 | Phase 16 | Pending |
+| ALERT-02 | Phase 16 | Pending |
+| ALERT-03 | Phase 16 | Pending |
 
 **Coverage:**
 - v0.1.0 requirements: 17 total
-- Mapped to phases: 0
-- Unmapped: 17 ⚠️
+- Mapped to phases: 17
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-17 after initial definition*
+*Last updated: 2026-03-17 after roadmap revision (phase order resequenced: UI first, data second)*
