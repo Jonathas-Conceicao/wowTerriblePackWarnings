@@ -23,6 +23,19 @@ When a player imports a route and pulls, they see accurate, timed ability warnin
 - Route persistence via SavedVariables, auto-scroll to active pull
 - DungeonEnemies data for all 9 Midnight M+ dungeons
 
+## Current Milestone: v0.1.0 Configuration and Skill Data
+
+**Goal:** Add per-skill configuration UI, populate ability data from MDT for all dungeons, rework highlighting for untimed vs timed skills, and support per-dungeon route management.
+
+**Target features:**
+- Configuration window: dungeon→mob→skill tree with per-skill settings
+- MDT ability data extraction for all 9 Midnight S1 dungeons
+- Per-skill toggles, custom labels, TTS text, and WoW sound alert dropdown (CDM-style)
+- Untimed skill highlighting on same-class cast detection via nameplate polling
+- Per-dungeon route import and storage (each dungeon holds its own route)
+- Dungeon selector in TPW window with auto-switch on zone-in
+- Pull rows show mob counts per type
+
 ## Requirements
 
 ### Validated
@@ -45,7 +58,14 @@ When a player imports a route and pulls, they see accurate, timed ability warnin
 
 ### Active
 
-(None -- next milestone will define new requirements)
+- Configuration window with dungeon→mob→skill hierarchy
+- MDT ability data population for all 9 dungeons (untimed, default WARRIOR class)
+- Per-skill settings: toggle tracking, custom label, TTS text, sound alert dropdown
+- Untimed skill highlighting via nameplate cast detection (UnitCastingInfo polling)
+- Timed skill pre-warning highlight at 5 seconds with alert
+- Per-dungeon route storage (independent routes per dungeon)
+- Dungeon selector in TPW window with zone-in auto-switch
+- Pull rows showing mob count per type
 
 ### Out of Scope
 
@@ -57,16 +77,19 @@ When a player imports a route and pulls, they see accurate, timed ability warnin
 ## Context
 
 - **Platform:** World of Warcraft Midnight expansion (12+ API)
-- **API constraints:** Midnight restricts combat log reading. Nameplate scanning works for mob detection.
+- **API constraints:** Midnight restricts combat log reading. Nameplate scanning works for mob detection. UnitCastingInfo/UnitChannelInfo available for cast detection via nameplate polling.
 - **Display system:** Custom spell icon squares with CooldownFrameTemplate sweep. TTS via C_VoiceChat.SpeakText.
 - **Import system:** LibDeflate + AceSerializer decode MDT export strings. DungeonEnemies data for 9 dungeons provides npcID → displayId mapping.
 - **Architecture:** Self-contained display + nameplate detection. Only external dependency is bundled decode libraries (LibStub pattern).
+- **MDT source:** Local at C:\Users\jonat\Repositories\MythicDungeonTools — ability data per enemy available, no cast timing.
+- **CDM reference:** Cooldown Manager sound alert pattern in wow-ui-source at C:\Users\jonat\Repositories\wow-ui-source — dropdown for WoW built-in sound files.
 
 ## Constraints
 
 - **API:** Midnight 12+ addon API only
 - **Framework:** Plain Lua + XML + bundled libs (LibDeflate, AceSerializer via LibStub)
 - **Data:** Ability cooldown timers are approximate/predefined
+- **Cast detection:** Must use UnitCastingInfo via nameplate polling (no CLEU)
 
 ## Key Decisions
 
@@ -82,6 +105,9 @@ When a player imports a route and pulls, they see accurate, timed ability warnin
 | Accept any dungeon import (no skill tracking if no AbilityDB) | Future-proofs for adding new dungeon abilities | Good |
 | Round NPC portraits with circular mask | Matches MDT visual style | Good |
 | Boss pull highlighting (dark red) | Quick visual identification of boss encounters | Good |
+| Default mobClass to WARRIOR for MDT-imported abilities | MDT lacks class data, WARRIOR is safe default, refine later | — Pending |
+| UnitCastingInfo polling for untimed skill highlights | CLEU disabled in Midnight, nameplate polling already runs | — Pending |
+| Per-dungeon route storage | Each dungeon can have independent imported route | — Pending |
 
 ---
-*Last updated: 2026-03-16 after v0.0.4 milestone*
+*Last updated: 2026-03-17 after v0.1.0 milestone start*

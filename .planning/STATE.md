@@ -1,43 +1,43 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.0
-milestone_name: milestone
-status: completed
-stopped_at: Completed 12-01-PLAN.md -- Phase 12 done, all cleanup complete
-last_updated: "2026-03-16T08:30:20.824Z"
-last_activity: 2026-03-16 -- Phase 12 plan 01 completed
+milestone: v0.1.0
+milestone_name: Configuration and Skill Data
+status: defining_requirements
+stopped_at: Milestone v0.1.0 started — defining requirements
+last_updated: "2026-03-17T00:00:00.000Z"
+last_activity: 2026-03-17 -- Milestone v0.1.0 started
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 2
-  completed_plans: 2
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-16)
+See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** When a player imports a route and pulls, they see accurate, timed ability warnings via custom spell icon display.
-**Current focus:** Phase 12 - Code Cleanup (complete)
+**Current focus:** Defining requirements for v0.1.0 Configuration and Skill Data
 
 ## Current Position
 
-Phase: 12 of 12 (Code Cleanup)
-Plan: 1 of 1 in current phase
-Status: Phase 12 complete -- all phases done
-Last activity: 2026-03-16 -- Phase 12 plan 01 completed
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-17 — Milestone v0.1.0 started
 
-Progress: [████████████████████] 100% (22/22 plans complete, v0.0.4 done)
+Progress: [░░░░░░░░░░░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
 - Total plans completed: 22 (across v0.0.1-v0.0.4)
 - Phases completed: 12
-- Milestones shipped: 3
+- Milestones shipped: 4
 
 ## Accumulated Context
 
@@ -46,19 +46,18 @@ Progress: [████████████████████] 100% (2
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- [v0.0.3]: Paste-only import (no slash command) -- WoW chat buffer too small
-- [v0.0.3]: Save processed pack data (not raw MDT string) -- instant load
-- [v0.0.4]: Two-phase cleanup: docs/CI first, then code cleanup
-- [v0.0.4]: WTFPL license to match TerribleBuffTracker series
-- [v0.0.4]: Added Midnight season limitation context to README per user review
-- [Phase 12]: Kept debug logging as toggleable ns.db.debug flag instead of removing (user override)
+- [v0.1.0]: Default mobClass to WARRIOR for MDT-imported abilities
+- [v0.1.0]: UnitCastingInfo polling for untimed skill cast detection
+- [v0.1.0]: Per-dungeon route storage (independent routes)
+- [v0.1.0]: CDM-style sound alert dropdown with WoW built-in sounds
 
 ### Roadmap Evolution
 
 - Phases 1-3: v0.0.1 MVP (shipped)
 - Phases 4-7: v0.0.2 Display Rework (shipped)
 - Phases 8-10: v0.0.3 MDT Import (shipped)
-- Phases 11-12: v0.0.4 Cleanup and Polish (current)
+- Phases 11-12: v0.0.4 Cleanup and Polish (shipped)
+- Phases 13+: v0.1.0 Configuration and Skill Data (active)
 
 ### Pending Todos
 
@@ -70,6 +69,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-16T07:22:36.666Z
-Stopped at: Completed 12-01-PLAN.md -- Phase 12 done, all cleanup complete
+Last session: 2026-03-17
+Stopped at: Milestone v0.1.0 started — defining requirements
 Resume file: None
