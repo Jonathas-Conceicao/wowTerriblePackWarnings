@@ -665,10 +665,6 @@ local function BuildLeftPanel(parent)
         }
         table.insert(nodes, node)
 
-        -- Left-align header text
-        header:GetFontString():SetJustifyH("LEFT")
-        header:GetFontString():SetPoint("LEFT", header, "LEFT", 4, 0)
-
         -- Alternating dungeon header backgrounds
         local dungeonNodeIdx = #nodes
         if dungeonNodeIdx % 2 == 0 then
@@ -679,6 +675,13 @@ local function BuildLeftPanel(parent)
 
         -- Use ASCII characters for collapse indicators (Unicode doesn't render in WoW)
         header:SetText("[+] " .. dungeonName)
+        -- Left-align after SetText creates the FontString
+        local fs = header:GetFontString()
+        if fs then
+            fs:ClearAllPoints()
+            fs:SetPoint("LEFT", header, "LEFT", 4, 0)
+            fs:SetJustifyH("LEFT")
+        end
         header:SetScript("OnClick", function()
             node.expanded = not node.expanded
             if node.expanded then
