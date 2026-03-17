@@ -9,7 +9,7 @@ Requirements for Configuration and Skill Data milestone. Each maps to roadmap ph
 
 ### Ability Data
 
-- [ ] **DATA-13**: All 9 Midnight S1 dungeons have ability data files with spellIDs extracted from MDT source
+- [x] **DATA-13**: All 9 Midnight S1 dungeons have ability data files with spellIDs extracted from MDT source
 - [x] **DATA-14**: Mobs default to WARRIOR class when imported from MDT (MDT lacks class data)
 - [x] **DATA-15**: Spell names and icons resolved dynamically via C_Spell.GetSpellInfo at addon load
 
@@ -74,7 +74,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CFG-04 | Phase 13 | Complete |
 | CFG-05 | Phase 13 | Pending |
 | ROUTE-04 | Phase 13 | Complete |
-| DATA-13 | Phase 14 | Pending |
+| DATA-13 | Phase 14 | Complete |
 | DATA-14 | Phase 14 | Complete |
 | DATA-15 | Phase 14 | Complete |
 | ROUTE-01 | Phase 15 | Pending |
