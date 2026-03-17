@@ -17,8 +17,8 @@ Requirements for Configuration and Skill Data milestone. Each maps to roadmap ph
 
 - [ ] **CFG-01**: Config window with left panel showing dungeon list expandable to deduplicated mobs
 - [ ] **CFG-02**: Right panel shows selected mob's skills with per-skill settings
-- [ ] **CFG-03**: User can toggle tracking on/off for each skill via checkbox
-- [ ] **CFG-04**: User can set custom label per skill (current label as default, empty allowed)
+- [x] **CFG-03**: User can toggle tracking on/off for each skill via checkbox
+- [x] **CFG-04**: User can set custom label per skill (current label as default, empty allowed)
 - [ ] **CFG-05**: User can see WoW spell tooltip when hovering a skill in the config window
 
 ### Alerts
@@ -70,8 +70,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | CFG-01 | Phase 13 | Pending |
 | CFG-02 | Phase 13 | Pending |
-| CFG-03 | Phase 13 | Pending |
-| CFG-04 | Phase 13 | Pending |
+| CFG-03 | Phase 13 | Complete |
+| CFG-04 | Phase 13 | Complete |
 | CFG-05 | Phase 13 | Pending |
 | ROUTE-04 | Phase 13 | Pending |
 | DATA-13 | Phase 14 | Pending |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.0
 milestone_name: milestone
 status: "Roadmap approved — ready for /gsd:plan-phase 13"
-stopped_at: Phase 13 UI-SPEC approved
-last_updated: "2026-03-17T06:41:57.379Z"
+stopped_at: Completed 13-01-PLAN.md
+last_updated: "2026-03-17T07:00:17.058Z"
 last_activity: "2026-03-17 — Roadmap revised: Config UI and Pack Polish moved to Phase 13 (validated against WindrunnerSpire data), Ability Data Foundation moved to Phase 14"
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 3
+  completed_plans: 1
   percent: 0
 ---
 
@@ -53,6 +53,7 @@ Recent decisions affecting current work:
 - [v0.1.0]: Sound and TTS are mutually exclusive per skill
 - [v0.1.0]: Per-spellID alert throttle (ALERT_THROTTLE_SECONDS constant) to prevent audio stacking
 - [v0.1.0 revision]: Config UI built first (Phase 13) against existing WindrunnerSpire data — proves the tree before populating 8 more dungeons
+- [Phase 13]: cfg.enabled == false strict equality in MergeSkillConfig — nil means default = enabled, only false means explicitly disabled
 
 ### Roadmap Evolution
 
@@ -89,7 +90,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-17T06:41:57.376Z
-Stopped at: Phase 13 UI-SPEC approved
-Resume file: .planning/phases/13-configuration-ui-and-pack-polish/13-UI-SPEC.md
+Last session: 2026-03-17T07:00:17.054Z
+Stopped at: Completed 13-01-PLAN.md
+Resume file: None
 Next action: /gsd:plan-phase 13
