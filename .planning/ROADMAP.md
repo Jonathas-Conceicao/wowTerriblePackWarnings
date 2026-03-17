@@ -88,7 +88,7 @@ Plans:
   1. Opening the config window shows all 9 dungeons in the left panel, each expandable to its mob list with ability rows
   2. Every mob in all 9 dungeons defaults to WARRIOR class so the nameplate scanner can match them on import
   3. Spell names and icons for all dungeons resolve without a manual cache — they appear correctly on first window open after addon load with no grey question marks
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
 - [ ] 14-01-PLAN.md -- defaultEnabled mechanism in MergeSkillConfig/ConfigFrame + WindrunnerSpire MDT reconciliation
 - [ ] 14-02-PLAN.md -- 8 new dungeon AbilityDB data files + TOC and install.bat updates
@@ -132,6 +132,6 @@ Plans:
 | 11. Documentation and CI | v0.0.4 | 1/1 | Complete | 2026-03-16 |
 | 12. Code Cleanup | v0.0.4 | 1/1 | Complete | 2026-03-16 |
 | 13. Configuration UI and Pack Polish | v0.1.0 | 3/3 | Complete | 2026-03-17 |
-| 14. Ability Data Foundation | v0.1.0 | 0/2 | Not started | - |
+| 14. Ability Data Foundation | 1/2 | In Progress|  | - |
 | 15. Per-Dungeon Route Storage | v0.1.0 | 0/? | Not started | - |
 | 16. Cast Detection and Sound Alerts | v0.1.0 | 0/? | Not started | - |

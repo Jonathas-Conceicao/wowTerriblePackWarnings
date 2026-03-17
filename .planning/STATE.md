@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.0
 milestone_name: milestone
 status: "Roadmap approved — ready for /gsd:plan-phase 13"
-stopped_at: Phase 14 context gathered
-last_updated: "2026-03-17T08:13:00.086Z"
+stopped_at: Completed 14-01-PLAN.md
+last_updated: "2026-03-17T08:34:07.751Z"
 last_activity: "2026-03-17 — Roadmap revised: Config UI and Pack Polish moved to Phase 13 (validated against WindrunnerSpire data), Ability Data Foundation moved to Phase 14"
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 5
+  completed_plans: 4
   percent: 0
 ---
 
@@ -56,6 +56,8 @@ Recent decisions affecting current work:
 - [Phase 13]: cfg.enabled == false strict equality in MergeSkillConfig — nil means default = enabled, only false means explicitly disabled
 - [Phase 13-02]: countLabel FontString created lazily on tex in PopulateList (not CreatePullRow) so row reuse works correctly across refreshes
 - [Phase 13-02]: configBtn anchored LEFT of clearBtn via SetPoint(RIGHT, clearBtn, LEFT) matching importBtn/clearBtn chain pattern
+- [Phase 14]: defaultEnabled=false for new MDT-sourced abilities; existing hand-authored entries remain enabled by default
+- [Phase 14]: New npcIDs from MDT use mobClass=WARRIOR as default; npcIDs with no spells (232071, 250883) omitted
 
 ### Roadmap Evolution
 
@@ -92,7 +94,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-17T08:13:00.080Z
-Stopped at: Phase 14 context gathered
-Resume file: .planning/phases/14-ability-data-foundation/14-CONTEXT.md
+Last session: 2026-03-17T08:34:07.747Z
+Stopped at: Completed 14-01-PLAN.md
+Resume file: None
 Next action: /gsd:plan-phase 13
