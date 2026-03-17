@@ -56,7 +56,7 @@ See: `.planning/milestones/v0.0.4-ROADMAP.md` for full details.
 
 ### v0.1.0 Configuration and Skill Data (Phases 13-16)
 
-- [ ] **Phase 13: Configuration UI and Pack Polish** - Config tree, dungeon selector, and mob count display validated against existing WindrunnerSpire data
+- [x] **Phase 13: Configuration UI and Pack Polish** - Config tree, dungeon selector, and mob count display validated against existing WindrunnerSpire data (completed 2026-03-17)
 - [ ] **Phase 14: Ability Data Foundation** - All remaining 8 dungeon AbilityDB files authored and visible in the proven config UI
 - [ ] **Phase 15: Per-Dungeon Route Storage** - Structural refactor retiring `PackDatabase["imported"]` across all four dependent files; auto-switching on zone-in
 - [ ] **Phase 16: Cast Detection and Sound Alerts** - Untimed skill highlighting via UnitCastingInfo nameplate polling; per-skill sound alert with throttle
@@ -74,7 +74,7 @@ See: `.planning/milestones/v0.0.4-ROADMAP.md` for full details.
   4. Setting a custom label for a WindrunnerSpire ability shows that label on the spell icon display instead of the default spell name
   5. Hovering an ability row in the config window shows the WoW spell tooltip for that spellID
   6. Each pull row in the TPW window shows a count for each mob type (e.g., "3x Spellguard") rather than unlabeled portrait icons
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [ ] 13-01-PLAN.md -- Data layer: Sounds.lua, MergeSkillConfig, mobCounts, skillConfig init, TOC
 - [ ] 13-02-PLAN.md -- PackFrame mob count overlays and Config button (ROUTE-04)
@@ -128,7 +128,7 @@ Plans:
 | 10. Route UI Overhaul | v0.0.3 | 1/1 | Complete | 2026-03-16 |
 | 11. Documentation and CI | v0.0.4 | 1/1 | Complete | 2026-03-16 |
 | 12. Code Cleanup | v0.0.4 | 1/1 | Complete | 2026-03-16 |
-| 13. Configuration UI and Pack Polish | 2/3 | In Progress|  | - |
+| 13. Configuration UI and Pack Polish | 3/3 | Complete   | 2026-03-17 | - |
 | 14. Ability Data Foundation | v0.1.0 | 0/? | Not started | - |
 | 15. Per-Dungeon Route Storage | v0.1.0 | 0/? | Not started | - |
 | 16. Cast Detection and Sound Alerts | v0.1.0 | 0/? | Not started | - |
