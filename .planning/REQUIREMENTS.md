@@ -37,7 +37,7 @@ Requirements for Configuration and Skill Data milestone. Each maps to roadmap ph
 - [ ] **ROUTE-01**: Each dungeon stores its own imported route independently in SavedVariables
 - [ ] **ROUTE-02**: TPW window has dungeon selector to switch active dungeon view
 - [ ] **ROUTE-03**: Active dungeon auto-switches on zone-in via GetInstanceInfo
-- [ ] **ROUTE-04**: Pull rows show mob count per type (e.g. "3x Spellguard")
+- [x] **ROUTE-04**: Pull rows show mob count per type (e.g. "3x Spellguard")
 
 ## Future Requirements
 
@@ -73,7 +73,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CFG-03 | Phase 13 | Complete |
 | CFG-04 | Phase 13 | Complete |
 | CFG-05 | Phase 13 | Pending |
-| ROUTE-04 | Phase 13 | Pending |
+| ROUTE-04 | Phase 13 | Complete |
 | DATA-13 | Phase 14 | Pending |
 | DATA-14 | Phase 14 | Pending |
 | DATA-15 | Phase 14 | Pending |
