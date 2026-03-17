@@ -39,7 +39,6 @@ local CLASS_ICON = {
 }
 
 --- Set the best available portrait for an NPC.
--- Fallback chain: creatureDisplayID -> class icon -> question mark
 local function GetPortraitTexture(tex, npcID)
     local displayId = npcIdToDisplayId[npcID]
     if displayId and displayId > 0 then
@@ -54,6 +53,38 @@ local function GetPortraitTexture(tex, npcID)
     tex:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
 end
 
+--- Create a "pushed in" background for an EditBox
+local function AddEditBoxBackground(editBox)
+    local bg = editBox:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints()
+    bg:SetColorTexture(0, 0, 0, 0.4)
+
+    -- Subtle inset border (top and left darker, bottom and right lighter)
+    local borderTop = editBox:CreateTexture(nil, "BORDER")
+    borderTop:SetColorTexture(0, 0, 0, 0.6)
+    borderTop:SetHeight(1)
+    borderTop:SetPoint("TOPLEFT", editBox, "TOPLEFT", 0, 0)
+    borderTop:SetPoint("TOPRIGHT", editBox, "TOPRIGHT", 0, 0)
+
+    local borderLeft = editBox:CreateTexture(nil, "BORDER")
+    borderLeft:SetColorTexture(0, 0, 0, 0.6)
+    borderLeft:SetWidth(1)
+    borderLeft:SetPoint("TOPLEFT", editBox, "TOPLEFT", 0, 0)
+    borderLeft:SetPoint("BOTTOMLEFT", editBox, "BOTTOMLEFT", 0, 0)
+
+    local borderBottom = editBox:CreateTexture(nil, "BORDER")
+    borderBottom:SetColorTexture(0.3, 0.3, 0.3, 0.4)
+    borderBottom:SetHeight(1)
+    borderBottom:SetPoint("BOTTOMLEFT", editBox, "BOTTOMLEFT", 0, 0)
+    borderBottom:SetPoint("BOTTOMRIGHT", editBox, "BOTTOMRIGHT", 0, 0)
+
+    local borderRight = editBox:CreateTexture(nil, "BORDER")
+    borderRight:SetColorTexture(0.3, 0.3, 0.3, 0.4)
+    borderRight:SetWidth(1)
+    borderRight:SetPoint("TOPRIGHT", editBox, "TOPRIGHT", 0, 0)
+    borderRight:SetPoint("BOTTOMRIGHT", editBox, "BOTTOMRIGHT", 0, 0)
+end
+
 ------------------------------------------------------------------------
 -- Module-level state
 ------------------------------------------------------------------------
@@ -62,14 +93,11 @@ local leftScrollFrame, leftScrollChild
 local rightScrollFrame, rightScrollChild
 local rightPanelHeader
 local rightPanelRows = {}
-local nodes = {}          -- dungeon tree nodes
+local nodes = {}
 local selectedNpcID = nil
 local selectedDungeonIdx = nil
 local PORTRAIT_SIZE = 22
-
--- Collapse indicators (UTF-8 byte sequences)
-local ICON_COLLAPSED = "\226\150\186 "  -- Unicode ►
-local ICON_EXPANDED  = "\226\150\188 "  -- Unicode ▼
+local SPELL_ICON_SIZE = 44
 
 ------------------------------------------------------------------------
 -- Sound popup (singleton, built on first use)
@@ -95,17 +123,15 @@ local function BuildSoundPopup()
     soundPopup.buttons = {}
 end
 
-local function ShowSoundPopup(anchorBtn, npcID, spellID, soundBtn, ttsEditBox)
+local function ShowSoundPopup(anchorBtn, npcID, spellID, soundBtn, ttsEditBox, ttsPlayBtn)
     if not soundPopup then BuildSoundPopup() end
 
     local spChild = soundPopup.scrollChild
 
-    -- Hide all existing buttons
     for _, btn in ipairs(soundPopup.buttons) do
         btn:Hide()
     end
 
-    -- For each sound entry, reuse or create a button
     local yOffset = 0
     for i, entry in ipairs(ns.AlertSounds) do
         local btn = soundPopup.buttons[i]
@@ -120,7 +146,6 @@ local function ShowSoundPopup(anchorBtn, npcID, spellID, soundBtn, ttsEditBox)
             soundPopup.buttons[i] = btn
         end
 
-        -- Capture locals for the closure
         local soundKitID = entry.soundKitID
         local soundName  = entry.name
 
@@ -131,20 +156,21 @@ local function ShowSoundPopup(anchorBtn, npcID, spellID, soundBtn, ttsEditBox)
         btn:Show()
 
         btn:SetScript("OnClick", function()
-            -- Write config
             ns.db.skillConfig[npcID] = ns.db.skillConfig[npcID] or {}
             ns.db.skillConfig[npcID][spellID] = ns.db.skillConfig[npcID][spellID] or {}
             ns.db.skillConfig[npcID][spellID].soundKitID = soundKitID
 
-            -- Preview + TTS EditBox coupling
             if soundKitID then
                 PlaySound(soundKitID)
                 ttsEditBox:Disable()
                 ttsEditBox:SetAlpha(0.4)
+                ttsPlayBtn:Disable()
+                ttsPlayBtn:SetAlpha(0.4)
             else
-                -- TTS selected
                 ttsEditBox:Enable()
                 ttsEditBox:SetAlpha(1.0)
+                ttsPlayBtn:Enable()
+                ttsPlayBtn:SetAlpha(1.0)
             end
 
             soundBtn:SetText(soundName)
@@ -159,6 +185,20 @@ local function ShowSoundPopup(anchorBtn, npcID, spellID, soundBtn, ttsEditBox)
     soundPopup:ClearAllPoints()
     soundPopup:SetPoint("TOPLEFT", anchorBtn, "BOTTOMLEFT", 0, 0)
     soundPopup:Show()
+end
+
+--- TrySpeak: fire TTS callout (same as IconDisplay)
+local function TrySpeak(message)
+    if not message or message == "" then return end
+    local voiceID = C_TTSSettings and C_TTSSettings.GetVoiceOptionID
+        and C_TTSSettings.GetVoiceOptionID(Enum.TtsVoiceType.Standard)
+    if not voiceID then
+        local voices = C_VoiceChat.GetTtsVoices and C_VoiceChat.GetTtsVoices()
+        if voices and voices[1] then voiceID = voices[1].voiceID end
+    end
+    if voiceID then
+        C_VoiceChat.SpeakText(voiceID, message, 0, 100, false)
+    end
 end
 
 ------------------------------------------------------------------------
@@ -180,7 +220,6 @@ local function BuildDungeonIndex()
             end
 
             if #mobs > 0 then
-                -- Sort mobs alphabetically by name
                 table.sort(mobs, function(a, b) return a.name < b.name end)
                 table.insert(result, {
                     dungeonIdx  = dungeonIdx,
@@ -191,9 +230,7 @@ local function BuildDungeonIndex()
         end
     end
 
-    -- Sort dungeons alphabetically by name
     table.sort(result, function(a, b) return a.dungeonName < b.dungeonName end)
-
     return result
 end
 
@@ -228,7 +265,6 @@ end
 -- PopulateRightPanel: show per-skill settings for the selected mob
 ------------------------------------------------------------------------
 local function PopulateRightPanel(npcID)
-    -- Hide all existing rightPanelRows
     for _, row in ipairs(rightPanelRows) do
         row:Hide()
     end
@@ -241,7 +277,7 @@ local function PopulateRightPanel(npcID)
         return
     end
 
-    -- Find mob name from DungeonEnemies
+    -- Find mob name
     local mobName = "NPC " .. npcID
     for _, enemies in pairs(ns.DungeonEnemies) do
         for _, enemy in pairs(enemies) do
@@ -253,13 +289,11 @@ local function PopulateRightPanel(npcID)
     end
 
     local mobClass = entry.mobClass or "UNKNOWN"
-    rightPanelHeader:SetText(mobName .. " \226\128\148 " .. mobClass)
+    rightPanelHeader:SetText(mobName .. " - " .. mobClass)
 
-    -- Header height: 4 top pad + ~16 text + 8 gap below = 32
     local yOffset = 32
 
     for abilityIdx, ability in ipairs(entry.abilities) do
-        -- Reuse or create a skill row frame
         local skillRow = rightPanelRows[abilityIdx]
         if not skillRow then
             skillRow = CreateFrame("Frame", nil, rightScrollChild)
@@ -282,45 +316,45 @@ local function PopulateRightPanel(npcID)
             GameTooltip:Hide()
         end)
 
-        -- Read current skillConfig
         local cfg = ns.db.skillConfig
             and ns.db.skillConfig[npcID]
             and ns.db.skillConfig[npcID][ability.spellID]
 
-        -- ---- Row 1: CheckButton + spell icon + ability name ----
+        local npcID_cb  = npcID
+        local spellID_cb = ability.spellID
+
+        -- ---- Row 1: CheckButton + large spell icon + ability name ----
         local rowInnerY = 0
 
+        -- CheckButton with visible textures
         if not skillRow.checkBtn then
-            skillRow.checkBtn = CreateFrame("CheckButton", nil, skillRow)
-            skillRow.checkBtn:SetSize(20, 20)
+            skillRow.checkBtn = CreateFrame("CheckButton", nil, skillRow, "UICheckButtonTemplate")
+            skillRow.checkBtn:SetSize(24, 24)
         end
         local checkBtn = skillRow.checkBtn
         checkBtn:ClearAllPoints()
         checkBtn:SetPoint("TOPLEFT", skillRow, "TOPLEFT", 0, -rowInnerY)
-        -- checked unless explicitly disabled
         if cfg and cfg.enabled == false then
             checkBtn:SetChecked(false)
         else
             checkBtn:SetChecked(true)
         end
-        local npcID_cb  = npcID
-        local spellID_cb = ability.spellID
         checkBtn:SetScript("OnClick", function(self)
             ns.db.skillConfig[npcID_cb] = ns.db.skillConfig[npcID_cb] or {}
             ns.db.skillConfig[npcID_cb][spellID_cb] = ns.db.skillConfig[npcID_cb][spellID_cb] or {}
             if self:GetChecked() then
-                ns.db.skillConfig[npcID_cb][spellID_cb].enabled = nil  -- nil = enabled (sparse)
+                ns.db.skillConfig[npcID_cb][spellID_cb].enabled = nil
             else
                 ns.db.skillConfig[npcID_cb][spellID_cb].enabled = false
             end
         end)
 
-        -- Spell icon
+        -- Spell icon (doubled size)
         if not skillRow.spellIcon then
             skillRow.spellIcon = skillRow:CreateTexture(nil, "ARTWORK")
-            skillRow.spellIcon:SetSize(22, 22)
         end
         local spellIcon = skillRow.spellIcon
+        spellIcon:SetSize(SPELL_ICON_SIZE, SPELL_ICON_SIZE)
         spellIcon:ClearAllPoints()
         spellIcon:SetPoint("LEFT", checkBtn, "RIGHT", 4, 0)
         local iconTex = C_Spell.GetSpellTexture(ability.spellID)
@@ -330,18 +364,18 @@ local function PopulateRightPanel(npcID)
             spellIcon:SetColorTexture(0.2, 0.2, 0.2, 1)
         end
 
-        -- Ability name
+        -- Ability name (beside icon, vertically centered)
         if not skillRow.abilityName then
             skillRow.abilityName = skillRow:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         end
         local abilityName = skillRow.abilityName
         abilityName:ClearAllPoints()
-        abilityName:SetPoint("LEFT", spellIcon, "RIGHT", 4, 0)
+        abilityName:SetPoint("LEFT", spellIcon, "RIGHT", 8, 0)
         abilityName:SetPoint("RIGHT", skillRow, "RIGHT", 0, 0)
         abilityName:SetJustifyH("LEFT")
         abilityName:SetText(ability.name or "")
 
-        rowInnerY = rowInnerY + 24
+        rowInnerY = rowInnerY + SPELL_ICON_SIZE + 4
 
         -- ---- Row 2: timing info (optional) ----
         if not skillRow.timingLabel then
@@ -350,7 +384,7 @@ local function PopulateRightPanel(npcID)
         local timingLabel = skillRow.timingLabel
         timingLabel:ClearAllPoints()
         if ability.first_cast and ability.cooldown then
-            timingLabel:SetPoint("TOPLEFT", skillRow, "TOPLEFT", 24, -rowInnerY)
+            timingLabel:SetPoint("TOPLEFT", skillRow, "TOPLEFT", 28, -rowInnerY)
             timingLabel:SetPoint("TOPRIGHT", skillRow, "TOPRIGHT", 0, -rowInnerY)
             timingLabel:SetJustifyH("LEFT")
             timingLabel:SetText("First cast: " .. ability.first_cast .. "s, Cooldown: " .. ability.cooldown .. "s")
@@ -360,24 +394,23 @@ local function PopulateRightPanel(npcID)
             timingLabel:Hide()
         end
 
-        -- ---- Row 3: Label + Sound ----
-
-        -- "Label:" prefix
+        -- ---- Row 3: Label ----
         if not skillRow.labelPrefix then
             skillRow.labelPrefix = skillRow:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
             skillRow.labelPrefix:SetText("Label:")
         end
         local labelPrefix = skillRow.labelPrefix
         labelPrefix:ClearAllPoints()
-        labelPrefix:SetPoint("TOPLEFT", skillRow, "TOPLEFT", 0, -rowInnerY)
+        labelPrefix:SetPoint("TOPLEFT", skillRow, "TOPLEFT", 4, -rowInnerY)
 
-        -- Label EditBox
         if not skillRow.labelEditBox then
             local eb = CreateFrame("EditBox", nil, skillRow)
-            eb:SetSize(120, 18)
+            eb:SetSize(140, 20)
             eb:SetFontObject(ChatFontNormal)
             eb:SetAutoFocus(false)
             eb:SetMaxLetters(64)
+            eb:SetTextInsets(4, 4, 2, 2)
+            AddEditBoxBackground(eb)
             eb:SetScript("OnEnterPressed", function(self)
                 ns.db.skillConfig[npcID_cb] = ns.db.skillConfig[npcID_cb] or {}
                 ns.db.skillConfig[npcID_cb][spellID_cb] = ns.db.skillConfig[npcID_cb][spellID_cb] or {}
@@ -394,16 +427,17 @@ local function PopulateRightPanel(npcID)
         labelEditBox:SetText(currentLabel)
         labelEditBox:Show()
 
-        -- "Sound:" prefix
+        rowInnerY = rowInnerY + 24
+
+        -- ---- Row 4: Sound ----
         if not skillRow.soundPrefix then
             skillRow.soundPrefix = skillRow:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
             skillRow.soundPrefix:SetText("Sound:")
         end
         local soundPrefix = skillRow.soundPrefix
         soundPrefix:ClearAllPoints()
-        soundPrefix:SetPoint("LEFT", labelEditBox, "RIGHT", 8, 0)
+        soundPrefix:SetPoint("TOPLEFT", skillRow, "TOPLEFT", 4, -rowInnerY)
 
-        -- Determine current sound name for button text
         local currentSoundName = "TTS"
         local currentSoundKitID = cfg and cfg.soundKitID
         if currentSoundKitID then
@@ -415,36 +449,34 @@ local function PopulateRightPanel(npcID)
             end
         end
 
-        -- Sound Button (we need a reference to ttsEditBox, built below; use a forward ref via skillRow)
         if not skillRow.soundBtn then
             skillRow.soundBtn = CreateFrame("Button", nil, skillRow, "GameMenuButtonTemplate")
-            skillRow.soundBtn:SetSize(130, 20)
+            skillRow.soundBtn:SetSize(140, 20)
         end
         local soundBtn = skillRow.soundBtn
         soundBtn:ClearAllPoints()
         soundBtn:SetPoint("LEFT", soundPrefix, "RIGHT", 4, 0)
         soundBtn:SetText(currentSoundName)
 
-        rowInnerY = rowInnerY + 22
+        rowInnerY = rowInnerY + 24
 
-        -- ---- Row 4: TTS text ----
-
-        -- "TTS:" prefix
+        -- ---- Row 5: TTS text + Play button ----
         if not skillRow.ttsPrefix then
             skillRow.ttsPrefix = skillRow:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
             skillRow.ttsPrefix:SetText("TTS:")
         end
         local ttsPrefix = skillRow.ttsPrefix
         ttsPrefix:ClearAllPoints()
-        ttsPrefix:SetPoint("TOPLEFT", skillRow, "TOPLEFT", 0, -rowInnerY)
+        ttsPrefix:SetPoint("TOPLEFT", skillRow, "TOPLEFT", 4, -rowInnerY)
 
-        -- TTS EditBox
         if not skillRow.ttsEditBox then
             local eb = CreateFrame("EditBox", nil, skillRow)
-            eb:SetHeight(18)
+            eb:SetHeight(20)
             eb:SetFontObject(ChatFontNormal)
             eb:SetAutoFocus(false)
             eb:SetMaxLetters(256)
+            eb:SetTextInsets(4, 4, 2, 2)
+            AddEditBoxBackground(eb)
             eb:SetScript("OnEnterPressed", function(self)
                 ns.db.skillConfig[npcID_cb] = ns.db.skillConfig[npcID_cb] or {}
                 ns.db.skillConfig[npcID_cb][spellID_cb] = ns.db.skillConfig[npcID_cb][spellID_cb] or {}
@@ -457,31 +489,50 @@ local function PopulateRightPanel(npcID)
         local ttsEditBox = skillRow.ttsEditBox
         ttsEditBox:ClearAllPoints()
         ttsEditBox:SetPoint("LEFT",  ttsPrefix, "RIGHT",  4,  0)
-        ttsEditBox:SetPoint("RIGHT", skillRow,  "RIGHT", -4,  0)
+        ttsEditBox:SetPoint("RIGHT", skillRow,  "RIGHT", -50,  0)
         local currentTTS = (cfg and cfg.ttsMessage ~= nil) and cfg.ttsMessage
             or (ability.ttsMessage or ability.name or "")
         ttsEditBox:SetText(currentTTS)
 
-        -- Couple TTS editbox state with sound selection
+        -- Play button for TTS preview
+        if not skillRow.ttsPlayBtn then
+            skillRow.ttsPlayBtn = CreateFrame("Button", nil, skillRow, "GameMenuButtonTemplate")
+            skillRow.ttsPlayBtn:SetSize(42, 20)
+            skillRow.ttsPlayBtn:SetText("Play")
+        end
+        local ttsPlayBtn = skillRow.ttsPlayBtn
+        ttsPlayBtn:ClearAllPoints()
+        ttsPlayBtn:SetPoint("LEFT", ttsEditBox, "RIGHT", 4, 0)
+        ttsPlayBtn:SetScript("OnClick", function()
+            local text = ttsEditBox:GetText()
+            TrySpeak(text)
+        end)
+
+        -- Couple TTS editbox + play button state with sound selection
         if currentSoundKitID then
             ttsEditBox:Disable()
             ttsEditBox:SetAlpha(0.4)
+            ttsPlayBtn:Disable()
+            ttsPlayBtn:SetAlpha(0.4)
         else
             ttsEditBox:Enable()
             ttsEditBox:SetAlpha(1.0)
+            ttsPlayBtn:Enable()
+            ttsPlayBtn:SetAlpha(1.0)
         end
         ttsEditBox:Show()
+        ttsPlayBtn:Show()
 
-        -- Wire sound button now that ttsEditBox is available
+        -- Wire sound button now that ttsEditBox and ttsPlayBtn are available
         local npcID_snd  = npcID
         local spellID_snd = ability.spellID
         soundBtn:SetScript("OnClick", function(self)
-            ShowSoundPopup(self, npcID_snd, spellID_snd, self, ttsEditBox)
+            ShowSoundPopup(self, npcID_snd, spellID_snd, self, ttsEditBox, ttsPlayBtn)
         end)
 
-        rowInnerY = rowInnerY + 22
+        rowInnerY = rowInnerY + 24
 
-        -- ---- Row 5: Reset button ----
+        -- ---- Row 6: Reset button ----
         if not skillRow.resetBtn then
             skillRow.resetBtn = CreateFrame("Button", nil, skillRow, "GameMenuButtonTemplate")
             skillRow.resetBtn:SetSize(60, 20)
@@ -489,7 +540,7 @@ local function PopulateRightPanel(npcID)
         end
         local resetBtn = skillRow.resetBtn
         resetBtn:ClearAllPoints()
-        resetBtn:SetPoint("TOPLEFT", skillRow, "TOPLEFT", 0, -rowInnerY)
+        resetBtn:SetPoint("TOPLEFT", skillRow, "TOPLEFT", 4, -rowInnerY)
 
         local npcID_rst   = npcID
         local spellID_rst  = ability.spellID
@@ -506,7 +557,7 @@ local function PopulateRightPanel(npcID)
         skillRow:SetHeight(rowInnerY + 4)
         skillRow:Show()
 
-        yOffset = yOffset + rowInnerY + 8  -- 8px gap between skill rows
+        yOffset = yOffset + rowInnerY + 8
     end
 
     rightScrollChild:SetHeight(math.max(yOffset, 40))
@@ -556,14 +607,22 @@ local function BuildLeftPanel(parent)
         local content = CreateFrame("Frame", nil, leftScrollChild)
         content:Hide()
 
-        local contentHeight = #mobList * 26
+        local MOB_ROW_HEIGHT = 26
+        local contentHeight = #mobList * MOB_ROW_HEIGHT
 
         -- Build mob rows inside content
         for i, mob in ipairs(mobList) do
             local mobRow = CreateFrame("Button", nil, content)
-            mobRow:SetHeight(26)
-            mobRow:SetPoint("TOPLEFT",  content, "TOPLEFT",  0, -(i - 1) * 26)
-            mobRow:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -(i - 1) * 26)
+            mobRow:SetHeight(MOB_ROW_HEIGHT)
+            mobRow:SetPoint("TOPLEFT",  content, "TOPLEFT",  16, -(i - 1) * MOB_ROW_HEIGHT)
+            mobRow:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -(i - 1) * MOB_ROW_HEIGHT)
+
+            -- Alternating row background
+            if i % 2 == 0 then
+                local rowBg = mobRow:CreateTexture(nil, "BACKGROUND")
+                rowBg:SetAllPoints()
+                rowBg:SetColorTexture(1, 1, 1, 0.05)
+            end
 
             -- Portrait
             local portrait = mobRow:CreateTexture(nil, "ARTWORK")
@@ -596,7 +655,6 @@ local function BuildLeftPanel(parent)
 
         content:SetHeight(contentHeight)
 
-        -- Node table entry
         local node = {
             header        = header,
             content       = content,
@@ -605,14 +663,14 @@ local function BuildLeftPanel(parent)
         }
         table.insert(nodes, node)
 
-        -- Header text and click
-        header:SetText(ICON_COLLAPSED .. dungeonName)
+        -- Use ASCII characters for collapse indicators (Unicode doesn't render in WoW)
+        header:SetText("[+] " .. dungeonName)
         header:SetScript("OnClick", function()
             node.expanded = not node.expanded
             if node.expanded then
-                header:SetText(ICON_EXPANDED .. dungeonName)
+                header:SetText("[-] " .. dungeonName)
             else
-                header:SetText(ICON_COLLAPSED .. dungeonName)
+                header:SetText("[+] " .. dungeonName)
             end
             RebuildLayout()
         end)
@@ -630,7 +688,7 @@ local function BuildConfigFrame()
     configFrame:SetPoint("CENTER")
     configFrame:Hide()
 
-    configFrame.TitleText:SetText("TerriblePackWarnings \226\128\148 Config")
+    configFrame.TitleText:SetText("TerriblePackWarnings - Config")
 
     -- Escape to close
     tinsert(UISpecialFrames, "TPWConfigFrame")
@@ -644,14 +702,14 @@ local function BuildConfigFrame()
         self:StopMovingOrSizing()
     end)
 
-    -- Vertical divider line at ~225px from left
+    -- Vertical divider
     local divider = configFrame:CreateTexture(nil, "ARTWORK")
     divider:SetColorTexture(0.4, 0.4, 0.4, 0.8)
     divider:SetWidth(1)
     divider:SetPoint("TOP",    configFrame, "TOPLEFT",    225, -30)
     divider:SetPoint("BOTTOM", configFrame, "BOTTOMLEFT", 225,  8)
 
-    -- Build left panel (dungeon-mob tree)
+    -- Build left panel
     BuildLeftPanel(configFrame)
 
     -- Right scroll frame
@@ -672,7 +730,7 @@ local function BuildConfigFrame()
 
     rightScrollChild:SetHeight(40)
 
-    -- Reset All button (bottom-right of config frame)
+    -- Reset All button
     local resetAllBtn = CreateFrame("Button", nil, configFrame, "GameMenuButtonTemplate")
     resetAllBtn:SetSize(80, 22)
     resetAllBtn:SetPoint("BOTTOMRIGHT", configFrame, "BOTTOMRIGHT", -12, 8)
