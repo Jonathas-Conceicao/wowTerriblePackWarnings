@@ -660,8 +660,22 @@ local function BuildLeftPanel(parent)
             content       = content,
             contentHeight = contentHeight,
             expanded      = false,
+            dungeonIdx    = dungeonIdx,
+            dungeonName   = dungeonName,
         }
         table.insert(nodes, node)
+
+        -- Left-align header text
+        header:GetFontString():SetJustifyH("LEFT")
+        header:GetFontString():SetPoint("LEFT", header, "LEFT", 4, 0)
+
+        -- Alternating dungeon header backgrounds
+        local dungeonNodeIdx = #nodes
+        if dungeonNodeIdx % 2 == 0 then
+            local headerBg = header:CreateTexture(nil, "BACKGROUND")
+            headerBg:SetAllPoints()
+            headerBg:SetColorTexture(1, 1, 1, 0.05)
+        end
 
         -- Use ASCII characters for collapse indicators (Unicode doesn't render in WoW)
         header:SetText("[+] " .. dungeonName)
@@ -758,4 +772,30 @@ end
 function ns.ConfigUI.Toggle()
     if not configFrame then BuildConfigFrame() end
     if configFrame:IsShown() then configFrame:Hide() else configFrame:Show() end
+end
+
+--- Open config window directly to a specific mob
+-- @param npcID       number  NPC ID to select
+-- @param dungeonIdx  number  dungeon index to expand
+function ns.ConfigUI.OpenToMob(npcID, dungeonIdx)
+    if not configFrame then BuildConfigFrame() end
+
+    -- Expand the correct dungeon node and collapse others
+    for _, node in ipairs(nodes) do
+        if node.dungeonIdx == dungeonIdx and not node.expanded then
+            node.expanded = true
+            node.header:SetText("[-] " .. node.dungeonName)
+        elseif node.dungeonIdx ~= dungeonIdx and node.expanded then
+            node.expanded = false
+            node.header:SetText("[+] " .. node.dungeonName)
+        end
+    end
+    RebuildLayout()
+
+    -- Select the mob
+    selectedNpcID = npcID
+    selectedDungeonIdx = dungeonIdx
+    PopulateRightPanel(npcID)
+
+    configFrame:Show()
 end

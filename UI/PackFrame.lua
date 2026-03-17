@@ -151,7 +151,7 @@ frame:SetSize(300, 400)
 frame:SetPoint("CENTER")
 frame:Hide()
 
-frame.TitleText:SetText("TerriblePackWarnings")
+frame.TitleText:SetText("TerriblePackWarnings - Route")
 
 -- Escape to close
 tinsert(UISpecialFrames, "TPWPackFrame")
@@ -317,9 +317,27 @@ local function PopulateList()
                 else
                     tex.countLabel:Hide()
                 end
+
+                -- Clickable overlay to open config for this mob (out of combat only)
+                if not tex.clickOverlay then
+                    tex.clickOverlay = CreateFrame("Button", nil, row)
+                    tex.clickOverlay:SetAllPoints(tex)
+                    tex.clickOverlay:SetFrameLevel(row:GetFrameLevel() + 2)
+                    tex.clickOverlay:RegisterForClicks("LeftButtonUp")
+                end
+                local npcID_portrait = npcIDs[p]
+                local dungeonIdx_portrait = ns.db.importedRoute and ns.db.importedRoute.dungeonIdx
+                tex.clickOverlay:SetScript("OnClick", function()
+                    if InCombatLockdown() then return end
+                    if ns.ConfigUI and ns.ConfigUI.OpenToMob and dungeonIdx_portrait then
+                        ns.ConfigUI.OpenToMob(npcID_portrait, dungeonIdx_portrait)
+                    end
+                end)
+                tex.clickOverlay:Show()
             else
                 tex:Hide()
                 if tex.countLabel then tex.countLabel:Hide() end
+                if tex.clickOverlay then tex.clickOverlay:Hide() end
             end
         end
 
