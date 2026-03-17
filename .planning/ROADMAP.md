@@ -74,7 +74,11 @@ See: `.planning/milestones/v0.0.4-ROADMAP.md` for full details.
   4. Setting a custom label for a WindrunnerSpire ability shows that label on the spell icon display instead of the default spell name
   5. Hovering an ability row in the config window shows the WoW spell tooltip for that spellID
   6. Each pull row in the TPW window shows a count for each mob type (e.g., "3x Spellguard") rather than unlabeled portrait icons
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 13-01-PLAN.md -- Data layer: Sounds.lua, MergeSkillConfig, mobCounts, skillConfig init, TOC
+- [ ] 13-02-PLAN.md -- PackFrame mob count overlays and Config button (ROUTE-04)
+- [ ] 13-03-PLAN.md -- ConfigFrame window with dungeon-mob tree and per-skill settings (CFG-01 through CFG-05)
 
 ### Phase 14: Ability Data Foundation
 **Goal**: All 9 Midnight S1 dungeon ability data files exist with valid spellIDs, WARRIOR defaults, and dynamically resolved spell names and icons — and all dungeons are immediately visible and navigable in the config UI from Phase 13
@@ -124,7 +128,7 @@ See: `.planning/milestones/v0.0.4-ROADMAP.md` for full details.
 | 10. Route UI Overhaul | v0.0.3 | 1/1 | Complete | 2026-03-16 |
 | 11. Documentation and CI | v0.0.4 | 1/1 | Complete | 2026-03-16 |
 | 12. Code Cleanup | v0.0.4 | 1/1 | Complete | 2026-03-16 |
-| 13. Configuration UI and Pack Polish | v0.1.0 | 0/? | Not started | - |
+| 13. Configuration UI and Pack Polish | v0.1.0 | 0/3 | Not started | - |
 | 14. Ability Data Foundation | v0.1.0 | 0/? | Not started | - |
 | 15. Per-Dungeon Route Storage | v0.1.0 | 0/? | Not started | - |
 | 16. Cast Detection and Sound Alerts | v0.1.0 | 0/? | Not started | - |
