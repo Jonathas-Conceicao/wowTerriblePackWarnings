@@ -336,6 +336,8 @@ local function PopulateRightPanel(npcID)
         checkBtn:SetPoint("TOPLEFT", skillRow, "TOPLEFT", 0, -rowInnerY)
         if cfg and cfg.enabled == false then
             checkBtn:SetChecked(false)
+        elseif not cfg and ability.defaultEnabled == false then
+            checkBtn:SetChecked(false)
         else
             checkBtn:SetChecked(true)
         end

@@ -30,6 +30,8 @@ local function MergeSkillConfig(npcID, ability, mobClass)
         and ns.db.skillConfig[npcID]
         and ns.db.skillConfig[npcID][ability.spellID]
     if not cfg then
+        -- No user override exists. Check if ability defaults to disabled.
+        if ability.defaultEnabled == false then return nil end
         -- No override: return ability unchanged (copy to avoid mutating AbilityDB)
         return {
             name       = ability.name,
@@ -41,7 +43,7 @@ local function MergeSkillConfig(npcID, ability, mobClass)
             ttsMessage = ability.ttsMessage,
         }
     end
-    if cfg.enabled == false then return nil end  -- disabled: omit from pack
+    if cfg.enabled == false then return nil end  -- user explicitly disabled
     return {
         name       = ability.name,
         spellID    = ability.spellID,
