@@ -225,8 +225,7 @@ local function RebuildLayout()
 end
 
 ------------------------------------------------------------------------
--- PopulateRightPanel: show abilities for selected mob
--- (stub in Task 1 — full implementation in Task 2)
+-- PopulateRightPanel: show per-skill settings for the selected mob
 ------------------------------------------------------------------------
 local function PopulateRightPanel(npcID)
     -- Hide all existing rightPanelRows
@@ -237,6 +236,8 @@ local function PopulateRightPanel(npcID)
     local entry = ns.AbilityDB[npcID]
     if not entry then
         rightPanelHeader:SetText("No ability data for NPC " .. tostring(npcID))
+        rightScrollChild:SetHeight(40)
+        rightScrollFrame:UpdateScrollChildRect()
         return
     end
 
@@ -254,8 +255,261 @@ local function PopulateRightPanel(npcID)
     local mobClass = entry.mobClass or "UNKNOWN"
     rightPanelHeader:SetText(mobName .. " \226\128\148 " .. mobClass)
 
-    -- Full skill rows are built in Task 2; for now show default text
-    rightScrollChild:SetHeight(1)
+    -- Header height: 4 top pad + ~16 text + 8 gap below = 32
+    local yOffset = 32
+
+    for abilityIdx, ability in ipairs(entry.abilities) do
+        -- Reuse or create a skill row frame
+        local skillRow = rightPanelRows[abilityIdx]
+        if not skillRow then
+            skillRow = CreateFrame("Frame", nil, rightScrollChild)
+            rightPanelRows[abilityIdx] = skillRow
+        end
+
+        skillRow:ClearAllPoints()
+        skillRow:SetPoint("TOPLEFT",  rightScrollChild, "TOPLEFT",  4, -yOffset)
+        skillRow:SetPoint("TOPRIGHT", rightScrollChild, "TOPRIGHT", -4, -yOffset)
+
+        -- Spell tooltip on hover
+        skillRow.spellID = ability.spellID
+        skillRow:EnableMouse(true)
+        skillRow:SetScript("OnEnter", function(self)
+            GameTooltip_SetDefaultAnchor(GameTooltip, self)
+            GameTooltip:SetSpellByID(self.spellID)
+            GameTooltip:Show()
+        end)
+        skillRow:SetScript("OnLeave", function()
+            GameTooltip:Hide()
+        end)
+
+        -- Read current skillConfig
+        local cfg = ns.db.skillConfig
+            and ns.db.skillConfig[npcID]
+            and ns.db.skillConfig[npcID][ability.spellID]
+
+        -- ---- Row 1: CheckButton + spell icon + ability name ----
+        local rowInnerY = 0
+
+        if not skillRow.checkBtn then
+            skillRow.checkBtn = CreateFrame("CheckButton", nil, skillRow)
+            skillRow.checkBtn:SetSize(20, 20)
+        end
+        local checkBtn = skillRow.checkBtn
+        checkBtn:ClearAllPoints()
+        checkBtn:SetPoint("TOPLEFT", skillRow, "TOPLEFT", 0, -rowInnerY)
+        -- checked unless explicitly disabled
+        if cfg and cfg.enabled == false then
+            checkBtn:SetChecked(false)
+        else
+            checkBtn:SetChecked(true)
+        end
+        local npcID_cb  = npcID
+        local spellID_cb = ability.spellID
+        checkBtn:SetScript("OnClick", function(self)
+            ns.db.skillConfig[npcID_cb] = ns.db.skillConfig[npcID_cb] or {}
+            ns.db.skillConfig[npcID_cb][spellID_cb] = ns.db.skillConfig[npcID_cb][spellID_cb] or {}
+            if self:GetChecked() then
+                ns.db.skillConfig[npcID_cb][spellID_cb].enabled = nil  -- nil = enabled (sparse)
+            else
+                ns.db.skillConfig[npcID_cb][spellID_cb].enabled = false
+            end
+        end)
+
+        -- Spell icon
+        if not skillRow.spellIcon then
+            skillRow.spellIcon = skillRow:CreateTexture(nil, "ARTWORK")
+            skillRow.spellIcon:SetSize(22, 22)
+        end
+        local spellIcon = skillRow.spellIcon
+        spellIcon:ClearAllPoints()
+        spellIcon:SetPoint("LEFT", checkBtn, "RIGHT", 4, 0)
+        local iconTex = C_Spell.GetSpellTexture(ability.spellID)
+        if iconTex then
+            spellIcon:SetTexture(iconTex)
+        else
+            spellIcon:SetColorTexture(0.2, 0.2, 0.2, 1)
+        end
+
+        -- Ability name
+        if not skillRow.abilityName then
+            skillRow.abilityName = skillRow:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        end
+        local abilityName = skillRow.abilityName
+        abilityName:ClearAllPoints()
+        abilityName:SetPoint("LEFT", spellIcon, "RIGHT", 4, 0)
+        abilityName:SetPoint("RIGHT", skillRow, "RIGHT", 0, 0)
+        abilityName:SetJustifyH("LEFT")
+        abilityName:SetText(ability.name or "")
+
+        rowInnerY = rowInnerY + 24
+
+        -- ---- Row 2: timing info (optional) ----
+        if not skillRow.timingLabel then
+            skillRow.timingLabel = skillRow:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        end
+        local timingLabel = skillRow.timingLabel
+        timingLabel:ClearAllPoints()
+        if ability.first_cast and ability.cooldown then
+            timingLabel:SetPoint("TOPLEFT", skillRow, "TOPLEFT", 24, -rowInnerY)
+            timingLabel:SetPoint("TOPRIGHT", skillRow, "TOPRIGHT", 0, -rowInnerY)
+            timingLabel:SetJustifyH("LEFT")
+            timingLabel:SetText("First cast: " .. ability.first_cast .. "s, Cooldown: " .. ability.cooldown .. "s")
+            timingLabel:Show()
+            rowInnerY = rowInnerY + 16
+        else
+            timingLabel:Hide()
+        end
+
+        -- ---- Row 3: Label + Sound ----
+
+        -- "Label:" prefix
+        if not skillRow.labelPrefix then
+            skillRow.labelPrefix = skillRow:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            skillRow.labelPrefix:SetText("Label:")
+        end
+        local labelPrefix = skillRow.labelPrefix
+        labelPrefix:ClearAllPoints()
+        labelPrefix:SetPoint("TOPLEFT", skillRow, "TOPLEFT", 0, -rowInnerY)
+
+        -- Label EditBox
+        if not skillRow.labelEditBox then
+            local eb = CreateFrame("EditBox", nil, skillRow)
+            eb:SetSize(120, 18)
+            eb:SetFontObject(ChatFontNormal)
+            eb:SetAutoFocus(false)
+            eb:SetMaxLetters(64)
+            eb:SetScript("OnEnterPressed", function(self)
+                ns.db.skillConfig[npcID_cb] = ns.db.skillConfig[npcID_cb] or {}
+                ns.db.skillConfig[npcID_cb][spellID_cb] = ns.db.skillConfig[npcID_cb][spellID_cb] or {}
+                ns.db.skillConfig[npcID_cb][spellID_cb].label = self:GetText()
+                self:ClearFocus()
+            end)
+            eb:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+            skillRow.labelEditBox = eb
+        end
+        local labelEditBox = skillRow.labelEditBox
+        labelEditBox:ClearAllPoints()
+        labelEditBox:SetPoint("LEFT", labelPrefix, "RIGHT", 4, 0)
+        local currentLabel = (cfg and cfg.label ~= nil) and cfg.label or (ability.label or "")
+        labelEditBox:SetText(currentLabel)
+        labelEditBox:Show()
+
+        -- "Sound:" prefix
+        if not skillRow.soundPrefix then
+            skillRow.soundPrefix = skillRow:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            skillRow.soundPrefix:SetText("Sound:")
+        end
+        local soundPrefix = skillRow.soundPrefix
+        soundPrefix:ClearAllPoints()
+        soundPrefix:SetPoint("LEFT", labelEditBox, "RIGHT", 8, 0)
+
+        -- Determine current sound name for button text
+        local currentSoundName = "TTS"
+        local currentSoundKitID = cfg and cfg.soundKitID
+        if currentSoundKitID then
+            for _, snd in ipairs(ns.AlertSounds) do
+                if snd.soundKitID == currentSoundKitID then
+                    currentSoundName = snd.name
+                    break
+                end
+            end
+        end
+
+        -- Sound Button (we need a reference to ttsEditBox, built below; use a forward ref via skillRow)
+        if not skillRow.soundBtn then
+            skillRow.soundBtn = CreateFrame("Button", nil, skillRow, "GameMenuButtonTemplate")
+            skillRow.soundBtn:SetSize(130, 20)
+        end
+        local soundBtn = skillRow.soundBtn
+        soundBtn:ClearAllPoints()
+        soundBtn:SetPoint("LEFT", soundPrefix, "RIGHT", 4, 0)
+        soundBtn:SetText(currentSoundName)
+
+        rowInnerY = rowInnerY + 22
+
+        -- ---- Row 4: TTS text ----
+
+        -- "TTS:" prefix
+        if not skillRow.ttsPrefix then
+            skillRow.ttsPrefix = skillRow:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            skillRow.ttsPrefix:SetText("TTS:")
+        end
+        local ttsPrefix = skillRow.ttsPrefix
+        ttsPrefix:ClearAllPoints()
+        ttsPrefix:SetPoint("TOPLEFT", skillRow, "TOPLEFT", 0, -rowInnerY)
+
+        -- TTS EditBox
+        if not skillRow.ttsEditBox then
+            local eb = CreateFrame("EditBox", nil, skillRow)
+            eb:SetHeight(18)
+            eb:SetFontObject(ChatFontNormal)
+            eb:SetAutoFocus(false)
+            eb:SetMaxLetters(256)
+            eb:SetScript("OnEnterPressed", function(self)
+                ns.db.skillConfig[npcID_cb] = ns.db.skillConfig[npcID_cb] or {}
+                ns.db.skillConfig[npcID_cb][spellID_cb] = ns.db.skillConfig[npcID_cb][spellID_cb] or {}
+                ns.db.skillConfig[npcID_cb][spellID_cb].ttsMessage = self:GetText()
+                self:ClearFocus()
+            end)
+            eb:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+            skillRow.ttsEditBox = eb
+        end
+        local ttsEditBox = skillRow.ttsEditBox
+        ttsEditBox:ClearAllPoints()
+        ttsEditBox:SetPoint("LEFT",  ttsPrefix, "RIGHT",  4,  0)
+        ttsEditBox:SetPoint("RIGHT", skillRow,  "RIGHT", -4,  0)
+        local currentTTS = (cfg and cfg.ttsMessage ~= nil) and cfg.ttsMessage
+            or (ability.ttsMessage or ability.name or "")
+        ttsEditBox:SetText(currentTTS)
+
+        -- Couple TTS editbox state with sound selection
+        if currentSoundKitID then
+            ttsEditBox:Disable()
+            ttsEditBox:SetAlpha(0.4)
+        else
+            ttsEditBox:Enable()
+            ttsEditBox:SetAlpha(1.0)
+        end
+        ttsEditBox:Show()
+
+        -- Wire sound button now that ttsEditBox is available
+        local npcID_snd  = npcID
+        local spellID_snd = ability.spellID
+        soundBtn:SetScript("OnClick", function(self)
+            ShowSoundPopup(self, npcID_snd, spellID_snd, self, ttsEditBox)
+        end)
+
+        rowInnerY = rowInnerY + 22
+
+        -- ---- Row 5: Reset button ----
+        if not skillRow.resetBtn then
+            skillRow.resetBtn = CreateFrame("Button", nil, skillRow, "GameMenuButtonTemplate")
+            skillRow.resetBtn:SetSize(60, 20)
+            skillRow.resetBtn:SetText("Reset")
+        end
+        local resetBtn = skillRow.resetBtn
+        resetBtn:ClearAllPoints()
+        resetBtn:SetPoint("TOPLEFT", skillRow, "TOPLEFT", 0, -rowInnerY)
+
+        local npcID_rst   = npcID
+        local spellID_rst  = ability.spellID
+        resetBtn:SetScript("OnClick", function()
+            if ns.db.skillConfig and ns.db.skillConfig[npcID_rst] then
+                ns.db.skillConfig[npcID_rst][spellID_rst] = nil
+            end
+            PopulateRightPanel(npcID_rst)
+        end)
+
+        rowInnerY = rowInnerY + 24
+
+        -- Separator gap between abilities
+        skillRow:SetHeight(rowInnerY + 4)
+        skillRow:Show()
+
+        yOffset = yOffset + rowInnerY + 8  -- 8px gap between skill rows
+    end
+
+    rightScrollChild:SetHeight(math.max(yOffset, 40))
     rightScrollFrame:UpdateScrollChildRect()
 end
 
