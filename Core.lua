@@ -24,6 +24,7 @@ frame:SetScript("OnEvent", function(self, event, ...)
             TerriblePackWarningsDB = {}
         end
         ns.db = TerriblePackWarningsDB
+        ns.db.skillConfig = ns.db.skillConfig or {}
 
         -- Restore imported route from SavedVariables
         if ns.Import and ns.Import.RestoreFromSaved then
@@ -91,8 +92,10 @@ SlashCmdList["TERRIBLEPACKWARNINGS"] = function(msg)
         end
     elseif cmd == "clear" then
         ns.Import.Clear()
+    elseif cmd == "config" then
+        if ns.ConfigUI and ns.ConfigUI.Toggle then ns.ConfigUI.Toggle() end
     elseif cmd == "help" then
-        print("|cff00ccffTPW|r Commands: select <dungeon>, start [pack#], stop, status, debug, clear, help")
+        print("|cff00ccffTPW|r Commands: select <dungeon>, start [pack#], stop, status, debug, clear, config, help")
     else
         -- Bare /tpw or unrecognized command — toggle pack selection window
         if ns.PackUI and ns.PackUI.Toggle then ns.PackUI.Toggle() end
