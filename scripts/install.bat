@@ -14,6 +14,7 @@ copy /Y "%SOURCE%Core.lua" "%DEST%\"
 if not exist "%DEST%\Data" mkdir "%DEST%\Data"
 copy /Y "%SOURCE%Data\WindrunnerSpire.lua" "%DEST%\Data\"
 copy /Y "%SOURCE%Data\DungeonEnemies.lua" "%DEST%\Data\"
+copy /Y "%SOURCE%Data\Sounds.lua" "%DEST%\Data\"
 
 if not exist "%DEST%\Engine" mkdir "%DEST%\Engine"
 copy /Y "%SOURCE%Engine\Scheduler.lua" "%DEST%\Engine\"
@@ -25,6 +26,7 @@ copy /Y "%SOURCE%Display\IconDisplay.lua" "%DEST%\Display\"
 
 if not exist "%DEST%\UI" mkdir "%DEST%\UI"
 copy /Y "%SOURCE%UI\PackFrame.lua" "%DEST%\UI\"
+copy /Y "%SOURCE%UI\ConfigFrame.lua" "%DEST%\UI\"
 
 if not exist "%DEST%\Libs" mkdir "%DEST%\Libs"
 xcopy /Y /E /I "%SOURCE%Libs" "%DEST%\Libs"
