@@ -30,7 +30,7 @@ scheduleAbility = function(ability, existingBarId)
     end
 
     -- Show the icon immediately with cooldown sweep
-    ns.IconDisplay.ShowIcon(barId, ability.spellID, ability.ttsMessage, ability.first_cast, ability.label)
+    ns.IconDisplay.ShowIcon(barId, ability.spellID, ability.ttsMessage, ability.first_cast, ability.label, ability.soundKitID, ability.soundEnabled)
 
     -- Pre-warning: 5 seconds before the cast — set urgent glow + TTS
     local preWarnOffset = ability.first_cast - 5
@@ -55,11 +55,13 @@ scheduleAbility = function(ability, existingBarId)
         -- Reschedule for next repeat using cooldown as the new first_cast
         -- Reuse the same barId so ShowIcon resets the existing icon slot
         scheduleAbility({
-            name       = ability.name,
-            spellID    = ability.spellID,
-            ttsMessage = ability.ttsMessage,
-            first_cast = ability.cooldown,
-            cooldown   = ability.cooldown,
+            spellID      = ability.spellID,
+            ttsMessage   = ability.ttsMessage,
+            first_cast   = ability.cooldown,
+            cooldown     = ability.cooldown,
+            label        = ability.label,
+            soundKitID   = ability.soundKitID,
+            soundEnabled = ability.soundEnabled,
         }, barId)
     end)
     table.insert(activeTimers, castHandle)
@@ -69,35 +71,6 @@ end
 -- ============================================================
 -- Public API
 -- ============================================================
-
-function Scheduler:Start(dungeonKey, packIndex)
-    local dungeon = ns.PackDatabase[dungeonKey]
-    if not dungeon then
-        print("|cff00ccffTPW|r Error: unknown dungeon key '" .. tostring(dungeonKey) .. "'")
-        return
-    end
-
-    local pack = dungeon[packIndex]
-    if not pack then
-        print("|cff00ccffTPW|r Error: pack index " .. tostring(packIndex) .. " not found in '" .. dungeonKey .. "'")
-        return
-    end
-
-    combatActive[1] = true
-
-    for _, ability in ipairs(pack.abilities) do
-        if ability.cooldown then
-            scheduleAbility(ability)
-        else
-            -- Untimed: show static icon (one per ability, regardless of mob count)
-            ns.IconDisplay.ShowStaticIcon("static_" .. ability.spellID, ability.spellID, ability.label)
-        end
-    end
-
-    if ns.db and ns.db.debug then
-        print("|cff00ccffTPW|r Started: " .. pack.displayName)
-    end
-end
 
 --- Start a single ability with an explicit barId (used by NameplateScanner per-mob).
 function Scheduler:StartAbility(ability, barId)

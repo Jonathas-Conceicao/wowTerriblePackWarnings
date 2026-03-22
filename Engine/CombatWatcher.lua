@@ -7,9 +7,18 @@ local CombatWatcher = ns.CombatWatcher
 -- Zone-to-dungeon auto-detection
 -- ============================================================
 
--- Maps instance name (from GetInstanceInfo()) to PackDatabase key
+-- Maps instance name (from GetInstanceInfo()) to PackDatabase key.
+-- NOTE: Names with punctuation (apostrophes, colons) are best-guess estimates.
+-- Verify exact strings in-game via debug logging (/tpw debug then zone in).
 local ZONE_DUNGEON_MAP = {
-    ["Windrunner Spire"] = "windrunner_spire",
+    ["Windrunner Spire"]        = "windrunner_spire",
+    ["Algethar Academy"]        = "algethar_academy",
+    ["Pit of Saron"]            = "pit_of_saron",
+    ["Skyreach"]                = "skyreach",
+    ["Magisters' Terrace"]      = "magisters_terrace",
+    ["Maisara Caverns"]         = "maisara_caverns",
+    ["Nexus Point: Xenas"]      = "nexus_point_xenas",
+    ["Seat of the Triumvirate"] = "seat_of_the_triumvirate",
 }
 
 -- ============================================================
@@ -101,6 +110,8 @@ function CombatWatcher:ManualStart(packIndex)
 end
 
 function CombatWatcher:OnCombatStart()
+    local mode = ns.db and ns.db.combatMode or "auto"
+    if mode == "disable" then return end
     -- Guard: only trigger from ready state to prevent double-starts and end-state triggers
     if state ~= "ready" then return end
 
@@ -114,8 +125,20 @@ function CombatWatcher:OnCombatStart()
 end
 
 function CombatWatcher:OnCombatEnd()
+    local mode = ns.db and ns.db.combatMode or "auto"
+    if mode == "disable" then return end
     if state ~= "active" then return end
 
+    -- Manual mode: stop scanning but do NOT advance to next pack
+    if mode == "manual" then
+        ns.NameplateScanner:Stop()
+        ns.Scheduler:Stop()
+        state = "ready"
+        if ns.PackUI and ns.PackUI.Refresh then ns.PackUI:Refresh() end
+        return
+    end
+
+    -- Auto mode: advance to next pack (existing behavior)
     -- Transition state BEFORE Stop() to prevent re-triggering on error
     local dungeon = ns.PackDatabase[selectedDungeon]
     local nextIndex = currentPackIndex + 1
@@ -144,19 +167,35 @@ function CombatWatcher:Reset()
     ns.NameplateScanner:Stop()
     ns.Scheduler:Stop()
 
-    -- If an imported route exists, reset pack index to 1 (keep route loaded)
-    if ns.PackDatabase["imported"] and #ns.PackDatabase["imported"] > 0 then
-        selectedDungeon  = "imported"
-        currentPackIndex = 1
-        state            = "ready"
-        if ns.db and ns.db.debug then
-            print("|cff00ccffTPW|r Reset to pull 1 (imported route)")
+    local instanceName = select(1, GetInstanceInfo())
+    local dungeonKey   = ZONE_DUNGEON_MAP[instanceName]
+
+    if ns.db and ns.db.debug then
+        print("|cff00ccffTPW|r Zone: " .. tostring(instanceName) .. " -> " .. tostring(dungeonKey))
+    end
+
+    if dungeonKey then
+        -- Known S1 dungeon zone — auto-switch to it
+        ns.db.selectedDungeon = dungeonKey
+        if ns.PackDatabase[dungeonKey] and #ns.PackDatabase[dungeonKey] > 0 then
+            selectedDungeon  = dungeonKey
+            currentPackIndex = 1
+            state            = "ready"
+        else
+            selectedDungeon  = nil
+            currentPackIndex = nil
+            state            = "idle"
+            print("|cff00ccffTPW|r No route for " .. instanceName .. ". Import one with /tpw")
         end
     else
+        -- Not an S1 dungeon zone — auto-disable tracking
+        ns.db.combatMode = "disable"
+        if ns.IconDisplay and ns.IconDisplay.CancelNonPreviews then
+            ns.IconDisplay.CancelNonPreviews()
+        end
         selectedDungeon  = nil
         currentPackIndex = nil
         state            = "idle"
-        if ns.db and ns.db.debug then print("|cff00ccffTPW|r Session cleared (zone change).") end
     end
 
     if ns.PackUI and ns.PackUI.Refresh then ns.PackUI:Refresh() end

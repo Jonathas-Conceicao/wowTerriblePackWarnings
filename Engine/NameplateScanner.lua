@@ -18,6 +18,15 @@ local classBarIds = {}
 -- spellID -> boolean (untimed static icon already shown for this ability)
 local staticShown = {}
 
+-- spellID -> ability table reference (untimed skills only, used to check if class has trackable casts)
+local spellIndex = {}
+
+-- classBase -> bool (true = this class has at least one untimed ability; built at Start())
+local classHasUntimed = {}
+
+-- classBase -> bool (true = at least one mob of this class is casting a tracked spell)
+local castingByClass = {}
+
 -- Global incrementing ID for unique per-mob barIds
 local timerCounter = 0
 
@@ -26,6 +35,10 @@ local timerCounter = 0
 -- UnitCanAttack and UnitClass are stable for a given mob in dungeon content,
 -- so we cache them to avoid redundant API calls in the 0.25s hot loop.
 local plateCache = {}
+
+-- Reusable tick-scope tables (wiped at start of each Tick to avoid per-tick allocation)
+local newCounts  = {}
+local newCasting = {}
 
 -- Debug logging: reads shared toggle from SavedVariables (ns.db.debug)
 -- Toggle with /tpw debug. Persists through /reload.
@@ -68,46 +81,47 @@ function Scanner:OnMobsAdded(classBase, delta)
                     local barId = "mob_" .. classBase .. "_" .. timerCounter
                     table.insert(classBarIds[classBase], barId)
                     ns.Scheduler:StartAbility(ability, barId)
-                    dbg("OnMobsAdded: " .. ability.name .. " barId=" .. barId)
+                    dbg("OnMobsAdded: " .. tostring(ability.spellID) .. " barId=" .. barId)
                 end
             else
                 -- Untimed: one static icon per ability, regardless of mob count
                 if not staticShown[ability.spellID] then
                     staticShown[ability.spellID] = true
-                    ns.IconDisplay.ShowStaticIcon("static_" .. ability.spellID, ability.spellID, ability.label)
-                    dbg("OnMobsAdded: static icon for " .. ability.name)
+                    ns.IconDisplay.ShowStaticIcon("static_" .. ability.spellID, ability.spellID, ability.label, ability.ttsMessage, ability.soundKitID, ability.soundEnabled)
+                    dbg("OnMobsAdded: static icon for " .. tostring(ability.spellID))
                 end
             end
         end
     end
 end
 
---- Called when mobs of a class die (count decreased between ticks).
--- Removes per-mob timed icons and clears static icons when class count reaches 0.
-function Scanner:OnMobsRemoved(classBase, delta)
-    local ids = classBarIds[classBase]
-    if not ids then return end
+-- ============================================================
+-- Internal: cast lifecycle handlers
+-- ============================================================
 
-    for i = 1, delta do
-        local barId = table.remove(ids) -- remove from end
-        if barId then
-            ns.Scheduler:StopAbility(barId)
-            dbg("OnMobsRemoved: stopped barId=" .. barId)
+--- Called on state transition: no-cast -> casting for a given mob class.
+-- Highlights all untimed static icons whose mobClass matches classBase.
+-- Alert (sound/TTS) fires here on the transition — not repeated while cast is ongoing.
+function Scanner:OnCastStart(classBase)
+    for _, ability in ipairs(activePack.abilities) do
+        if not ability.cooldown and ability.mobClass == classBase then
+            local key = "static_" .. ability.spellID
+            ns.IconDisplay.SetCastHighlight(key, ability)
         end
     end
+    dbg("OnCastStart: " .. classBase)
+end
 
-    -- If all mobs of this class are gone, also clear static icons for this class
-    if #ids == 0 then
-        for _, ability in ipairs(activePack.abilities) do
-            if ability.mobClass == classBase and not ability.cooldown then
-                local staticId = "static_" .. ability.spellID
-                ns.IconDisplay.CancelIcon(staticId)
-                staticShown[ability.spellID] = nil
-                dbg("OnMobsRemoved: cleared static icon for " .. ability.name)
-            end
+--- Called on state transition: casting -> no-cast for a given mob class.
+-- Clears orange cast glow on all untimed static icons for this class.
+function Scanner:OnCastEnd(classBase)
+    for _, ability in ipairs(activePack.abilities) do
+        if not ability.cooldown and ability.mobClass == classBase then
+            local key = "static_" .. ability.spellID
+            ns.IconDisplay.ClearCastHighlight(key)
         end
-        classBarIds[classBase] = nil
     end
+    dbg("OnCastEnd: " .. classBase)
 end
 
 -- ============================================================
@@ -124,7 +138,7 @@ end
 function Scanner:Tick()
     if not activePack then return end
 
-    local newCounts = {} -- classBase -> count of in-combat hostile mobs this tick
+    wipe(newCounts)  -- classBase -> count of in-combat hostile mobs this tick
 
     local plates = C_NamePlate.GetNamePlates()
     for _, plate in ipairs(plates) do
@@ -132,8 +146,9 @@ function Scanner:Tick()
         if npUnit then
             local cached = plateCache[npUnit]
             if cached and cached.hostile and cached.classBase then
-                local inCombatOk, inCombat = pcall(UnitAffectingCombat, npUnit)
-                if inCombatOk and inCombat then
+                -- UnitAffectingCombat does not throw in Midnight — call directly
+                local inCombat = UnitAffectingCombat(npUnit)
+                if inCombat then
                     newCounts[cached.classBase] = (newCounts[cached.classBase] or 0) + 1
                     -- Debug: log every class detected (first scan only)
                     if not prevCounts[cached.classBase] then
@@ -153,7 +168,59 @@ function Scanner:Tick()
         end
     end
 
-    prevCounts = newCounts
+    -- Copy newCounts into prevCounts (reuse table, avoid reassignment)
+    wipe(prevCounts)
+    for k, v in pairs(newCounts) do
+        prevCounts[k] = v
+    end
+
+    -- Cast detection pass: poll UnitCastingInfo/UnitChannelInfo for tracked spells
+    -- Reuses the `plates` variable captured at the top of Tick() (no duplicate GetNamePlates call)
+    wipe(newCasting)  -- classBase -> bool
+
+    for _, plate in ipairs(plates) do
+        local npUnit = plate.namePlateUnitToken or plate.unitToken
+        if npUnit then
+            local cached = plateCache[npUnit]
+            if cached and cached.hostile and cached.classBase then
+                -- Check if this mob is casting or channeling anything.
+                -- Midnight wraps spellIDs as Secret Values (can't use as table keys),
+                -- so we only check if a cast is happening (name ~= nil), not which spell.
+                -- Our model: any mob of tracked class casting → glow all untimed skills for that class.
+                -- Only check mobs whose class has untimed abilities (O(1) lookup via classHasUntimed).
+                if classHasUntimed[cached.classBase] then
+                    local isCasting = false
+                    local okCast, castName = pcall(UnitCastingInfo, npUnit)
+                    if okCast and castName then
+                        isCasting = true
+                    end
+                    if not isCasting then
+                        local okChan, chanName = pcall(UnitChannelInfo, npUnit)
+                        if okChan and chanName then
+                            isCasting = true
+                        end
+                    end
+                    if isCasting then
+                        newCasting[cached.classBase] = true
+                    end
+                end
+            end
+        end
+    end
+
+    -- Reconcile cast state transitions
+    for classBase in pairs(newCasting) do
+        if not castingByClass[classBase] then
+            castingByClass[classBase] = true
+            Scanner:OnCastStart(classBase)
+        end
+    end
+    for classBase in pairs(castingByClass) do
+        if not newCasting[classBase] then
+            castingByClass[classBase] = nil
+            Scanner:OnCastEnd(classBase)
+        end
+    end
 end
 
 -- ============================================================
@@ -170,7 +237,19 @@ function Scanner:Start(pack)
     wipe(prevCounts)
     wipe(classBarIds)
     wipe(staticShown)
+    wipe(spellIndex)
+    wipe(classHasUntimed)
+    wipe(castingByClass)
     timerCounter = 0
+
+    -- Build O(1) lookup tables for untimed skills
+    -- Timed skills alert via the timer system (SetUrgent), not cast detection
+    for _, ability in ipairs(pack.abilities) do
+        if not ability.cooldown then
+            spellIndex[ability.spellID] = ability
+            classHasUntimed[ability.mobClass] = true
+        end
+    end
 
     dbg("NameplateScanner:Start — polling every 0.25s for " .. #pack.abilities .. " abilities")
 
@@ -197,6 +276,9 @@ function Scanner:Stop()
     wipe(prevCounts)
     wipe(classBarIds)
     wipe(staticShown)
+    wipe(spellIndex)
+    wipe(classHasUntimed)
+    wipe(castingByClass)
     -- Note: plateCache is NOT wiped here — it's managed by nameplate events
     -- and stays valid across combat sessions
 

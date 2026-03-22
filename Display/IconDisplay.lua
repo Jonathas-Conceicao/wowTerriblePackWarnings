@@ -119,54 +119,54 @@ local function TrySpeak(message)
     end
 end
 
---- CreateGlowTextures: build 4 red edge textures on slot
-local function CreateGlowTextures(slot)
-    if slot.glowTextures then return end
-
-    local g = {}
-    -- Top edge
-    g.top = slot:CreateTexture(nil, "OVERLAY")
-    g.top:SetColorTexture(1, 0, 0, 1)
-    g.top:SetPoint("TOPLEFT", slot, "TOPLEFT", 0, 0)
-    g.top:SetPoint("TOPRIGHT", slot, "TOPRIGHT", 0, 0)
-    g.top:SetHeight(GLOW_WIDTH)
-
-    -- Bottom edge
-    g.bottom = slot:CreateTexture(nil, "OVERLAY")
-    g.bottom:SetColorTexture(1, 0, 0, 1)
-    g.bottom:SetPoint("BOTTOMLEFT", slot, "BOTTOMLEFT", 0, 0)
-    g.bottom:SetPoint("BOTTOMRIGHT", slot, "BOTTOMRIGHT", 0, 0)
-    g.bottom:SetHeight(GLOW_WIDTH)
-
-    -- Left edge
-    g.left = slot:CreateTexture(nil, "OVERLAY")
-    g.left:SetColorTexture(1, 0, 0, 1)
-    g.left:SetPoint("TOPLEFT", slot, "TOPLEFT", 0, 0)
-    g.left:SetPoint("BOTTOMLEFT", slot, "BOTTOMLEFT", 0, 0)
-    g.left:SetWidth(GLOW_WIDTH)
-
-    -- Right edge
-    g.right = slot:CreateTexture(nil, "OVERLAY")
-    g.right:SetColorTexture(1, 0, 0, 1)
-    g.right:SetPoint("TOPRIGHT", slot, "TOPRIGHT", 0, 0)
-    g.right:SetPoint("BOTTOMRIGHT", slot, "BOTTOMRIGHT", 0, 0)
-    g.right:SetWidth(GLOW_WIDTH)
-
-    slot.glowTextures = g
+--- CreateGlowTextures: build 4 edge textures on slot
+-- @param slot   frame   the icon slot
+-- @param r,g,b  number  glow color (0-1)
+-- @param field  string  field name on slot to store the textures table
+local function CreateGlowTextures(slot, r, green, b, field)
+    if slot[field] then return end
+    local textures = {}
+    textures.top = slot:CreateTexture(nil, "OVERLAY")
+    textures.top:SetColorTexture(r, green, b, 1)
+    textures.top:SetPoint("TOPLEFT", slot, "TOPLEFT", 0, 0)
+    textures.top:SetPoint("TOPRIGHT", slot, "TOPRIGHT", 0, 0)
+    textures.top:SetHeight(GLOW_WIDTH)
+    textures.bottom = slot:CreateTexture(nil, "OVERLAY")
+    textures.bottom:SetColorTexture(r, green, b, 1)
+    textures.bottom:SetPoint("BOTTOMLEFT", slot, "BOTTOMLEFT", 0, 0)
+    textures.bottom:SetPoint("BOTTOMRIGHT", slot, "BOTTOMRIGHT", 0, 0)
+    textures.bottom:SetHeight(GLOW_WIDTH)
+    textures.left = slot:CreateTexture(nil, "OVERLAY")
+    textures.left:SetColorTexture(r, green, b, 1)
+    textures.left:SetPoint("TOPLEFT", slot, "TOPLEFT", 0, 0)
+    textures.left:SetPoint("BOTTOMLEFT", slot, "BOTTOMLEFT", 0, 0)
+    textures.left:SetWidth(GLOW_WIDTH)
+    textures.right = slot:CreateTexture(nil, "OVERLAY")
+    textures.right:SetColorTexture(r, green, b, 1)
+    textures.right:SetPoint("TOPRIGHT", slot, "TOPRIGHT", 0, 0)
+    textures.right:SetPoint("BOTTOMRIGHT", slot, "BOTTOMRIGHT", 0, 0)
+    textures.right:SetWidth(GLOW_WIDTH)
+    slot[field] = textures
 end
 
 local function ShowGlow(slot)
-    CreateGlowTextures(slot)
-    for _, tex in pairs(slot.glowTextures) do
-        tex:Show()
-    end
+    CreateGlowTextures(slot, 1, 0, 0, "glowTextures")
+    for _, tex in pairs(slot.glowTextures) do tex:Show() end
 end
 
 local function HideGlow(slot)
     if not slot.glowTextures then return end
-    for _, tex in pairs(slot.glowTextures) do
-        tex:Hide()
-    end
+    for _, tex in pairs(slot.glowTextures) do tex:Hide() end
+end
+
+local function ShowCastGlow(slot)
+    CreateGlowTextures(slot, 1, 0.5, 0, "castGlowTextures")
+    for _, tex in pairs(slot.castGlowTextures) do tex:Show() end
+end
+
+local function HideCastGlow(slot)
+    if not slot.castGlowTextures then return end
+    for _, tex in pairs(slot.castGlowTextures) do tex:Hide() end
 end
 
 ----------------------------------------------------------------------
@@ -178,7 +178,10 @@ end
 -- @param spellID     number  spell ID for icon texture
 -- @param ttsMessage  string|nil  short TTS callout text
 -- @param duration    number  cooldown duration in seconds
-function ns.IconDisplay.ShowIcon(instanceKey, spellID, ttsMessage, duration, label)
+-- @param label       string|nil  short label text below icon
+-- @param soundKitID  number|nil  WoW soundKitID to play at SetUrgent (nil = use TTS)
+-- @param soundEnabled boolean|nil  if false/nil, no sound or TTS fires at SetUrgent
+function ns.IconDisplay.ShowIcon(instanceKey, spellID, ttsMessage, duration, label, soundKitID, soundEnabled)
     -- If already showing this key, reset its cooldown
     local existing = slotsByKey[instanceKey]
     if existing then
@@ -194,6 +197,8 @@ function ns.IconDisplay.ShowIcon(instanceKey, spellID, ttsMessage, duration, lab
 
     local slot = CreateIconSlot(spellID, duration, label)
     slot.ttsMessage = ttsMessage
+    slot.soundKitID = soundKitID
+    slot.soundEnabled = soundEnabled or false
     slot.instanceKey = instanceKey
 
     activeSlots[#activeSlots + 1] = slot
@@ -212,10 +217,17 @@ end
 -- Only one icon per instanceKey (untimed = one icon regardless of mob count)
 -- @param instanceKey string  unique key for this icon
 -- @param spellID     number  spell ID for icon texture
-function ns.IconDisplay.ShowStaticIcon(instanceKey, spellID, label)
+-- @param label       string|nil  short label text below icon
+-- @param ttsMessage  string|nil  short TTS callout text (used by SetCastHighlight)
+-- @param soundKitID  number|nil  WoW soundKitID to play at SetCastHighlight (nil = use TTS)
+-- @param soundEnabled boolean|nil  if false/nil, no sound or TTS fires at SetCastHighlight
+function ns.IconDisplay.ShowStaticIcon(instanceKey, spellID, label, ttsMessage, soundKitID, soundEnabled)
     if slotsByKey[instanceKey] then return end
 
     local slot = CreateIconSlot(spellID, nil, label)
+    slot.ttsMessage = ttsMessage
+    slot.soundKitID = soundKitID
+    slot.soundEnabled = soundEnabled or false
     slot.instanceKey = instanceKey
 
     activeSlots[#activeSlots + 1] = slot
@@ -227,16 +239,54 @@ function ns.IconDisplay.ShowStaticIcon(instanceKey, spellID, label)
     dbg("ShowStaticIcon: " .. instanceKey .. " spellID=" .. tostring(spellID))
 end
 
---- SetUrgent: add red border glow and fire TTS for a timed icon
+--- SetUrgent: add red border glow and fire sound or TTS for a timed icon
+-- Sound and TTS are mutually exclusive: soundKitID takes priority over ttsMessage.
 -- @param instanceKey string  the icon to mark urgent
 function ns.IconDisplay.SetUrgent(instanceKey)
     local slot = slotsByKey[instanceKey]
     if not slot then return end
 
-    ShowGlow(slot)
-    TrySpeak(slot.ttsMessage)
+    ShowGlow(slot)  -- red glow (existing)
+    if slot.soundEnabled then
+        if slot.soundKitID then
+            PlaySound(slot.soundKitID, "Master")
+        else
+            TrySpeak(slot.ttsMessage)
+        end
+    end
 
     dbg("SetUrgent: " .. instanceKey)
+end
+
+--- SetCastHighlight: show orange cast glow and fire configured alert on untimed icon
+-- Called by NameplateScanner when a mob of this icon's class begins casting a tracked spell.
+-- Alert fires only on the not-glowing -> glowing transition (caller's responsibility).
+-- @param instanceKey string  the icon to highlight
+-- @param ability     table   ability table with optional soundKitID and ttsMessage
+function ns.IconDisplay.SetCastHighlight(instanceKey, ability)
+    local slot = slotsByKey[instanceKey]
+    if not slot then return end
+    ShowCastGlow(slot)
+    -- Use slot.soundEnabled (set at ShowStaticIcon time) for live state
+    local soundOn = slot.soundEnabled
+    if soundOn then
+        if slot.soundKitID then
+            PlaySound(slot.soundKitID, "Master")
+        elseif slot.ttsMessage then
+            TrySpeak(slot.ttsMessage)
+        end
+    end
+    dbg("SetCastHighlight: " .. instanceKey)
+end
+
+--- ClearCastHighlight: hide orange cast glow without affecting red urgent glow
+-- Called by NameplateScanner when the casting mob's cast ends.
+-- @param instanceKey string  the icon to clear
+function ns.IconDisplay.ClearCastHighlight(instanceKey)
+    local slot = slotsByKey[instanceKey]
+    if not slot then return end
+    HideCastGlow(slot)
+    dbg("ClearCastHighlight: " .. instanceKey)
 end
 
 --- CancelIcon: remove a specific icon and re-layout remaining icons
@@ -250,6 +300,8 @@ function ns.IconDisplay.CancelIcon(instanceKey)
         GameTooltip:Hide()
     end
 
+    HideGlow(slot)
+    HideCastGlow(slot)
     slot:Hide()
     slotsByKey[instanceKey] = nil
 
@@ -265,12 +317,43 @@ function ns.IconDisplay.CancelIcon(instanceKey)
     dbg("CancelIcon: " .. instanceKey)
 end
 
+--- CancelPreviews: cancel all preview icons (keys starting with "preview_")
+function ns.IconDisplay.CancelPreviews()
+    local toRemove = {}
+    for key, _ in pairs(slotsByKey) do
+        if key:find("^preview_") then
+            table.insert(toRemove, key)
+        end
+    end
+    for _, key in ipairs(toRemove) do
+        if ns.Scheduler and ns.Scheduler.StopAbility then
+            ns.Scheduler:StopAbility(key)
+        end
+        ns.IconDisplay.CancelIcon(key)
+    end
+end
+
+--- CancelNonPreviews: cancel all icons except previews (keys starting with "preview_")
+function ns.IconDisplay.CancelNonPreviews()
+    local toRemove = {}
+    for key, _ in pairs(slotsByKey) do
+        if not key:find("^preview_") then
+            table.insert(toRemove, key)
+        end
+    end
+    for _, key in ipairs(toRemove) do
+        ns.IconDisplay.CancelIcon(key)
+    end
+end
+
 --- CancelAll: hide and clear all active icon slots
 function ns.IconDisplay.CancelAll()
     for _, slot in ipairs(activeSlots) do
         if GameTooltip:GetOwner() == slot then
             GameTooltip:Hide()
         end
+        HideGlow(slot)
+        HideCastGlow(slot)
         slot:Hide()
     end
     activeSlots = {}

@@ -19,5 +19,15 @@ Display\IconDisplay.lua
 Import\Decode.lua
 Data\DungeonEnemies.lua
 Data\WindrunnerSpire.lua
+Data\AlgetharAcademy.lua
+Data\MagistersTerrace.lua
+Data\MaisaraCaverns.lua
+Data\NexusPointXenas.lua
+Data\PitOfSaron.lua
+Data\SeatoftheTriumvirate.lua
+Data\Skyreach.lua
+Data\Sounds.lua
 Import\Pipeline.lua
+Import\Profile.lua
 UI\PackFrame.lua
+UI\ConfigFrame.lua

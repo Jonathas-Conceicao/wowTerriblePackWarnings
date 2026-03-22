@@ -2,26 +2,28 @@
 
 ## What This Is
 
-A World of Warcraft addon for Midnight (12+ API) that brings ability warnings to dungeon trash packs in Mythic+ content. Players import an MDT/Keystone.guru route, and the addon displays spell icon squares with cooldown sweeps, TTS callouts, and per-mob timer instances detected via nameplate scanning -- giving competitive M+ players the same threat awareness on trash that they get on bosses.
+A World of Warcraft addon for Midnight (12+ API) that brings ability warnings to dungeon trash packs in Mythic+ content. Players import an MDT/Keystone.guru route, configure which skills to track with custom timers and alerts, and the addon displays spell icons with countdown sweeps, cast detection highlights, and sound/TTS callouts -- giving M+ players threat awareness on trash that they normally only get on bosses.
 
 ## Core Value
 
-When a player imports a route and pulls, they see accurate, timed ability warnings for that pack's dangerous mob abilities via custom spell icon display with per-mob detection.
+When a player imports a route and pulls, they see accurate, timed ability warnings for that pack's dangerous mob abilities via custom spell icon display with per-mob detection and configurable alerts.
 
 ## Current State
 
-**Shipped:** v0.0.4 (2026-03-16)
-**Code:** 1,839 lines of Lua across 10 files + 3 bundled libraries
+**Shipped:** v0.1.0 (2026-03-22)
+**Code:** 6,294 lines of Lua across 19 files + 3 bundled libraries
 **Tech stack:** Plain Lua, WoW FrameXML, C_VoiceChat TTS, nameplate scanning, LibDeflate + AceSerializer
 
 **What works:**
-- MDT/Keystone.guru route import via UI paste popup
-- npcID-keyed ability database with dynamic pack building from imported routes
-- MDT-style pack UI: numbered pulls with round NPC portrait icons, boss highlighting
-- Custom spell icon display: horizontal squares with cooldown sweep, TTS, red glow
-- Nameplate-based mob detection: 0.25s poll, UnitClass matching, per-mob timers
-- Route persistence via SavedVariables, auto-scroll to active pull
-- DungeonEnemies data for all 9 Midnight M+ dungeons
+- Per-skill configuration window with dungeon→mob→skill tree, search, and profile management
+- Ability data for all 8 Midnight S1 dungeons (190+ mobs from MDT)
+- Per-dungeon route storage with zone-in auto-switch
+- Cast detection via UnitCastingInfo nameplate polling (Secret Values workaround)
+- Timed ability warnings with cooldown sweep and 5s pre-warning
+- Sound/TTS alerts with CDM-style sound dropdown (67 sounds)
+- Profile system: create/delete/switch, import/export as shareable strings
+- Combat modes: Auto/Manual/Disable
+- Skill preview with cooldown sweep from config window
 
 ## Requirements
 
@@ -42,6 +44,16 @@ When a player imports a route and pulls, they see accurate, timed ability warnin
 - Dynamic pack building from imported routes -- v0.0.3
 - MDT-style pull UI with NPC portraits -- v0.0.3
 - Import/Clear route management -- v0.0.3
+- Configuration window with dungeon→mob→skill hierarchy -- v0.1.0
+- MDT ability data for all 8 S1 dungeons -- v0.1.0
+- Per-skill settings (toggle, label, timed, sound/TTS) -- v0.1.0
+- Cast detection highlights via UnitCastingInfo -- v0.1.0
+- Per-dungeon route storage with zone-in auto-switch -- v0.1.0
+- Slash command rework (/tpw config, /tpw route) -- v0.1.0
+- Config search filtering -- v0.1.0
+- Profile system with import/export -- v0.1.0
+- Per-skill timed toggle with timer fields -- v0.1.0
+- Per-skill sound alert checkbox -- v0.1.0
 
 ### Active
 
@@ -49,24 +61,26 @@ When a player imports a route and pulls, they see accurate, timed ability warnin
 
 ### Out of Scope
 
-- Combat log event parsing -- blocked by Midnight API restrictions
+- Combat log event parsing -- blocked by Midnight API restrictions (CLEU disabled)
 - Auto-detection of current pack without route addon -- no reliable API
-- Community-contributed warning profiles -- future milestone
 - Route editing within TPW -- editing stays in MDT/Keystone.guru
+- Spell-specific cast detection -- spellIDs are Secret Values in Midnight
 
 ## Context
 
 - **Platform:** World of Warcraft Midnight expansion (12+ API)
-- **API constraints:** Midnight restricts combat log reading. Nameplate scanning works for mob detection.
-- **Display system:** Custom spell icon squares with CooldownFrameTemplate sweep. TTS via C_VoiceChat.SpeakText.
-- **Import system:** LibDeflate + AceSerializer decode MDT export strings. DungeonEnemies data for 9 dungeons provides npcID → displayId mapping.
-- **Architecture:** Self-contained display + nameplate detection. Only external dependency is bundled decode libraries (LibStub pattern).
+- **API constraints:** Midnight restricts combat log reading, spell IDs from casts, and health values (all Secret Values). Nameplate scanning and cast name detection work.
+- **Display system:** Custom spell icon squares with CooldownFrameTemplate sweep. TTS via C_VoiceChat.SpeakText. Sound via PlaySound on Master channel.
+- **Import system:** LibDeflate + AceSerializer decode MDT export strings and encode profile strings.
+- **Architecture:** Self-contained display + nameplate detection. Profile system for per-skill configuration. Per-dungeon route storage.
 
 ## Constraints
 
 - **API:** Midnight 12+ addon API only
 - **Framework:** Plain Lua + XML + bundled libs (LibDeflate, AceSerializer via LibStub)
-- **Data:** Ability cooldown timers are approximate/predefined
+- **Data:** Ability cooldown timers configured by users (no reliable source)
+- **Cast detection:** Class-based only (Secret Values prevent spell-specific detection)
+- **Mob classes:** Most default to WARRIOR (requires in-game verification)
 
 ## Key Decisions
 
@@ -76,12 +90,15 @@ When a player imports a route and pulls, they see accurate, timed ability warnin
 | Custom icon display over DBM/ET adapters | DBM not universal, ET boss-only | Good |
 | Nameplate UnitClass for runtime detection | NPC IDs not available on nameplates | Good |
 | npcID for data linkage, UnitClass for runtime | MDT uses npcIDs, nameplates expose class | Good |
-| Bundle LibDeflate + AceSerializer via LibStub | Required for MDT string decode, follows industry pattern | Good |
-| Paste-only import (no slash command) | WoW chat buffer too small for MDT strings | Good -- discovered during UAT |
+| Bundle LibDeflate + AceSerializer via LibStub | Required for MDT string decode + profile export | Good |
+| Paste-only import (no slash command) | WoW chat buffer too small for MDT strings | Good |
 | Save processed pack data (not raw MDT string) | Instant load, no re-decode on startup | Good |
-| Accept any dungeon import (no skill tracking if no AbilityDB) | Future-proofs for adding new dungeon abilities | Good |
-| Round NPC portraits with circular mask | Matches MDT visual style | Good |
-| Boss pull highlighting (dark red) | Quick visual identification of boss encounters | Good |
+| defaultEnabled = false for MDT-imported abilities | Users opt-in per skill, no noise from unknown abilities | Good |
+| Class-based cast detection (not spell-specific) | Midnight Secret Values prevent spellID table keys | Good |
+| Per-dungeon route storage | Each dungeon independently imported/managed | Good |
+| Profile system for skill config | Shareable configurations, multiple setups per player | Good |
+| Auto-disable on non-S1 zone-out | Prevents stale tracking outside dungeons | Good |
+| Rebuild packs on config close | Natural workflow boundary, avoids per-keystroke rebuilds | Good |
 
 ---
-*Last updated: 2026-03-16 after v0.0.4 milestone*
+*Last updated: 2026-03-22 after v0.1.0 milestone*

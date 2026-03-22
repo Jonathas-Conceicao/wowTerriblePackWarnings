@@ -1,5 +1,27 @@
 # Milestones
 
+## v0.1.0 Configuration and Skill Data (Shipped: 2026-03-22)
+
+**Phases completed:** 6 phases, 16 plans
+**Code:** 6,294 lines of Lua across 19 files + 3 bundled libraries
+**Timeline:** 6 days (2026-03-17 → 2026-03-22)
+
+**Key accomplishments:**
+- Config window with dungeon→mob→skill tree, per-skill settings (enable, label, timed, sound/TTS), search, profile management
+- Ability data for all 8 Midnight S1 dungeons extracted from MDT (190+ mobs)
+- Per-dungeon route storage with zone-in auto-switch and schema migration
+- Cast detection via UnitCastingInfo (Secret Values workaround: class-based name presence check)
+- Sound/TTS alerts with per-skill configuration, CDM-style sound dropdown (67 sounds)
+- Profile system: create/delete/switch, import/export via LibDeflate+AceSerializer
+- Slash command rework: /tpw opens config, /tpw route opens route, case-insensitive
+- Combat modes: Auto/Manual/Disable with immediate disable clearing all tracking
+- Skill preview with cooldown sweep from config window
+
+**Requirements:** 31/31 v0.1.0 requirements completed
+**Audit:** tech_debt (5 items, no blockers)
+
+---
+
 ## v0.0.4 Cleanup and Polish (Shipped: 2026-03-16)
 
 **Phases completed:** 2 phases, 2 plans

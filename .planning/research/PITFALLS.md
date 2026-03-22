@@ -1,169 +1,218 @@
 # Pitfalls Research
 
-**Domain:** WoW Midnight dungeon pack warning addon (timer-based, predefined data, Boss Warnings API)
-**Researched:** 2026-03-13
-**Confidence:** MEDIUM-HIGH (core API restrictions confirmed via Warcraft Wiki and Blizzard official docs; Boss Timeline injection API confirmed via 12.0.0 API changes; some C_EncounterTimeline parameter details are LOW confidence — unverified in public docs)
+**Domain:** WoW Midnight dungeon pack warning addon — v0.1.0 Configuration and Skill Data milestone
+**Researched:** 2026-03-17
+**Confidence:** HIGH for API behavior (verified against wow-ui-source); HIGH for schema migration patterns (derived from existing code); MEDIUM for sound throttling specifics (pattern-confirmed, not benchmarked in Midnight)
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Calling Restricted APIs During a Mythic+ Keystone Run
+### Pitfall 1: UnitCastingInfo Polling Adds a Second Hot Loop Without a Budget
 
 **What goes wrong:**
-Any API that reads combat state — unit health, auras, cooldowns, spell information — returns a "secret value" during an active Mythic+ keystone run. If your code attempts arithmetic, table indexing, or conditional logic on a secret value, Lua throws an error and your addon either silently breaks or generates a cascade of UI errors. This is not hypothetical: Blizzard's own UI code shipped with this bug in week one of Midnight.
+Adding `UnitCastingInfo` polling for untimed skill highlighting by piggy-backing on the existing 0.25s `NameplateScanner` tick seems simple, but the cost compounds. The current tick already calls `UnitAffectingCombat` once per visible nameplate (up to 20 calls/tick). Adding `UnitCastingInfo` per-nameplate per-tick doubles the API call budget. At 20 nameplates, that is 40 additional API calls every 0.25s (160/sec) in the hot path. This is not catastrophic in isolation but becomes visible during the period when the config UI is also open (UI rendering + polling simultaneously).
+
+More critically: `UnitCastingInfo` returns 9 values. The 9th return value is `spellID`. Matching this against the ability database on every tick for every nameplate requires iterating the ability list. With 8 dungeons each having 5-15 mobs with 1-3 abilities, the inner loop can reach 30-50 iterations per nameplate per tick. At 20 nameplates, that is 600-1000 table lookups per second.
 
 **Why it happens:**
-Developers assume that because the addon runs in a non-combat context (the user is selecting a pack before pulling), restricted APIs are safe to call. The restriction activates the moment the keystone run starts, not when combat begins. Pack selection can happen mid-run (between packs), and the restriction is already active.
+The existing tick is already O(nameplates). Developers assume adding one more API call per nameplate is negligible. The O(nameplates × abilities) inner loop is not obvious until the ability database grows.
 
 **How to avoid:**
-- Never call `UnitHealth`, `UnitAura`, `GetSpellCooldown`, `UnitBuff`, `UnitDebuff`, or any unit query API for combat-derived data.
-- This addon does not need these APIs at all — timers are predefined. The risk is accidentally introducing them during debugging, convenience, or UI display code.
-- Wrap any optional informational calls in `issecretvalue()` guards or `pcall()` if you add display features later.
-- Use `C_Secrets.IsRestricted()` (or `C_RestrictedActions`) to gate any future conditional API calls.
+- Build a spellID → ability lookup index at `NameplateScanner:Start(pack)` time. This makes the inner tick O(1) per nameplate instead of O(abilities).
+- Gate `UnitCastingInfo` calls behind a separate `castDetect` flag per ability entry. Only call it for nameplates whose cached `classBase` matches at least one untimed ability. This eliminates most calls: most nameplates will not be casting a tracked ability.
+- Keep the cast detection check inside the existing 0.25s tick — do not create a second ticker. Two overlapping tickers at different intervals will not be synchronized and will create uneven CPU spikes.
+- Use `pcall(UnitCastingInfo, npUnit)` as the current code already does for `UnitAffectingCombat`, since cast state can change between the nameplate being valid and the call completing.
 
 **Warning signs:**
-- Lua errors appearing when the addon is used inside a Mythic+ dungeon but not outside it.
-- Errors only on the first pack selection after the key timer starts.
-- The error message references a "secret value" or "restricted access."
+- Frame rate drops during large pulls (6+ mobs) when untimed detection is active.
+- `/tpw status` shows cast detection active but no nameplate reductions visible.
+- Profiling shows `NameplateScanner.Tick` consuming >0.5ms per call.
 
-**Phase to address:** Foundation phase (addon structure setup). Establish the rule: this addon reads no runtime combat data, period. Enforce with a code comment convention.
+**Phase to address:** Cast detection phase — build the spellID index at the same time as the UnitCastingInfo call, not after.
 
 ---
 
-### Pitfall 2: Assuming C_EncounterTimeline.AddScriptEvent Works Like a Simple Timer
+### Pitfall 2: UnitCastingInfo False Positives From Shared SpellIDs Across Different Mob Classes
 
 **What goes wrong:**
-`C_EncounterTimeline.AddScriptEvent` exists in the 12.0.0 API, but its parameter signature, preconditions, and behavior are not fully documented in public wikis. Developers who guess at the API based on function name alone will ship code that silently does nothing, crashes on invalid parameters, or only works in boss encounters (not trash pulls). The Boss Warnings timeline may also require an active encounter state to display events.
+Multiple mobs in different pulls can share the same spellID (example: two different NPC types using "Fire Spit" spell 1216848). If the pack has npcID A (WARRIOR) with spellID 1216848 and the player is in a different pack containing npcID B (also WARRIOR) with the same spellID but no tracked ability, `UnitCastingInfo` will fire the highlight for npcID A's ability even though the casting mob is not in the active pack.
+
+The converse is also true: the current `classBase` detection in `NameplateScanner` counts all in-combat hostiles of a class, not just the specific npcIDs in the active pack. A random WARRIOR mob that wandered into nameplate range while the pack is active will trigger the untimed highlight for a tracked WARRIOR ability even if that mob has nothing to do with the pack.
 
 **Why it happens:**
-The function name implies "add a custom event to the Boss Timeline." The actual behavior may require specific event data structures, severity levels, or may only render during an `ENCOUNTER_TIMELINE_STATE_UPDATED` active state. Public documentation is sparse — the API exists in the 12.0 changes list but parameter documentation is absent.
+The detection model uses `UnitClass` (which maps to `classBase`) as a proxy for mob identity because nameplate units do not expose npcID directly. This works for timer spawning (one timer per in-combat WARRIOR) but creates cross-pack and cross-mob false positives when the same class appears in nameplates outside the intended pack.
 
 **How to avoid:**
-- Treat `C_EncounterTimeline.AddScriptEvent` as LOW confidence until verified in-game.
-- The fallback plan is `C_EncounterWarnings.PlaySound` (confirmed to exist) plus a custom frame for timer display — avoid depending solely on Boss Timeline injection.
-- Verify the API works for trash-pack contexts (not just active boss encounters) early in development by testing with a minimal stub addon before building the full timer system around it.
-- Check `C_EncounterTimeline.IsFeatureAvailable()` and `C_EncounterTimeline.IsFeatureEnabled()` before calling injection functions.
+- Accept this limitation as a known constraint of the CLEU-disabled Midnight API; document it for users.
+- Narrow the detection window: only trigger `UnitCastingInfo` highlights when `UnitAffectingCombat` is already true for the unit (the mob is actively in combat, not just nearby).
+- Do not try to match npcID from nameplate units — it is not exposed. The classBase proxy is the best available signal.
+- Add a debug log line (behind `ns.db.debug`) when a cast match fires, so users can identify false positives in edge cases.
+- In the config UI, document per-ability that untimed highlights are class-based, not mob-specific.
 
 **Warning signs:**
-- Timers registered via `AddScriptEvent` never appear in the Boss Timeline UI.
-- No error is thrown, but no visual output occurs (silent failure).
-- The function works in a raid encounter but not during a trash pull.
+- Untimed highlight fires when no mobs from the active pack are visible.
+- Highlight fires before the player has engaged the pack.
+- Same highlight fires repeatedly when pulling unrelated packs of the same class.
 
-**Phase to address:** Boss Warnings integration phase — this must be the first thing prototyped, not the last. Validate the injection API before building the full timer data system around an assumed integration point.
+**Phase to address:** Cast detection phase — document the constraint explicitly in ability data comments before shipping the feature.
 
 ---
 
-### Pitfall 3: Timer Drift — Predefined Cooldowns Diverge From Actual Mob Behavior
+### Pitfall 3: SavedVariables Schema Migration When Ability Data Structure Changes
 
 **What goes wrong:**
-Mob ability cooldowns in Midnight dungeons are not perfectly deterministic. Most abilities have a "first cast offset" (time from pull to first cast that is shorter than the repeat cooldown), cast variance windows (±1-3 seconds), and some abilities are skipped if the mob dies or resets. Hardcoded timers that ignore the first-cast offset will show the warning 8-15 seconds late on the first cast, making the warning useless precisely when it matters most (opening burst).
+The current schema saves processed pack data directly into `ns.db.importedRoute.packs` — the full resolved ability list. When v0.1.0 adds per-skill config (toggle tracking, custom label, TTS text, sound alert), this config must live alongside or keyed against the ability entries. If the ability data structure changes (new field added, field renamed, field removed) between addon versions, the saved config becomes partially invalid but not obviously so: old saves load without error because Lua tables tolerate extra or missing keys silently.
+
+The dangerous failure mode: a user saves a per-skill toggle. A later patch renames the field. The toggle silently stops working. The user does not notice because no error fires.
+
+Per-dungeon route storage (the new multi-route system) will also change `ns.db.importedRoute` from a single object to a keyed table by dungeon. Any code that reads the old single-route schema will silently get `nil` and behave as if no route is imported.
 
 **Why it happens:**
-Developers model the cooldown as `ability_fires_every_X_seconds_from_pull`. In reality it is: `first_cast = pull + Y seconds`, `subsequent_casts = first_cast + X seconds`. Y is frequently different from X. DBM and BigWigs both model this explicitly in their encounter data structures.
+WoW addon SavedVariables have no schema versioning built in. Developers add fields incrementally and assume backward compatibility. The flat-structure assumption breaks when the top-level shape changes (single route → keyed table).
 
 **How to avoid:**
-- The data schema for each ability must include two fields: `first_cast` (time from pack selection/pull to first expected cast) and `cooldown` (repeat interval after first cast).
-- Document variance tolerance per ability — some abilities have tight windows, others are loose. Users should understand warnings are approximate.
-- Test data against actual dungeon runs during development. Do not trust Wowhead cast timing data alone; it aggregates and may not reflect first-cast offset.
+- Add a `schemaVersion` field to `TerriblePackWarningsDB` on first write. Increment it when the schema changes.
+- On `ADDON_LOADED`, read `schemaVersion` and run a migration function if it is below current. Migration can be additive (add missing fields with defaults) or destructive (wipe and re-import if structure changed fundamentally).
+- For the v0.1.0 migration specifically: detect the old single-route structure (`ns.db.importedRoute.packs` exists and `ns.db.importedRoutes` does not) and migrate by copying into the new per-dungeon keyed table.
+- Per-skill config should be stored separately from the processed pack data: `ns.db.skillConfig[dungeonKey][npcID][spellID]` keyed by stable identifiers. If ability data changes, the config orphan does not corrupt anything — it is just unused until the ability reappears.
+- Default all per-skill config values at access time via a helper function, never assume the key exists in SavedVariables.
 
 **Warning signs:**
-- During playtesting, the first warning fires noticeably after the ability actually cast.
-- Users report "the warning is always late the first time."
-- Cooldown timer looks correct from the second cast onward.
+- After an addon update, per-skill settings silently reset to defaults.
+- The pack selection window shows "No route imported" even though the user had a route saved.
+- Lua errors on load referencing `importedRoute.packs` being nil after the schema change.
 
-**Phase to address:** Data schema design phase. Build first-cast offset into the data model from day one — retrofitting it later requires modifying every ability entry.
+**Phase to address:** SavedVariables schema design phase — establish the `schemaVersion` field and the per-dungeon keyed structure before any per-skill config is written to disk.
 
 ---
 
-### Pitfall 4: TOC Interface Version Mismatch Causing Silent Addon Disable
+### Pitfall 4: Per-Skill Config Table Grows Unboundedly as Dungeons Are Added
 
 **What goes wrong:**
-If the TOC `## Interface:` field does not match the current WoW client version, the client marks the addon as "out of date" and may refuse to load it (or load it with a warning that prompts users to disable it). The Midnight pre-patch uses `120000` and the full Midnight launch uses `120001`. Using the wrong number, or leaving a pre-Midnight value like `110007`, causes the addon to fail silently for users who have "Load out of date AddOns" disabled.
+Per-skill config stored as `ns.db.skillConfig[dungeonKey][npcID][spellID]` with one entry per configured ability will grow to cover all 9 dungeons × ~15 mobs/dungeon × ~2 abilities/mob = ~270 entries if all skills are configured. This is manageable. The problem occurs when the user imports routes for all 9 dungeons and has previously configured abilities for dungeons whose routes are later cleared or replaced: the config entries for cleared dungeons accumulate as orphans with no corresponding pack data.
+
+Over multiple seasons, if dungeon rosters change and npcIDs change, old config entries pile up silently. The SavedVariables file grows, and on each load, `RestoreFromSaved` must traverse stale entries.
 
 **Why it happens:**
-Developers set the TOC version during initial development and forget to update it. The expansion pre-patch and release use different interface numbers, and the version changes again with each major patch.
+Developers write config at user action time but never prune config on route clear or dungeon deselect. The clear operation removes `ns.db.importedRoutes[dungeonKey]` but leaves `ns.db.skillConfig[dungeonKey]` intact.
 
 **How to avoid:**
-- Set `## Interface: 120001` for the Midnight launch target.
-- Add a `## Interface-Retail: 120001` line if targeting multi-version compatibility.
-- Verify the current interface number with `/dump select(4, GetBuildInfo())` in-game before shipping.
-- Add the TOC interface number as an explicit checklist item in any release process.
+- Keep per-skill config entries small: only store non-default values. A per-skill entry that exactly matches the default should not be persisted.
+- On route import (or explicit clear), prune orphaned config entries for that dungeon: remove `ns.db.skillConfig[dungeonKey]` when a route for that dungeon is cleared.
+- Do not proactively create config entries on addon load — create them only when the user explicitly changes a setting from its default.
+- Add a periodic audit (on `PLAYER_ENTERING_WORLD`) that removes config entries for npcIDs not present in any currently-imported route.
 
 **Warning signs:**
-- Users report the addon does not appear in their AddOns list or is grayed out.
-- The addon works for the developer but not for testers on the same game version.
-- No Lua errors — the addon simply never loads.
+- SavedVariables file (in `WTF/Account/.../SavedVariables/TerriblePackWarnings.lua`) grows larger than ~50KB for a normal user.
+- Config values for abilities that no longer exist in any route appear when iterating `ns.db.skillConfig`.
 
-**Phase to address:** Foundation phase (TOC and addon structure setup).
+**Phase to address:** Per-skill config storage phase — establish the sparse-default pattern before any config is written.
 
 ---
 
-### Pitfall 5: Initialization Race — Accessing SavedVariables Before ADDON_LOADED
+### Pitfall 5: Sound Alert Stacking When Multiple Mobs Cast the Same Ability Simultaneously
 
 **What goes wrong:**
-Attempting to read or write SavedVariables (user settings, pack selection persistence) in top-level addon code — before the `ADDON_LOADED` event fires for your specific addon — results in nil reads. This silently corrupts any default value logic and can cause nil-reference crashes on first load.
+If three WARRIOR mobs each cast the tracked ability simultaneously, the pre-warning glow triggers three separate `TrySpeak` calls within the same 0.25s tick window. The current `TrySpeak` in `IconDisplay.lua` fires `C_VoiceChat.SpeakText` with `overlap = false`, which queues speech. Three queued TTS alerts for the same ability text play sequentially, producing a stutter ("Bolt Bolt Bolt") that is disorienting and takes 3-5 seconds to clear the queue.
+
+Adding a WoW sound file alert (via `PlaySound`) in addition to TTS compounds this: both the sound and the TTS trigger per-mob, so at 5 mobs, 5 sounds plus 5 TTS queued messages fire within the same tick.
 
 **Why it happens:**
-WoW executes addon Lua files on load, but SavedVariables are not populated until `ADDON_LOADED` fires with your addon's name as the argument. Developers who initialize settings in the file body rather than in an event handler hit this every time.
+The current timer system spawns one barId per mob (correct for per-mob cooldown tracking) and calls `SetUrgent` per barId independently. There is no deduplication at the alert layer. The design was correct for the single-mob case but was not designed for simultaneous multi-mob pre-warnings.
 
 **How to avoid:**
-- All SavedVariables access must be gated behind `ADDON_LOADED` with an explicit addon name check: `if event == "ADDON_LOADED" and arg1 == "TerriblePackWarnings" then`.
-- Initialize defaults defensively: `MyAddonDB = MyAddonDB or {}` inside the event handler, not at file scope.
-- `PLAYER_ENTERING_WORLD` is safe for UI setup that depends on game state (called after `ADDON_LOADED`); use it for anything that queries the world rather than saved config.
+- Implement a per-ability alert throttle: track the last time an alert (sound or TTS) fired for a given `spellID`. If the same `spellID` fired an alert within the last N seconds (recommend 3 seconds), suppress the duplicate.
+- The throttle should be at the `spellID` level, not the `barId` level, so all instances of the same ability share one throttle bucket.
+- For TTS specifically, `C_VoiceChat.SpeakText` with `overlap = false` (the current call) already prevents simultaneous overlap, but queued messages still play sequentially. Use `overlap = true` for the first call and then throttle subsequent calls so only one fires.
+- For `PlaySound`, WoW's `PlaySound` call does not queue — it plays immediately and overlapping calls produce audio chaos. Throttling is mandatory at the addon level.
+- Throttle table: `alertThrottle = {}` keyed by `spellID`, value = `GetTime()` of last alert. In `SetUrgent`, check `GetTime() - (alertThrottle[spellID] or 0) > THROTTLE_SECONDS` before firing.
 
 **Warning signs:**
-- Settings reset to defaults every login despite being saved.
-- Nil errors on first install that go away after `/reload`.
-- Pack selection state not persisted between sessions.
+- TTS fires the same phrase 3+ times in quick succession on a pull with multiple mobs.
+- Sound effects overlap during large pulls.
+- Users report the TTS "stutters" or "repeats itself."
 
-**Phase to address:** Foundation phase (addon structure and event handling setup).
+**Phase to address:** Sound alert phase — build throttle into `SetUrgent` at the same time the sound dropdown is added, before testing with multi-mob packs.
 
 ---
 
-### Pitfall 6: Timer State Not Reset When the Player Leaves or Resets the Dungeon
+### Pitfall 6: Config UI Frame Pooling Failure With Large Mob/Skill Trees
 
 **What goes wrong:**
-Active timers continue running after the player dies, wipes, leaves the instance, or the keystone run ends. The user returns to a dungeon with stale timers firing for a pack they already cleared, or timers fire in the main city after logging back in.
+The current `PackFrame.lua` creates pull row frames once and reuses them (the `rows` array). The config window will need a dungeon → mob → skill hierarchy. If this is implemented by creating one frame per skill entry without pooling, and the full 9-dungeon dataset has ~270 abilities, opening the config window creates 270+ frames simultaneously. WoW frame creation (`CreateFrame`) has a non-trivial cost per call; 270 frames on first open produces a visible hitch (200-400ms freeze) depending on hardware.
+
+The secondary problem: if frames are created on open and not destroyed on close (hidden instead of destroyed), they remain allocated even when the config window is closed. Across a dungeon run with repeated opens/closes, the frame pool grows stale with frames referencing ability data that may no longer be relevant.
 
 **Why it happens:**
-`C_Timer.After` and `C_Timer.NewTicker` callbacks have no automatic cancellation scope. Once scheduled, they fire unless explicitly cancelled. Developers who do not implement a cleanup path on `PLAYER_ENTERING_WORLD` (instance change), `ENCOUNTER_END`, or `PLAYER_DEAD` leave timers orphaned.
+The pull row pattern in `PackFrame.lua` shows the right approach: create rows lazily, grow as needed, hide unused rows. Developers port this to the config UI but omit the "hide unused" step for the skill level of the hierarchy, causing all 270 rows to show even when only one dungeon is expanded.
 
 **How to avoid:**
-- Maintain a table of all active `C_Timer` handles returned by `C_Timer.After` / `C_Timer.NewTicker`.
-- On `PLAYER_ENTERING_WORLD` (fires on zone change and login), cancel all active timer handles and reset addon state.
-- Provide an explicit "Cancel / Reset" button in the UI so users can manually clear timers if they wipe mid-pull.
-- Test the specific scenario: start timers, press Escape to leave dungeon, verify no timers fire in the outdoor world.
+- Implement a virtual scroll or accordion pattern: only create frames for the currently visible (expanded) section of the hierarchy. One dungeon expanded at a time limits visible frame count to ~15 mob rows × ~2 skill rows = ~30 frames maximum.
+- Use the same lazy row creation pattern from `PackFrame.lua`: grow the frame pool as the user expands sections, never shrink it (hide unused rows instead of destroying them).
+- Measure: if the full expanded tree (all dungeons, all mobs) stays under 50 frames, frame pooling is not needed. Only add complexity if the actual count warrants it.
+- Cap the visible height of the config window to force scrolling rather than rendering all entries.
 
 **Warning signs:**
-- Timer warning appears after a wipe when the player has run back.
-- Warning fires while standing at the dungeon entrance before the next pull.
-- Users report "ghost warnings" appearing unexpectedly.
+- Opening the config window produces a visible freeze (>100ms hitch).
+- Memory usage climbs with each open/close cycle of the config window.
+- `/framestackxml` or WoW profiling shows frame count increasing over time.
 
-**Phase to address:** Timer system phase — implement cleanup alongside timer start, not as a later addition.
+**Phase to address:** Config UI phase — measure frame count for the target hierarchy before deciding whether virtual scroll is required.
 
 ---
 
-### Pitfall 7: Global Namespace Pollution Causing Conflicts With Other Addons
+### Pitfall 7: Per-Dungeon Route Migration — Old "imported" Key Breaks CombatWatcher
 
 **What goes wrong:**
-Lua variables declared without `local` become globals accessible (and overwritable) by every other addon. A variable named `db`, `config`, `timers`, or `pack` defined at file scope collides with identically named globals in other popular addons, causing silent data corruption or crashes that appear to be the other addon's fault.
+`CombatWatcher` and `Import.Pipeline` currently use `PackDatabase["imported"]` as the single route key and `ns.db.importedRoute` as the single saved route. Both are hardcoded strings throughout the code. Migrating to per-dungeon keys (`PackDatabase["windrunner_spire"]`, `PackDatabase["pit_of_saron"]`, etc.) requires changing every reference to these strings.
+
+The dangerous failure mode during migration: `CombatWatcher:Reset()` checks `ns.PackDatabase["imported"]` explicitly to decide whether to reset to ready state. If the per-dungeon migration is done but `CombatWatcher:Reset()` is not updated, the condition never fires and the watcher stays in `idle` state even when a route is imported. No error is thrown.
+
+Similarly, `PackFrame.lua` calls `ns.PackDatabase["imported"]` in `PopulateList()`. After migration, `PopulateList` will render an empty list even though routes exist under per-dungeon keys.
 
 **Why it happens:**
-Plain Lua defaults to global scope. New WoW addon developers coming from other languages expect variable declarations to be scoped to the file. The project uses no framework (no Ace3/AceDB), which removes the namespace protection those libraries provide.
+String keys are scattered across 4 files (`Pipeline.lua`, `CombatWatcher.lua`, `PackFrame.lua`, `Import.lua`). A partial migration that updates the data layer but not all consumers creates a silent mismatch.
 
 **How to avoid:**
-- Every variable that does not need cross-file access gets `local`.
-- Create a single global table: `TerriblePackWarnings = TerriblePackWarnings or {}` and put all addon state inside it.
-- Use the addon namespace provided by the second argument of the TOC-loaded file: `local _, ns = ...; ns.db = {}`.
-- Run FindGlobals or a Lua linter to audit for accidental globals before release.
+- Introduce a constant or accessor function for the active dungeon key rather than using the string literal `"imported"` everywhere.
+- When implementing multi-route storage, do a grep for `"imported"` and `importedRoute` across all files before shipping. There should be zero remaining literal references after migration.
+- The migration must be atomic: all consumers updated in the same commit, not incrementally.
+- The `CombatWatcher:Reset()` function specifically needs to iterate `ns.db.importedRoutes` (the new per-dungeon table) rather than checking the single-route key.
 
 **Warning signs:**
-- Errors that only appear when specific other addons are also enabled.
-- Another addon's functionality changes based on whether your addon is loaded.
-- A variable that should be local appears accessible via the Lua console globally.
+- After migration, `/tpw status` shows `idle` even with an imported route.
+- The pack selection window shows "No route imported" with data in `ns.db.importedRoutes`.
+- Grep for `"imported"` still returns results in consumer files after migration.
 
-**Phase to address:** Foundation phase. Establish scoping conventions before writing any feature code.
+**Phase to address:** Per-dungeon route storage phase — this migration must be treated as a cross-cutting refactor, not a localized change.
+
+---
+
+### Pitfall 8: MDT Ability Data Missing SpellIDs or Having Stale Ability Tables
+
+**What goes wrong:**
+MDT's `dungeonEnemies[dungeonIndex][enemyIdx].spells` table is keyed by spellID and the values are empty tables `{}` (confirmed in WindrunnerSpire.lua). This provides a list of spellIDs associated with a mob but no cast timing, no label, and no indication of whether the spell is meaningful (auto-attacks and passive procs appear alongside dangerous cast abilities).
+
+When populating AbilityDB for 9 dungeons from MDT data, developers may assume the `spells` table contains useful structured data and write code that iterates it expecting fields that do not exist. The result is either silently empty ability entries or Lua errors from accessing nil fields on the empty table.
+
+Additionally: MDT's dungeon data is periodically updated when Blizzard re-tunes dungeons. SpellIDs that existed in early Midnight may be replaced in a later patch. AbilityDB entries pointing to a removed spellID will produce a grey placeholder icon (because `C_Spell.GetSpellTexture` returns nil for invalid IDs) with no error, silently degrading the display.
+
+**Why it happens:**
+MDT's `spells` table is documentation of what a mob can do, not a structured ability database. It provides IDs only — timing, labels, and importance classification must come from TPW's own AbilityDB. Developers misread MDT as the source of truth for ability data structure.
+
+**How to avoid:**
+- Treat MDT's `spells` table as a spellID reference list only — used to verify that a spellID exists in the game, not as a source of ability data.
+- The canonical ability data for each mob must be authored manually in `Data/*.lua` files (as WindrunnerSpire.lua already does). MDT cannot be automatically converted into useful AbilityDB entries.
+- When adding spellIDs to AbilityDB, verify each spellID is valid by checking `C_Spell.GetSpellInfo(spellID)` in-game (or via the debug console) before committing the data.
+- For the 8 remaining dungeons, plan time for manual data authoring, not automated MDT extraction. The MDT data tells you which mobs exist and their npcIDs — that is all.
+
+**Warning signs:**
+- Ability icons display as grey question-mark squares for specific dungeons.
+- `C_Spell.GetSpellTexture` returns nil for spellIDs that were copied from MDT's `spells` table.
+- `/tpw debug` shows "Icon texture for spellID X = nil" in the console.
+
+**Phase to address:** Ability data population phase — establish the manual authoring workflow with a per-dungeon checklist before attempting all 9 dungeons.
 
 ---
 
@@ -171,12 +220,13 @@ Plain Lua defaults to global scope. New WoW addon developers coming from other l
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Single hardcoded cooldown per ability (no first-cast offset) | Simpler data schema | First warning always late; users lose trust in all warnings | Never — this is the core value proposition |
-| No timer handle tracking | Simpler timer scheduling | Orphaned timers fire after wipes/zone changes; never acceptable in release | Never |
-| All state in globals (no namespace table) | Slightly less typing | Conflicts with any addon sharing a common variable name | Never |
-| Magic numbers for ability cooldowns inline in code | Faster initial authoring | Impossible to update data without editing code; no separation between data and logic | Never — data must be in a table |
-| Skipping `ADDON_LOADED` gate for SavedVariables | Slightly simpler init | Silent nil corruption on first install; settings never persist | Never |
-| Hard-coding dungeon/zone checks via string matching on zone name | No zone ID lookup needed | Zone names localize; addon breaks for non-English clients | Never for zone detection; acceptable for display labels |
+| Calling `UnitCastingInfo` per-nameplate without a spellID index | Simpler implementation | O(nameplates × abilities) inner loop; frame rate drops at 15+ mobs | Never — build the index at Start() time |
+| Using `"imported"` literal string as PackDatabase key throughout codebase | Works for single-route | Full refactor needed to add per-dungeon routes | Never — use a constant or function |
+| Storing full processed pack data per-skill in SavedVariables | Easier to restore | Orphaned entries pile up; SavedVariables bloats | Never — store only non-default overrides |
+| No schemaVersion in TerriblePackWarningsDB | Simpler init | Silent corruption on schema change; users lose settings | Never for a shipped addon |
+| Sound/TTS alert without per-spellID throttle | Simpler alert code | Audio stutter on multi-mob pulls; user experience degraded | Never once multi-mob packs are tested |
+| Creating all config UI frames on window open | Simpler layout code | Visible hitch on first open if >50 frames | Acceptable only if total frame count stays under 50 |
+| Copying MDT `spells` table directly to AbilityDB | Faster data authoring | Invalid spellIDs; empty timing data; silent display failures | Never — MDT data is an ID reference list only |
 
 ---
 
@@ -184,12 +234,12 @@ Plain Lua defaults to global scope. New WoW addon developers coming from other l
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| C_EncounterTimeline Boss Timeline | Assuming it works for trash pulls the same way it works for bosses | Verify `IsFeatureAvailable()` outside an active encounter; have a fallback display path |
-| C_EncounterWarnings.PlaySound | Calling without checking `IsFeatureEnabled()` | Gate behind both `IsFeatureAvailable()` and `IsFeatureEnabled()` |
-| C_Timer.After | Ignoring the returned timer handle | Always store the handle in a cancellation table |
-| SavedVariables | Reading globals before ADDON_LOADED fires | Gate all reads and default-initialization inside the ADDON_LOADED event handler |
-| TOC ## SavedVariables | Listing the variable name wrong (case mismatch) | Variable name in TOC must exactly match the global Lua variable name |
-| Frame XML registration | Registering events in XML `<Scripts>` and also in Lua | Double-registration causes handlers to fire twice per event |
+| `UnitCastingInfo(npUnit)` | Calling without pcall; nameplate unit may become invalid between tick and call | Wrap in pcall as done for UnitAffectingCombat; check return for nil before using |
+| `UnitCastingInfo` return values | Assuming index 1 is spellID | Signature: `name, text, texture, startTime, endTime, isTradeSkill, castID, notInterruptible, spellID = UnitCastingInfo(unit)` — spellID is index 9, use `select(9, UnitCastingInfo(unit))` |
+| `PlaySound(soundKitID)` | Calling with numeric literal IDs from online databases | IDs change between patches; prefer `SOUNDKIT.*` constants which are stable symbolic names |
+| `C_VoiceChat.SpeakText` (TTS) with `overlap = false` | Not throttling at addon level; relying on overlap=false to prevent stacking | Queue still plays sequentially; throttle at spellID level before the call |
+| SavedVariables multi-route migration | Incremental updates across multiple files | Treat as atomic refactor; verify all `"imported"` literals are removed in one pass |
+| MDT `dungeonEnemies[idx].spells` | Iterating and using `spells[spellID]` sub-table fields | Sub-tables are always `{}`; extract only the spellID keys, provide all other data manually |
 
 ---
 
@@ -197,9 +247,11 @@ Plain Lua defaults to global scope. New WoW addon developers coming from other l
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Using OnUpdate for timer polling instead of C_Timer | CPU spike during combat; frame rate drops | Use `C_Timer.After` for one-shot delays; `C_Timer.NewTicker` for repeating; reserve OnUpdate for sub-0.05s needs | Immediately at any scale; OnUpdate fires every frame (~60/sec) |
-| Creating new table allocations inside timer callbacks | Gradual memory growth across a dungeon run | Pre-allocate data structures; pass references, not new tables | Noticeable after 30+ packs in a long session |
-| Registering all events globally and filtering in OnEvent | Slight performance overhead; increases with event volume | Register only specific events you actually handle | Trivial for this addon scale; more relevant if addon grows to handle many unit events |
+| O(nameplates × abilities) per tick for cast detection | Frame rate drops during large pulls | Build spellID index at Start(); make inner loop O(1) per nameplate | Noticeable at 10+ mobs with 5+ abilities each |
+| Two overlapping C_Timer tickers (existing 0.25s + new cast detection) | Uneven CPU spikes; doubled nameplate API calls | Add cast detection to existing Tick(); never create a second ticker | Immediately at any mob count |
+| `PlaySound` called per-mob per-tick without throttle | Audio chaos; WoW client sound channel saturation | Throttle at spellID level with GetTime() delta check | At 3+ mobs casting the same ability |
+| Config UI recreating all frames on each Refresh() | Hitch on every Refresh call (called on every pack selection) | Create frames once, hide unused; Refresh only updates data fields | At 30+ visible config rows |
+| Iterating all `ns.db.skillConfig` on every pack activation | Slow pack activation with large config tables | Index config by the keys used at access time; do not scan the full table | At 200+ total config entries (all 9 dungeons configured) |
 
 ---
 
@@ -207,24 +259,25 @@ Plain Lua defaults to global scope. New WoW addon developers coming from other l
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| No visual indication that timers are running | User unsure if they selected a pack correctly | Show active state (highlighted pack, timer count, or cancel button) after selection |
-| Warning fires but user does not know which ability it refers to | Warning is ignored; no value delivered | Display ability name in the warning, not just a generic alert |
-| No way to cancel mid-pull | User pulls wrong pack, cannot stop phantom timers | Always provide a "Stop / Reset" button accessible during combat |
-| Warnings fire at cooldown start, not before the cast | Warning arrives too late to react | Warn N seconds before expected cast (configurable lead time, default 3-5 seconds) |
-| Pack list is flat with no area grouping | Users cannot find the right pack in a long list | Group packs by dungeon area/zone section |
-| Timers silently continue after a wipe | User confused about state on the run-back | Auto-cancel all timers on PLAYER_DEAD or PLAYER_ENTERING_WORLD |
+| Config window with no "Reset to defaults" per-skill | Users cannot undo accidental changes | Add a reset button per skill row; it should delete the SavedVariables entry for that skill |
+| Dungeon selector shows all 9 dungeons even when no route imported for most | Confusing; clicking unimported dungeon produces no feedback | Disable/grey out dungeon tabs with no imported route; show import button inline |
+| Per-skill toggle disables a skill but leaves its icon visible | Icon appears but does not warn; user confused | Hidden skills should have their icon removed from IconDisplay entirely |
+| Sound dropdown with raw numeric SoundKit IDs | Meaningless to users | Use human-readable labels (e.g. "Raid Warning", "Quest Complete", "Alarm") mapped to SOUNDKIT constants |
+| Auto-switch on zone-in overrides user's current pack selection | User manually selected a pack, zone change resets it | Only auto-switch if no active pack is selected, or if the user was in a different dungeon |
+| Config window does not show which abilities are in-combat | Cannot distinguish active abilities from idle ones | Show a colored indicator dot on skill rows when that skill's timer or static icon is currently active |
 
 ---
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Boss Warnings integration:** Timer appears in developer testing, but only because a raid encounter was active. Verify it fires for trash pulls outside of any ENCOUNTER_START event.
-- [ ] **Timer cancellation:** Timers stop on the cancel button click, but verify they also stop on: zone exit, `/reload`, PLAYER_DEAD, and dungeon completion.
-- [ ] **SavedVariables persistence:** Pack selection persists across a single session but verify it survives logout, login, and `/reload ui`.
-- [ ] **First-cast offset:** Warning appears correct from the second cast onward — verify it also fires correctly for the first ability cast immediately after pull.
-- [ ] **Non-English clients:** Pack names and ability names display correctly. Zone detection (if used) does not rely on localized zone name strings.
-- [ ] **TOC version:** Addon loads without "out of date" warning on a clean install with default client settings (Load out of date AddOns = OFF).
-- [ ] **No global leaks:** Run `/dump TerriblePackWarnings` and verify all state is inside the namespace table. Verify no unexpected globals exist.
+- [ ] **Cast detection:** UnitCastingInfo returns a spellID — verify the spellID matches the `spellID` field in AbilityDB, not just the mob class. Verify it does not fire for mobs outside the active pack.
+- [ ] **Per-skill config persistence:** Config survives `/reload ui`, logout, and addon update (schema migration path is exercised).
+- [ ] **Sound throttle:** With 5 WARRIOR mobs in a pack, fire the pre-warning — verify only one TTS and one sound plays, not five.
+- [ ] **Multi-route storage:** Import a route for Windrunner Spire, then import a route for Pit of Saron — verify both are stored and the first is not overwritten.
+- [ ] **CombatWatcher after migration:** After per-dungeon route refactor, verify `/tpw status` shows `ready` (not `idle`) after importing a route.
+- [ ] **Ability data for new dungeons:** Every npcID in AbilityDB has a valid spellID — verify by checking that `C_Spell.GetSpellTexture(spellID)` returns non-nil for all entries.
+- [ ] **Config UI on Refresh:** Open config window, import a new route, verify config window updates without a freeze or duplicate rows.
+- [ ] **Orphan cleanup:** Import a route, configure some skills, clear the route — verify `ns.db.skillConfig` entries for that dungeon are removed.
 
 ---
 
@@ -232,12 +285,14 @@ Plain Lua defaults to global scope. New WoW addon developers coming from other l
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Secret value errors in Mythic+ | MEDIUM | Audit all API calls against the restricted API list; remove any combat-state queries; re-test in a keystone run |
-| C_EncounterTimeline injection doesn't work for trash | HIGH | Implement fallback custom frame for warning display; this requires new UI work |
-| Data schema missing first-cast offset | HIGH | Add `first_cast` field to every ability entry; update all timer scheduling logic; re-test all pack data |
-| Global namespace collision with another addon | MEDIUM | Namespace all state under the addon table; this is a refactor but not a rewrite |
-| Timer orphans (timers running after zone change) | LOW | Add cleanup handler on PLAYER_ENTERING_WORLD; straightforward to add at any time |
-| TOC version mismatch | LOW | Update ## Interface field; 5-minute fix |
+| UnitCastingInfo O(N×M) inner loop causing frame drops | MEDIUM | Add spellID index at Start() time; refactor Tick() to use it; straightforward but requires testing all detection paths |
+| False positive cast detection across packs | LOW | Accept as known limitation; add debug logging and document in config UI tooltip |
+| SavedVariables schema corruption after migration | MEDIUM | Add schemaVersion check on load; provide wipe-and-reimport path as escape hatch |
+| Orphaned config entries bloating SavedVariables | LOW | One-time cleanup function on ADDON_LOADED; run once, remove when all users are migrated |
+| Sound stacking discovered after shipping | LOW | Add throttle table to SetUrgent; 10-line change; ship as hotfix |
+| Config UI hitch on open | LOW to MEDIUM | Profile frame count; if >50, convert to accordion/virtual-scroll; pre-existing row pool pattern makes this straightforward |
+| Multi-route migration breaking CombatWatcher | MEDIUM | Grep all files for "imported" literal; fix all consumers; verify with /tpw status test |
+| Invalid MDT spellIDs in AbilityDB | LOW | Audit each spellID in-game via /dump C_Spell.GetSpellInfo(id); replace invalid IDs; no structural refactor needed |
 
 ---
 
@@ -245,32 +300,39 @@ Plain Lua defaults to global scope. New WoW addon developers coming from other l
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Restricted API calls in Mythic+ | Phase 1: Foundation | Test pack selection inside an active keystone run; confirm no Lua errors |
-| C_EncounterTimeline injection uncertainty | Phase 2: Boss Warnings integration (prototype first) | Verify `AddScriptEvent` fires a visible event in Boss Timeline during a trash pull |
-| Timer drift / missing first-cast offset | Phase 1: Data schema design | Playtest first cast of each ability in the target dungeon and compare to warning timing |
-| TOC version mismatch | Phase 1: Foundation | Fresh install on clean client with "Load out of date AddOns" disabled |
-| Initialization race (SavedVariables) | Phase 1: Foundation | Verify settings persist across logout/login on first install |
-| Timer state not reset on zone change | Phase 2: Timer system | Zone out mid-timer; confirm no timers fire in outdoor zone |
-| Global namespace pollution | Phase 1: Foundation | Run FindGlobals or `/dump` check; enforce local-by-default convention before writing feature code |
+| UnitCastingInfo O(N×M) performance | Cast detection phase: build spellID index before first use | Profile Tick() duration during a 10-mob pull with untimed detection active |
+| UnitCastingInfo false positives | Cast detection phase: document constraint in code and config UI | Pull a pack of WARRIORs with a WARRIOR mob from a different group in range; verify no spurious highlight |
+| SavedVariables schema migration | Per-dungeon route storage phase: establish schemaVersion before writing any new fields | Import a route on old schema; update addon; verify route survives and new schema fields initialize correctly |
+| Per-skill config bloat | Per-skill config storage phase: implement sparse-default pattern from the start | After configuring and clearing routes repeatedly, verify SavedVariables file size stays bounded |
+| Sound alert stacking | Sound alert phase: add throttle table to SetUrgent alongside the PlaySound call | Pull 5 mobs with the same tracked untimed ability; verify single TTS and single sound per pre-warning window |
+| Config UI frame hitch | Config UI phase: count maximum frame count before choosing pattern | Open config with all 9 dungeons data loaded; measure open time; must be under 100ms |
+| Per-dungeon route migration breaking CombatWatcher | Per-dungeon route storage phase: atomic refactor with grep verification | After migration, verify /tpw status shows ready; verify PackDatabase contains no "imported" key |
+| MDT ability data gaps | Ability data population phase: manual authoring workflow with in-game spellID verification | All icons render with non-grey textures; zero "Icon texture = nil" in debug log |
 
 ---
 
 ## Sources
 
-- [Patch 12.0.0/Planned API changes - Warcraft Wiki](https://warcraft.wiki.gg/wiki/Patch_12.0.0/Planned_API_changes) — Confirmed C_EncounterTimeline, C_EncounterWarnings, restriction scope
-- [Patch 12.0.0/API changes - Warcraft Wiki](https://warcraft.wiki.gg/wiki/Patch_12.0.0/API_changes) — Full API additions including C_EncounterTimeline function list
-- [Combat Philosophy and Addon Disarmament in Midnight - Blizzard](https://news.blizzard.com/en-us/article/24246290/combat-philosophy-and-addon-disarmament-in-midnight) — Official restriction philosophy, what is and is not blocked
-- [WoW Midnight's Addon Changes Part 1 - kaylriene.com](https://kaylriene.com/2025/10/03/wow-midnights-addon-combat-and-design-changes-part-1-api-anarchy-and-the-dark-black-box/) — Black box system, developer impact analysis
-- [Week One of Midnight UI Era - kaylriene.com](https://kaylriene.com/2026/01/27/a-mini-summary-of-week-one-of-the-new-wow-ui-era-blizzards-own-lua-errors-the-vibecoded-addon-wars-of-2026/) — Real-world post-launch problems including Blizzard's own secret value errors
-- [Cell Addon Midnight Compatibility PR #457 - GitHub](https://github.com/enderneko/Cell/pull/457) — Detailed real-world case study: secret values, CLEU removal, pcall overhead, per-field secrecy checks
-- [Development clarification: secret value obfuscation - Blizzard Forums](https://us.forums.blizzard.com/en/wow/t/development-clarification-maintaining-ui-accuracy-vs-secret-value-obfuscation-in-midnight/2243547) — Official developer clarification on secret values
-- [Majority of Addon Changes Finalized for Midnight Pre-Patch - Wowhead](https://www.wowhead.com/news/majority-of-addon-changes-finalized-for-midnight-pre-patch-whitelisted-spells-379738) — Whitelisted spells, GetSpellCooldownRemaining removal
-- [Blizzard Relaxing More Addon Limitations - Icy Veins](https://www.icy-veins.com/wow/news/blizzard-relaxing-more-addon-limitations-in-midnight/) — Post-beta restriction relaxations
-- [C_Timer.After - Warcraft Wiki](https://warcraft.wiki.gg/wiki/API_C_Timer.After) — Timer API performance characteristics vs OnUpdate
-- [TOC format - Warcraft Wiki](https://warcraft.wiki.gg/wiki/TOC_format) — Interface version fields and multi-version support
-- [AddOn loading process - Warcraft Wiki](https://warcraft.wiki.gg/wiki/AddOn_loading_process) — ADDON_LOADED / PLAYER_ENTERING_WORLD / VARIABLES_LOADED ordering
-- [Saving variables between sessions - Wowpedia](https://wowpedia.fandom.com/wiki/Saving_variables_between_game_sessions) — SavedVariables initialization patterns and versioning
+- `Engine/NameplateScanner.lua` (this repo) — existing tick cost analysis in source comments; plateCache pattern
+- `Engine/Scheduler.lua` (this repo) — barId per-mob tracking pattern; combatActive table; timer handle tracking
+- `Display/IconDisplay.lua` (this repo) — TrySpeak implementation; SetUrgent call site; no current per-spellID throttle
+- `Import/Pipeline.lua` (this repo) — "imported" literal usage; single-route schema; SavedVariables layout
+- `UI/PackFrame.lua` (this repo) — lazy row creation pattern; Refresh() call frequency
+- `wow-ui-source/Interface/AddOns/Blizzard_UIPanels_Game/Mainline/CastingBarFrame.lua` — UnitCastingInfo return signature confirmed: `name, text, texture, startTime, endTime, isTradeSkill, castID, notInterruptible, spellID`
+- `wow-ui-source/Interface/AddOns/Blizzard_NamePlates/Blizzard_ClassNameplateBar.lua` — `select(9, UnitCastingInfo(unit))` pattern for spellID extraction
+- `MythicDungeonTools/Midnight/WindrunnerSpire.lua` — MDT `spells` table structure confirmed as `[spellID] = {}` (empty tables); no timing or label data
 
 ---
-*Pitfalls research for: WoW Midnight dungeon pack warning addon (TerriblePackWarnings)*
-*Researched: 2026-03-13*
+
+## Retained Pitfalls From Initial Research (Still Applicable)
+
+The following pitfalls from the v0.0.x research remain relevant for this milestone. They are not repeated in full above but should be carried forward to any phase checklist:
+
+- **Restricted API calls in Mythic+** — Do not add any UnitHealth, UnitAura, UnitBuff, or combat-state API calls when building the config UI or cast detection.
+- **Timer state not reset on zone change** — Any new per-dungeon timer state must also be cleared in `CombatWatcher:Reset()` and on `PLAYER_ENTERING_WORLD`.
+- **Global namespace pollution** — All new config and cast detection state must live inside `ns.*` or local scope. No new globals.
+- **C_Timer handle tracking** — Any new timers added for untimed highlight expiry or debounce must be tracked for cancellation.
+
+---
+*Pitfalls research for: WoW Midnight dungeon pack warning addon (TerriblePackWarnings) — v0.1.0 Configuration and Skill Data milestone*
+*Researched: 2026-03-17*

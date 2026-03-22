@@ -75,6 +75,22 @@ local function GetPortraitTexture(tex, npcID)
 end
 
 ------------------------------------------------------------------------
+-- Per-dungeon selection helpers
+------------------------------------------------------------------------
+local function GetSelectedDungeonKey()
+    return ns.db and ns.db.selectedDungeon or nil
+end
+
+local function GetSelectedDungeonName()
+    local key = GetSelectedDungeonKey()
+    if not key then return nil end
+    for _, info in pairs(ns.DUNGEON_IDX_MAP or {}) do
+        if info.key == key then return info.name end
+    end
+    return key
+end
+
+------------------------------------------------------------------------
 -- Clear Confirmation Dialog (StaticPopup)
 ------------------------------------------------------------------------
 StaticPopupDialogs["TPW_CONFIRM_CLEAR"] = {
@@ -82,7 +98,10 @@ StaticPopupDialogs["TPW_CONFIRM_CLEAR"] = {
     button1 = "Clear",
     button2 = "Cancel",
     OnAccept = function()
-        ns.Import.Clear()
+        local key = GetSelectedDungeonKey()
+        if key then
+            ns.Import.Clear(key)
+        end
     end,
     timeout = 0,
     whileDead = true,
@@ -144,17 +163,73 @@ popupCancelBtn:SetText("Cancel")
 popupCancelBtn:SetScript("OnClick", function() importPopup:Hide() end)
 
 ------------------------------------------------------------------------
+-- Dungeon Dropdown (singleton, built on first use)
+------------------------------------------------------------------------
+local dungeonDropdown = nil
+
+local function BuildDungeonDropdown()
+    dungeonDropdown = CreateFrame("Frame", "TPWDungeonDropdown", UIParent, "BasicFrameTemplateWithInset")
+    dungeonDropdown:SetFrameStrata("DIALOG")
+    dungeonDropdown:Hide()
+    dungeonDropdown.TitleText:SetText("Select Dungeon")
+    tinsert(UISpecialFrames, "TPWDungeonDropdown")
+
+    -- Build sorted dungeon list from DUNGEON_IDX_MAP
+    local dungeons = {}
+    for _, info in pairs(ns.DUNGEON_IDX_MAP or {}) do
+        table.insert(dungeons, { key = info.key, name = info.name })
+    end
+    table.sort(dungeons, function(a, b) return a.name < b.name end)
+
+    local btnHeight = 22
+    local padding = 32  -- top title bar
+    local bottomPad = 8
+    dungeonDropdown:SetSize(220, #dungeons * btnHeight + padding + bottomPad)
+
+    for i, dungeon in ipairs(dungeons) do
+        local btn = CreateFrame("Button", nil, dungeonDropdown, "GameMenuButtonTemplate")
+        btn:SetSize(196, btnHeight)
+        btn:SetPoint("TOPLEFT", dungeonDropdown, "TOPLEFT", 12, -(padding + (i - 1) * btnHeight))
+        btn:SetText(dungeon.name)
+        btn:SetScript("OnClick", function()
+            ns.db.selectedDungeon = dungeon.key
+            -- If this dungeon has packs loaded, select it in CombatWatcher
+            if ns.PackDatabase[dungeon.key] and #ns.PackDatabase[dungeon.key] > 0 then
+                ns.CombatWatcher:SelectDungeon(dungeon.key)
+            end
+            dungeonDropdown:Hide()
+            if ns.PackUI and ns.PackUI.Refresh then ns.PackUI:Refresh() end
+        end)
+    end
+end
+
+local function ShowDungeonDropdown(anchorBtn)
+    if not dungeonDropdown then BuildDungeonDropdown() end
+    dungeonDropdown:ClearAllPoints()
+    dungeonDropdown:SetPoint("TOPLEFT", anchorBtn, "BOTTOMLEFT", 0, 0)
+    dungeonDropdown:Show()
+end
+
+------------------------------------------------------------------------
 -- Main Frame
 ------------------------------------------------------------------------
 local frame = CreateFrame("Frame", "TPWPackFrame", UIParent, "BasicFrameTemplateWithInset")
-frame:SetSize(300, 400)
+frame:SetSize(300, 430)
 frame:SetPoint("CENTER")
 frame:Hide()
 
-frame.TitleText:SetText("TerriblePackWarnings")
+frame.TitleText:SetText("TerriblePackWarnings - Route")
 
--- Escape to close
+-- Escape to close (re-register on every show to survive UISpecialFrames wipes)
 tinsert(UISpecialFrames, "TPWPackFrame")
+frame:SetScript("OnShow", function()
+    -- Ensure we're in UISpecialFrames
+    local found = false
+    for _, name in ipairs(UISpecialFrames) do
+        if name == "TPWPackFrame" then found = true break end
+    end
+    if not found then tinsert(UISpecialFrames, "TPWPackFrame") end
+end)
 
 -- Movable with position persistence
 frame:SetMovable(true)
@@ -169,21 +244,43 @@ frame:SetScript("OnDragStop", function(self)
 end)
 
 ------------------------------------------------------------------------
--- Header (dungeon name + pull count)
+-- Dungeon Selector Button (top of frame)
+------------------------------------------------------------------------
+local dungeonBtn = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
+dungeonBtn:SetSize(276, 22)
+dungeonBtn:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -26)
+dungeonBtn:SetScript("OnClick", function(self) ShowDungeonDropdown(self) end)
+
+------------------------------------------------------------------------
+-- Header (pull count subtitle, anchored below dungeon button)
 ------------------------------------------------------------------------
 local header = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-header:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -28)
-header:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -14, -28)
+header:SetPoint("TOPLEFT", dungeonBtn, "BOTTOMLEFT", 2, -4)
+header:SetPoint("TOPRIGHT", dungeonBtn, "BOTTOMRIGHT", -2, -4)
 header:SetJustifyH("LEFT")
 
 local function UpdateHeader()
-    if ns.db and ns.db.importedRoute then
-        local route = ns.db.importedRoute
-        local pullCount = route.packs and #route.packs or 0
-        header:SetText(route.dungeonName .. " -- " .. pullCount .. " pulls")
-        header:SetTextColor(1, 0.82, 0)
+    local key = GetSelectedDungeonKey()
+    local name = GetSelectedDungeonName()
+
+    -- Update dungeon button text
+    if name then
+        dungeonBtn:SetText(name)
     else
-        header:SetText("No route imported")
+        dungeonBtn:SetText("Select Dungeon...")
+    end
+
+    -- Update header subtitle (pull count)
+    if key and ns.db.importedRoutes and ns.db.importedRoutes[key] then
+        local route = ns.db.importedRoutes[key]
+        local pullCount = route.packs and #route.packs or 0
+        header:SetText(pullCount .. " pulls")
+        header:SetTextColor(1, 0.82, 0)
+    elseif key then
+        header:SetText("No route imported. Click Import to add one.")
+        header:SetTextColor(0.6, 0.6, 0.6)
+    else
+        header:SetText("Select a dungeon above")
         header:SetTextColor(0.6, 0.6, 0.6)
     end
 end
@@ -192,15 +289,15 @@ end
 -- Scroll Frame (anchored below header, above footer button area)
 ------------------------------------------------------------------------
 local scrollFrame = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
-scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -46)
-scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -34, 35)
+scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -66)
+scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -34, 60)
 
 local scrollChild = CreateFrame("Frame", nil, scrollFrame)
 scrollChild:SetWidth(250)
 scrollFrame:SetScrollChild(scrollChild)
 
 ------------------------------------------------------------------------
--- Footer Buttons (Import / Clear)
+-- Footer Buttons (Import / Clear / Config)
 ------------------------------------------------------------------------
 local importBtn = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
 importBtn:SetSize(80, 22)
@@ -210,9 +307,81 @@ importBtn:SetScript("OnClick", function() importPopup:Show() end)
 
 local clearBtn = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
 clearBtn:SetSize(80, 22)
-clearBtn:SetPoint("RIGHT", importBtn, "LEFT", -8, 0)
+clearBtn:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 12, 8)
 clearBtn:SetText("Clear")
-clearBtn:SetScript("OnClick", function() StaticPopup_Show("TPW_CONFIRM_CLEAR") end)
+clearBtn:SetScript("OnClick", function()
+    local key = GetSelectedDungeonKey()
+    if not key then return end
+    local name = GetSelectedDungeonName() or key
+    StaticPopupDialogs["TPW_CONFIRM_CLEAR"].text = "Clear route for " .. name .. "? This cannot be undone."
+    StaticPopup_Show("TPW_CONFIRM_CLEAR")
+end)
+
+------------------------------------------------------------------------
+-- Combat Mode Buttons (Auto / Manual / Disable)
+------------------------------------------------------------------------
+local modeButtons = {}
+
+local function UpdateModeButtons()
+    local current = ns.db and ns.db.combatMode or "auto"
+    for _, btn in ipairs(modeButtons) do
+        if btn.mode == current then
+            btn:SetAlpha(1.0)
+            if not btn.activeBg then
+                btn.activeBg = btn:CreateTexture(nil, "BACKGROUND")
+                btn.activeBg:SetAllPoints()
+                btn.activeBg:SetColorTexture(0, 0.6, 0.8, 0.3)
+            end
+            btn.activeBg:Show()
+        else
+            btn:SetAlpha(0.5)
+            if btn.activeBg then btn.activeBg:Hide() end
+        end
+    end
+end
+
+local function SetCombatMode(mode)
+    if ns.db then ns.db.combatMode = mode end
+    -- Disable: immediately stop all tracking and clear displays
+    if mode == "disable" then
+        if ns.NameplateScanner and ns.NameplateScanner.Stop then
+            ns.NameplateScanner:Stop()
+        end
+        if ns.Scheduler and ns.Scheduler.Stop then
+            ns.Scheduler:Stop()
+        end
+        if ns.IconDisplay and ns.IconDisplay.CancelNonPreviews then
+            ns.IconDisplay.CancelNonPreviews()
+        end
+    end
+    UpdateModeButtons()
+    if ns.PackUI and ns.PackUI.Refresh then ns.PackUI:Refresh() end
+end
+
+-- Center the 3 mode buttons: total width = 3*80 + 2*4 = 248, frame = 300, padding = (300-248)/2 = 26
+local modeDisable = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
+modeDisable:SetSize(80, 22)
+modeDisable:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 26, 33)
+modeDisable:SetText("Disable")
+modeDisable.mode = "disable"
+modeDisable:SetScript("OnClick", function() SetCombatMode("disable") end)
+table.insert(modeButtons, modeDisable)
+
+local modeManual = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
+modeManual:SetSize(80, 22)
+modeManual:SetPoint("LEFT", modeDisable, "RIGHT", 4, 0)
+modeManual:SetText("Manual")
+modeManual.mode = "manual"
+modeManual:SetScript("OnClick", function() SetCombatMode("manual") end)
+table.insert(modeButtons, modeManual)
+
+local modeAuto = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
+modeAuto:SetSize(80, 22)
+modeAuto:SetPoint("LEFT", modeManual, "RIGHT", 4, 0)
+modeAuto:SetText("Auto")
+modeAuto.mode = "auto"
+modeAuto:SetScript("OnClick", function() SetCombatMode("auto") end)
+table.insert(modeButtons, modeAuto)
 
 ------------------------------------------------------------------------
 -- Pull Row Creation
@@ -266,7 +435,8 @@ local function PopulateList()
         row:Hide()
     end
 
-    local packs = ns.PackDatabase["imported"]
+    local selectedKey = GetSelectedDungeonKey()
+    local packs = selectedKey and ns.PackDatabase[selectedKey] or nil
     if not packs then
         scrollChild:SetHeight(1)
         return
@@ -295,8 +465,42 @@ local function PopulateList()
             if p <= #npcIDs then
                 GetPortraitTexture(tex, npcIDs[p])
                 tex:Show()
+                -- Count overlay
+                if not tex.countLabel then
+                    tex.countLabel = row:CreateFontString(nil, "OVERLAY")
+                    tex.countLabel:SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
+                    tex.countLabel:SetPoint("BOTTOMRIGHT", tex, "BOTTOMRIGHT", 0, 0)
+                    tex.countLabel:SetTextColor(1, 1, 1, 1)
+                end
+                local count = pack.mobCounts and pack.mobCounts[npcIDs[p]] or 1
+                if count > 1 then
+                    tex.countLabel:SetText("x" .. count)
+                    tex.countLabel:Show()
+                else
+                    tex.countLabel:Hide()
+                end
+
+                -- Clickable overlay to open config for this mob (out of combat only)
+                if not tex.clickOverlay then
+                    tex.clickOverlay = CreateFrame("Button", nil, row)
+                    tex.clickOverlay:SetAllPoints(tex)
+                    tex.clickOverlay:SetFrameLevel(row:GetFrameLevel() + 2)
+                    tex.clickOverlay:RegisterForClicks("LeftButtonUp")
+                end
+                local npcID_portrait = npcIDs[p]
+                local routeData = selectedKey and ns.db.importedRoutes and ns.db.importedRoutes[selectedKey]
+                local dungeonIdx_portrait = routeData and routeData.dungeonIdx
+                tex.clickOverlay:SetScript("OnClick", function()
+                    if InCombatLockdown() then return end
+                    if ns.ConfigUI and ns.ConfigUI.OpenToMob and dungeonIdx_portrait then
+                        ns.ConfigUI.OpenToMob(npcID_portrait, dungeonIdx_portrait)
+                    end
+                end)
+                tex.clickOverlay:Show()
             else
                 tex:Hide()
+                if tex.countLabel then tex.countLabel:Hide() end
+                if tex.clickOverlay then tex.clickOverlay:Hide() end
             end
         end
 
@@ -310,7 +514,7 @@ local function PopulateList()
         end
 
         -- State coloring (combat state > boss > alternating)
-        local sameDungeon = (activeDungeon == "imported")
+        local sameDungeon = (activeDungeon == selectedKey)
         if sameDungeon and i == activePackIndex and curState == "active" then
             row.bg:SetColorTexture(1, 0.5, 0, 0.25)       -- orange: active/fighting
         elseif sameDungeon and i == activePackIndex then
@@ -328,7 +532,7 @@ local function PopulateList()
         -- Click to select pack
         local packIndex = i
         row:SetScript("OnClick", function()
-            ns.CombatWatcher:SelectPack("imported", packIndex)
+            ns.CombatWatcher:SelectPack(selectedKey, packIndex)
             ns.PackUI:Refresh()
         end)
 
@@ -341,7 +545,7 @@ local function PopulateList()
     -- Auto-scroll to center the active/selected pack (delay 1 frame for layout)
     C_Timer.After(0, function()
         local scrollTarget = nil
-        if activeDungeon == "imported" and activePackIndex then
+        if activeDungeon == selectedKey and activePackIndex then
             scrollTarget = activePackIndex
         end
         if scrollTarget and scrollTarget > 0 then
@@ -372,17 +576,10 @@ function PackUI.Toggle()
     if frame:IsShown() then frame:Hide() else frame:Show() end
 end
 
-function PackUI.Show()
-    frame:Show()
-end
-
-function PackUI.Hide()
-    frame:Hide()
-end
-
 function PackUI:Refresh()
     UpdateHeader()
     PopulateList()
+    UpdateModeButtons()
 end
 
 ------------------------------------------------------------------------
@@ -391,3 +588,4 @@ end
 UpdateHeader()
 PopulateList()
 RestorePosition()
+UpdateModeButtons()
