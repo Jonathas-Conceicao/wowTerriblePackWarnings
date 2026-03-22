@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.1.0 — Configuration and Skill Data
+
+- Configuration window for browsing all dungeon mobs and their skills
+- Per-skill settings: enable/disable tracking, custom labels, timers, and alerts
+- Cast detection: untimed skills glow when a mob of the same class is casting
+- Sound and TTS alerts configurable per skill
+- Ability data for all 8 Midnight S1 dungeons
+- Per-dungeon route storage with automatic dungeon switching on zone-in
+- Profile system with import and export for sharing configurations
+- Combat modes: Auto, Manual, and Disable
+- Search to quickly find mobs or skills across all dungeons
+- Skill preview from the configuration window
+
 ## v0.0.4 — Cleanup and Polish
 
 - README with project description, WIP notice, gallery, and GPL-2.0 license
