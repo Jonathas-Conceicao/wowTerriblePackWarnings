@@ -6,10 +6,10 @@ get spell icons with countdown timers and cast detection highlights when
 you pull tracked packs.
 
 Midnight's addon API is heavily restricted -- no combat log, spell IDs
-from casts are secret values, health values are hidden. The addon works
-around these limitations with nameplate scanning and timer-based
-predictions. The result is **Terrible** at best, but it's better than
-nothing.
+from casts are secret values, health values are hidden. The addon
+works around these limitations with nameplate scanning and timer-based
+predictions. The result is **Terrible** at best, but if you think it's
+better than nothing, feel free to use this as you see fit.
 
 This addon is in **early stages of development**. Profiles and
 configuration formats may change between updates and are not guaranteed
@@ -85,8 +85,6 @@ A more flexible usage that doesn't require a strict route:
 | `/tpw` | Open config window |
 | `/tpw config` | Open config window |
 | `/tpw route` | Open route window |
-| `/tpw debug` | Toggle debug logging |
-| `/tpw status` | Print current state |
 | `/tpw help` | Show all commands |
 
 ## Data Status
