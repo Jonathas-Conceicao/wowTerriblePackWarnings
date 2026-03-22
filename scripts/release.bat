@@ -3,26 +3,30 @@ setlocal enabledelayedexpansion
 
 if "%~1"=="" (
     echo Usage: release.bat ^<version^>
-    echo Example: release.bat 1.0.0
+    echo Example: release.bat 0.1.0
     exit /b 1
 )
 
-set "SOURCE=%~dp0..\"
 set "VERSION=%~1"
 set "TAG=v%VERSION%"
 
-echo Releasing TerriblePackWarnings %VERSION%
+echo Releasing TerriblePackWarnings %TAG%
 
-git -C "%SOURCE%" tag -a "%TAG%" -m "Release %VERSION%"
+pushd "%~dp0.."
+
+git tag -a %TAG% -m "Release %VERSION%"
 if errorlevel 1 (
     echo Error: Failed to create tag %TAG%
+    popd
     exit /b 1
 )
 
-git -C "%SOURCE%" push origin main "%TAG%"
+git push origin main %TAG%
 if errorlevel 1 (
-    echo Error: Failed to push tag %TAG%
+    echo Error: Failed to push
+    popd
     exit /b 1
 )
 
 echo Released %TAG% -- GitHub Actions will handle packaging
+popd
