@@ -25,7 +25,7 @@ me to the best of my abilities.
 
 ## Showcase
 
-![Pack warnings in action](ws_fst_pack.png)
+![Pack warnings in action](Assets/ws_fst_pack.png)
 
 ## Features
 
