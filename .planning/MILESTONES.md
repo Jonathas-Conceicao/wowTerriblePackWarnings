@@ -1,4 +1,23 @@
 # Milestones
+## v0.1.1 Adding Mob Categories (Shipped: 2026-03-24)
+
+**Phases completed:** 4 phases, 6 plans
+**Code:** 6,414 lines of Lua across 19 files + 3 bundled libraries
+**Timeline:** 2 days (2026-03-23 → 2026-03-24)
+
+**Key accomplishments:**
+- Per-mob mobCategory field across all 9 dungeon data files (190+ mobs categorized from VOD review)
+- DeriveCategory() runtime detection: 7-step priority chain (boss → lieutenant → classification → class → unknown)
+- Category-based scanner matching replacing old class-based model entirely
+- Color-coded [Category] tags in config UI with category-aware search (partial match + hyphen normalization)
+- All 8 S1 dungeons fully categorized with MobCategories.md reference doc
+- isBoss field eliminated from DungeonEnemies — boss detection unified through AbilityDB mobCategory
+- Unknown-as-wildcard: non-categorized mobs never filtered out (false positives over false negatives)
+
+**Requirements:** 15/15 v0.1.1 requirements + 6 CAT requirements completed
+
+---
+
 
 ## v0.1.0 Configuration and Skill Data (Shipped: 2026-03-22)
 

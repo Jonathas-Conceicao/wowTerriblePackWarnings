@@ -3,11 +3,13 @@ local addonName, ns = ...
 ns.AbilityDB = ns.AbilityDB or {}
 
 -- Nexus Point Xenas ability database
--- Keyed by npcID; mobClass defaults to WARRIOR, abilities from MDT spells
+-- Keyed by npcID
+-- mobCategory: semantic role — "boss"|"miniboss"|"caster"|"warrior"|"rogue"|"trivial"|"unknown"
+--   (not to be confused with the runtime WoW class token e.g. "WARRIOR"; that is never stored here)
 
 -- Shadowguard Defender (241643)
 ns.AbilityDB[241643] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1249645, defaultEnabled = false },
         { spellID = 1252218, defaultEnabled = false },
@@ -17,7 +19,7 @@ ns.AbilityDB[241643] = {
 
 -- Reformed Voidling (248501)
 ns.AbilityDB[248501] = {
-    mobClass = "WARRIOR",
+    mobCategory = "trivial",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1252218, defaultEnabled = false },
     },
@@ -25,7 +27,7 @@ ns.AbilityDB[248501] = {
 
 -- Corewright Arcanist (241644)
 ns.AbilityDB[241644] = {
-    mobClass = "WARRIOR",
+    mobCategory = "caster",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1249815, defaultEnabled = false },
         { spellID = 1249818, defaultEnabled = false },
@@ -39,7 +41,7 @@ ns.AbilityDB[241644] = {
 
 -- Hollowsoul Scrounger (241645)
 ns.AbilityDB[241645] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1227020, defaultEnabled = false },
         { spellID = 1252204, defaultEnabled = false },
@@ -49,7 +51,7 @@ ns.AbilityDB[241645] = {
 
 -- Flux Engineer (241647)
 ns.AbilityDB[241647] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1257124, defaultEnabled = false },
         { spellID = 1269283, defaultEnabled = false },
@@ -59,7 +61,7 @@ ns.AbilityDB[241647] = {
 
 -- Nexus Adept (248708)
 ns.AbilityDB[248708] = {
-    mobClass = "WARRIOR",
+    mobCategory = "trivial",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1271094, defaultEnabled = false },
     },
@@ -67,7 +69,7 @@ ns.AbilityDB[248708] = {
 
 -- Circuit Seer (248373)
 ns.AbilityDB[248373] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1249801, defaultEnabled = false },
         { spellID = 1249806, defaultEnabled = false },
@@ -79,7 +81,7 @@ ns.AbilityDB[248373] = {
 
 -- Cursed Voidcaller (248706)
 ns.AbilityDB[248706] = {
-    mobClass = "WARRIOR",
+    mobCategory = "trivial",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1252218, defaultEnabled = false },
         { spellID = 1281636, defaultEnabled = false },
@@ -88,7 +90,7 @@ ns.AbilityDB[248706] = {
 
 -- Dreadflail (248506)
 ns.AbilityDB[248506] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1252218, defaultEnabled = false },
         { spellID = 1252436, defaultEnabled = false },
@@ -102,7 +104,7 @@ ns.AbilityDB[248506] = {
 
 -- Duskfright Herald (241660)
 ns.AbilityDB[241660] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1252062, defaultEnabled = false },
         { spellID = 1252076, defaultEnabled = false },
@@ -114,7 +116,7 @@ ns.AbilityDB[241660] = {
 
 -- Grand Nullifier (251853)
 ns.AbilityDB[251853] = {
-    mobClass = "WARRIOR",
+    mobCategory = "caster",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1252218, defaultEnabled = false },
         { spellID = 1258681, defaultEnabled = false },
@@ -127,7 +129,7 @@ ns.AbilityDB[251853] = {
 
 -- Null Sentinel (248502)
 ns.AbilityDB[248502] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1252218, defaultEnabled = false },
         { spellID = 1252406, defaultEnabled = false },
@@ -139,7 +141,7 @@ ns.AbilityDB[248502] = {
 
 -- Lingering Image (241642)
 ns.AbilityDB[241642] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1257701, defaultEnabled = false },
         { spellID = 1257736, defaultEnabled = false },
@@ -152,7 +154,7 @@ ns.AbilityDB[241642] = {
 
 -- Radiant Swarm (254932)
 ns.AbilityDB[254932] = {
-    mobClass = "WARRIOR",
+    mobCategory = "trivial",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1263775, defaultEnabled = false },
         { spellID = 1282944, defaultEnabled = false },
@@ -161,7 +163,7 @@ ns.AbilityDB[254932] = {
 
 -- Lightwrought (254926)
 ns.AbilityDB[254926] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1263892, defaultEnabled = false },
         { spellID = 1277557, defaultEnabled = false },
@@ -170,7 +172,7 @@ ns.AbilityDB[254926] = {
 
 -- Flarebat (254928)
 ns.AbilityDB[254928] = {
-    mobClass = "WARRIOR",
+    mobCategory = "trivial",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1263783, defaultEnabled = false },
         { spellID = 1263785, defaultEnabled = false },
@@ -179,7 +181,7 @@ ns.AbilityDB[254928] = {
 
 -- Kasreth (241539)
 ns.AbilityDB[241539] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1250553, defaultEnabled = false },
         { spellID = 1251626, defaultEnabled = false },
@@ -199,7 +201,7 @@ ns.AbilityDB[241539] = {
 
 -- Corewarden Nysarra (241542)
 ns.AbilityDB[241542] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1247937, defaultEnabled = false },
         { spellID = 1248007, defaultEnabled = false },
@@ -215,7 +217,7 @@ ns.AbilityDB[241542] = {
 
 -- Lothraxion (241546)
 ns.AbilityDB[241546] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1253855, defaultEnabled = false },
         { spellID = 1253950, defaultEnabled = false },
@@ -232,7 +234,7 @@ ns.AbilityDB[241546] = {
 
 -- Smudge (248769)
 ns.AbilityDB[248769] = {
-    mobClass = "WARRIOR",
+    mobCategory = "trivial",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1257268, defaultEnabled = false },
     },
@@ -240,7 +242,7 @@ ns.AbilityDB[248769] = {
 
 -- [DNT] Conduit Stalker (250299)
 ns.AbilityDB[250299] = {
-    mobClass = "WARRIOR",
+    mobCategory = "unknown",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1251579, defaultEnabled = false },
     },
@@ -248,7 +250,7 @@ ns.AbilityDB[250299] = {
 
 -- Null Guardian (251024)
 ns.AbilityDB[251024] = {
-    mobClass = "WARRIOR",
+    mobCategory = "unknown",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1282663, defaultEnabled = false },
         { spellID = 1282664, defaultEnabled = false },
@@ -260,7 +262,7 @@ ns.AbilityDB[251024] = {
 
 -- Wretched Supplicant (251031)
 ns.AbilityDB[251031] = {
-    mobClass = "WARRIOR",
+    mobCategory = "unknown",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1282722, defaultEnabled = false },
         { spellID = 1282723, defaultEnabled = false },
@@ -269,7 +271,7 @@ ns.AbilityDB[251031] = {
 
 -- Fractured Image (251568)
 ns.AbilityDB[251568] = {
-    mobClass = "WARRIOR",
+    mobCategory = "unknown",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1255310, defaultEnabled = false },
         { spellID = 1255533, defaultEnabled = false },
@@ -280,17 +282,35 @@ ns.AbilityDB[251568] = {
     },
 }
 
+-- Core Technician (249711)
+ns.AbilityDB[249711] = { mobCategory = "unknown", abilities = {} }
+
+-- Nullifier (251852)
+ns.AbilityDB[251852] = { mobCategory = "unknown", abilities = {} }
+
+-- Voidcaller (251878)
+ns.AbilityDB[251878] = {
+    mobCategory = "unknown",  -- semantic role; see header for vocabulary
+    abilities = {},
+}
+
 -- Mana Battery (252825)
 ns.AbilityDB[252825] = {
-    mobClass = "WARRIOR",
+    mobCategory = "trivial",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1257126, defaultEnabled = false },
     },
 }
 
+-- Corespark Conduit (252852)
+ns.AbilityDB[252852] = {
+    mobCategory = "unknown",  -- semantic role; see header for vocabulary
+    abilities = {},
+}
+
 -- Corewarden Nysarra (254227)
 ns.AbilityDB[254227] = {
-    mobClass = "WARRIOR",
+    mobCategory = "unknown",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1271388, defaultEnabled = false },
     },
@@ -298,7 +318,7 @@ ns.AbilityDB[254227] = {
 
 -- Broken Pipe (254459)
 ns.AbilityDB[254459] = {
-    mobClass = "WARRIOR",
+    mobCategory = "unknown",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1262088, defaultEnabled = false },
         { spellID = 1262630, defaultEnabled = false },
@@ -307,7 +327,7 @@ ns.AbilityDB[254459] = {
 
 -- Corespark Pylon (254485)
 ns.AbilityDB[254485] = {
-    mobClass = "WARRIOR",
+    mobCategory = "unknown",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1262084, defaultEnabled = false },
         { spellID = 1262088, defaultEnabled = false },
@@ -317,7 +337,7 @@ ns.AbilityDB[254485] = {
 
 -- Fractured Image (255179)
 ns.AbilityDB[255179] = {
-    mobClass = "WARRIOR",
+    mobCategory = "unknown",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1264429, defaultEnabled = false },
         { spellID = 1265984, defaultEnabled = false },
@@ -326,9 +346,8 @@ ns.AbilityDB[255179] = {
 
 -- Mana Battery (259569)
 ns.AbilityDB[259569] = {
-    mobClass = "WARRIOR",
+    mobCategory = "unknown",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1257126, defaultEnabled = false },
     },
 }
-

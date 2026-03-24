@@ -21,11 +21,13 @@ ns.DUNGEON_IDX_MAP = DUNGEON_IDX_MAP
 -- Returns a merged ability table, or nil if the skill is disabled or has defaultEnabled=false with no override.
 -- IMPORTANT: checks cfg.enabled == false (strict equality) — nil means "use default = enabled".
 -- Timing fields (first_cast, cooldown) come from profile config only when cfg.timed is true.
+-- mobCategory is read from ns.AbilityDB[npcID].mobCategory; defaults to "unknown" (wildcard).
 -- @param npcID    number   NPC ID of the mob
 -- @param ability  table    ability entry from ns.AbilityDB[npcID].abilities
--- @param mobClass string   mob class string (e.g. "PALADIN")
 -- @return table|nil  merged ability table, or nil if disabled
-local function MergeSkillConfig(npcID, ability, mobClass)
+local function MergeSkillConfig(npcID, ability)
+    local entry = ns.AbilityDB[npcID]
+    local mobCategory = (entry and entry.mobCategory) or "unknown"
     local profileCfg = ns.db.profiles
         and ns.db.profiles[ns.db.activeProfile]
         and ns.db.profiles[ns.db.activeProfile].skillConfig
@@ -38,7 +40,7 @@ local function MergeSkillConfig(npcID, ability, mobClass)
         -- No override and not defaultEnabled=false: return with no timers (all untimed by default)
         return {
             spellID      = ability.spellID,
-            mobClass     = mobClass,
+            mobCategory  = mobCategory,
             first_cast   = nil,
             cooldown     = nil,
             label        = nil,
@@ -50,7 +52,7 @@ local function MergeSkillConfig(npcID, ability, mobClass)
     local defaultTTS = (C_Spell.GetSpellInfo(ability.spellID) or {}).name
     return {
         spellID      = ability.spellID,
-        mobClass     = mobClass,
+        mobCategory  = mobCategory,
         first_cast   = cfg.timed and cfg.first_cast or nil,
         cooldown     = cfg.timed and cfg.cooldown or nil,
         label        = cfg.label ~= nil and cfg.label or nil,
@@ -102,9 +104,9 @@ local function BuildPack(pullIdx, pullData, dungeonIdx)
                 local entry = ns.AbilityDB and ns.AbilityDB[npcID]
                 if entry then
                     for _, ability in ipairs(entry.abilities) do
-                        local merged = MergeSkillConfig(npcID, ability, entry.mobClass)
+                        local merged = MergeSkillConfig(npcID, ability)
                         if merged then
-                            local key = merged.spellID .. "_" .. merged.mobClass
+                            local key = merged.spellID .. "_" .. merged.mobCategory
                             if not seenAbility[key] then
                                 seenAbility[key] = true
                                 table.insert(pack.abilities, merged)

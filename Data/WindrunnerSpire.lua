@@ -3,11 +3,13 @@ local addonName, ns = ...
 ns.AbilityDB = ns.AbilityDB or {}
 
 -- Windrunner Spire ability database
--- Keyed by npcID; mobClass defaults to WARRIOR, abilities from MDT spells
+-- Keyed by npcID
+-- mobCategory: semantic role — "boss"|"miniboss"|"caster"|"warrior"|"rogue"|"trivial"|"unknown"
+--   (not to be confused with the runtime WoW class token e.g. "WARRIOR"; that is never stored here)
 
 -- Restless Steward (232070)
 ns.AbilityDB[232070] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1216135, defaultEnabled = false },
         { spellID = 1216298, defaultEnabled = false },
@@ -15,9 +17,12 @@ ns.AbilityDB[232070] = {
     },
 }
 
+-- Dutiful Groundskeeper (232071)
+ns.AbilityDB[232071] = { mobCategory = "warrior", abilities = {} }
+
 -- Spellguard Magus (232113)
 ns.AbilityDB[232113] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1216250, defaultEnabled = false },
         { spellID = 1216253, defaultEnabled = false },
@@ -28,7 +33,7 @@ ns.AbilityDB[232113] = {
 
 -- Windrunner Soldier (232116)
 ns.AbilityDB[232116] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1216462, defaultEnabled = false },
     },
@@ -36,7 +41,7 @@ ns.AbilityDB[232116] = {
 
 -- Fervent Apothecary (232173)
 ns.AbilityDB[232173] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 473644, defaultEnabled = false },
         { spellID = 473647, defaultEnabled = false },
@@ -46,7 +51,7 @@ ns.AbilityDB[232173] = {
 
 -- Ardent Cutthroat (232171)
 ns.AbilityDB[232171] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 473794, defaultEnabled = false },
         { spellID = 473795, defaultEnabled = false },
@@ -57,7 +62,7 @@ ns.AbilityDB[232171] = {
 
 -- Zealous Reaver (232232)
 ns.AbilityDB[232232] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 473640, defaultEnabled = false },
     },
@@ -65,7 +70,7 @@ ns.AbilityDB[232232] = {
 
 -- Devoted Woebringer (232175)
 ns.AbilityDB[232175] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 473657, defaultEnabled = false },
         { spellID = 473663, defaultEnabled = false },
@@ -76,7 +81,7 @@ ns.AbilityDB[232175] = {
 
 -- Flesh Behemoth (232176)
 ns.AbilityDB[232176] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 473776, defaultEnabled = false },
         { spellID = 473786, defaultEnabled = false },
@@ -87,7 +92,7 @@ ns.AbilityDB[232176] = {
 
 -- Territorial Dragonhawk (232056)
 ns.AbilityDB[232056] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1216848, defaultEnabled = false },
         { spellID = 1216860, defaultEnabled = false },
@@ -97,7 +102,7 @@ ns.AbilityDB[232056] = {
 
 -- Spindleweb Hatchling (234673)
 ns.AbilityDB[234673] = {
-    mobClass = "WARRIOR",
+    mobCategory = "trivial",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1216834, defaultEnabled = false },
     },
@@ -105,7 +110,7 @@ ns.AbilityDB[234673] = {
 
 -- Creeping Spindleweb (232067)
 ns.AbilityDB[232067] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1216822, defaultEnabled = false },
         { spellID = 1216825, defaultEnabled = false },
@@ -115,7 +120,7 @@ ns.AbilityDB[232067] = {
 
 -- Apex Lynx (232063)
 ns.AbilityDB[232063] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1216985, defaultEnabled = false },
         { spellID = 1217010, defaultEnabled = false },
@@ -125,7 +130,7 @@ ns.AbilityDB[232063] = {
 
 -- Pesty Lashling (238099)
 ns.AbilityDB[238099] = {
-    mobClass = "WARRIOR",
+    mobCategory = "trivial",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1277761, defaultEnabled = false },
     },
@@ -133,7 +138,7 @@ ns.AbilityDB[238099] = {
 
 -- Bloated Lasher (236894)
 ns.AbilityDB[236894] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1216819, defaultEnabled = false },
         { spellID = 1216963, defaultEnabled = false },
@@ -142,7 +147,7 @@ ns.AbilityDB[236894] = {
 
 -- Swiftshot Archer (232119)
 ns.AbilityDB[232119] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1216419, defaultEnabled = false },
         { spellID = 1216449, defaultEnabled = false },
@@ -152,7 +157,7 @@ ns.AbilityDB[232119] = {
 
 -- Phalanx Breaker (232122)
 ns.AbilityDB[232122] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 471643, defaultEnabled = false },
         { spellID = 471648, defaultEnabled = false },
@@ -162,7 +167,7 @@ ns.AbilityDB[232122] = {
 
 -- Loyal Worg (232283)
 ns.AbilityDB[232283] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1253739, defaultEnabled = false },
     },
@@ -170,7 +175,7 @@ ns.AbilityDB[232283] = {
 
 -- Lingering Marauder (232147)
 ns.AbilityDB[232147] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1216637, defaultEnabled = false },
         { spellID = 1216643, defaultEnabled = false },
@@ -179,7 +184,7 @@ ns.AbilityDB[232147] = {
 
 -- Spectral Axethrower (232148)
 ns.AbilityDB[232148] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 468659, defaultEnabled = false },
     },
@@ -187,7 +192,7 @@ ns.AbilityDB[232148] = {
 
 -- Phantasmal Mystic (232146)
 ns.AbilityDB[232146] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1216459, defaultEnabled = false },
         { spellID = 1216592, defaultEnabled = false },
@@ -197,7 +202,7 @@ ns.AbilityDB[232146] = {
 
 -- Emberdawn (231606)
 ns.AbilityDB[231606] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 465904, defaultEnabled = false },
         { spellID = 466064, defaultEnabled = false },
@@ -213,7 +218,7 @@ ns.AbilityDB[231606] = {
 
 -- Kalis (231626)
 ns.AbilityDB[231626] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 472724, defaultEnabled = false },
         { spellID = 472736, defaultEnabled = false },
@@ -225,7 +230,7 @@ ns.AbilityDB[231626] = {
 
 -- Latch (231629)
 ns.AbilityDB[231629] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 472745, defaultEnabled = false },
         { spellID = 472758, defaultEnabled = false },
@@ -241,7 +246,7 @@ ns.AbilityDB[231629] = {
 
 -- Commander Kroluk (231631)
 ns.AbilityDB[231631] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 467620, defaultEnabled = false },
         { spellID = 467621, defaultEnabled = false },
@@ -266,7 +271,7 @@ ns.AbilityDB[231631] = {
 
 -- Restless Heart (231636)
 ns.AbilityDB[231636] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 468429, defaultEnabled = false },
         { spellID = 468442, defaultEnabled = false },
@@ -284,7 +289,7 @@ ns.AbilityDB[231636] = {
 
 -- Flaming Updraft (232118)
 ns.AbilityDB[232118] = {
-    mobClass = "WARRIOR",
+    mobCategory = "unknown",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 465957, defaultEnabled = false },
         { spellID = 467120, defaultEnabled = false },
@@ -295,7 +300,7 @@ ns.AbilityDB[232118] = {
 
 -- Phalanx Breaker (232121)
 ns.AbilityDB[232121] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1282478, defaultEnabled = false },
     },
@@ -303,7 +308,7 @@ ns.AbilityDB[232121] = {
 
 -- Haunting Grunt (232446)
 ns.AbilityDB[232446] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 467815, defaultEnabled = false },
     },
@@ -311,10 +316,12 @@ ns.AbilityDB[232446] = {
 
 -- Scouting Trapper (250883)
 ns.AbilityDB[250883] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1219224, defaultEnabled = false },
         { spellID = 1219266, defaultEnabled = false },
     },
 }
 
+-- Scouting Trapper (238049)
+ns.AbilityDB[238049] = { mobCategory = "warrior", abilities = {} }

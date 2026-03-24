@@ -3,11 +3,13 @@ local addonName, ns = ...
 ns.AbilityDB = ns.AbilityDB or {}
 
 -- Algethar Academy ability database
--- Keyed by npcID; mobClass defaults to WARRIOR, abilities from MDT spells
+-- Keyed by npcID
+-- mobCategory: semantic role — "boss"|"miniboss"|"caster"|"warrior"|"rogue"|"trivial"|"unknown"
+--   (not to be confused with the runtime WoW class token e.g. "WARRIOR"; that is never stored here)
 
 -- Corrupted Manafiend (196045)
 ns.AbilityDB[196045] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 387523, defaultEnabled = false },
         { spellID = 388862, defaultEnabled = false },
@@ -18,7 +20,7 @@ ns.AbilityDB[196045] = {
 
 -- Spellbound Battleaxe (196577)
 ns.AbilityDB[196577] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 387523, defaultEnabled = false },
         { spellID = 388841, defaultEnabled = false },
@@ -28,7 +30,7 @@ ns.AbilityDB[196577] = {
 
 -- Arcane Ravager (196671)
 ns.AbilityDB[196671] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 388940, defaultEnabled = false },
         { spellID = 388942, defaultEnabled = false },
@@ -42,7 +44,7 @@ ns.AbilityDB[196671] = {
 
 -- Arcane Forager (196694)
 ns.AbilityDB[196694] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 389054, defaultEnabled = false },
         { spellID = 389055, defaultEnabled = false },
@@ -51,7 +53,7 @@ ns.AbilityDB[196694] = {
 
 -- Unruly Textbook (196044)
 ns.AbilityDB[196044] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 387523, defaultEnabled = false },
         { spellID = 388392, defaultEnabled = false },
@@ -60,7 +62,7 @@ ns.AbilityDB[196044] = {
 
 -- Vexamus (194181)
 ns.AbilityDB[194181] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 385958, defaultEnabled = false },
         { spellID = 386173, defaultEnabled = false },
@@ -76,7 +78,7 @@ ns.AbilityDB[194181] = {
 
 -- Guardian Sentry (192680)
 ns.AbilityDB[192680] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 377912, defaultEnabled = false },
         { spellID = 377991, defaultEnabled = false },
@@ -87,7 +89,7 @@ ns.AbilityDB[192680] = {
 
 -- Territorial Eagle (192329)
 ns.AbilityDB[192329] = {
-    mobClass = "WARRIOR",
+    mobCategory = "trivial",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 377344, defaultEnabled = false },
         { spellID = 377389, defaultEnabled = false },
@@ -96,7 +98,7 @@ ns.AbilityDB[192329] = {
 
 -- Alpha Eagle (192333)
 ns.AbilityDB[192333] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 377383, defaultEnabled = false },
         { spellID = 377389, defaultEnabled = false },
@@ -106,7 +108,7 @@ ns.AbilityDB[192333] = {
 
 -- Crawth (191736)
 ns.AbilityDB[191736] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 181089, defaultEnabled = false },
         { spellID = 376997, defaultEnabled = false },
@@ -121,7 +123,7 @@ ns.AbilityDB[191736] = {
 
 -- Aggravated Skitterfly (197406)
 ns.AbilityDB[197406] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 390938, defaultEnabled = false },
         { spellID = 390942, defaultEnabled = false },
@@ -131,7 +133,7 @@ ns.AbilityDB[197406] = {
 
 -- Vile Lasher (197219)
 ns.AbilityDB[197219] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 390912, defaultEnabled = false },
         { spellID = 390915, defaultEnabled = false },
@@ -140,9 +142,12 @@ ns.AbilityDB[197219] = {
     },
 }
 
+-- Hungry Lasher (197398)
+ns.AbilityDB[197398] = { mobCategory = "trivial", abilities = {} }
+
 -- Overgrown Ancient (196482)
 ns.AbilityDB[196482] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 388544, defaultEnabled = false },
         { spellID = 388623, defaultEnabled = false },
@@ -156,7 +161,7 @@ ns.AbilityDB[196482] = {
 
 -- Algeth'ar Echoknight (196200)
 ns.AbilityDB[196200] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1270349, defaultEnabled = false },
         { spellID = 1270356, defaultEnabled = false },
@@ -165,7 +170,7 @@ ns.AbilityDB[196200] = {
 
 -- Spectral Invoker (196202)
 ns.AbilityDB[196202] = {
-    mobClass = "WARRIOR",
+    mobCategory = "caster",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1279627, defaultEnabled = false },
     },
@@ -173,7 +178,7 @@ ns.AbilityDB[196202] = {
 
 -- Echo of Doragosa (190609)
 ns.AbilityDB[190609] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 373326, defaultEnabled = false },
         { spellID = 374343, defaultEnabled = false },
@@ -186,4 +191,3 @@ ns.AbilityDB[190609] = {
         { spellID = 1282252, defaultEnabled = false },
     },
 }
-

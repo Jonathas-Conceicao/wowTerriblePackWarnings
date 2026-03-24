@@ -30,15 +30,6 @@ for npcID, entry in pairs(ns.AbilityDB or {}) do
     end
 end
 
--- Boss lookup: npcID -> true if isBoss flag in DungeonEnemies
-local npcIdIsBoss = {}
-for _, enemies in pairs(ns.DungeonEnemies) do
-    for _, enemy in pairs(enemies) do
-        if enemy.id and enemy.isBoss then
-            npcIdIsBoss[enemy.id] = true
-        end
-    end
-end
 
 local CLASS_ICON = {
     WARRIOR     = "Interface\\Icons\\ClassIcon_Warrior",
@@ -507,7 +498,7 @@ local function PopulateList()
         -- Check if pack contains a boss
         local hasBoss = false
         for _, npcID in ipairs(npcIDs) do
-            if npcIdIsBoss[npcID] then
+            if ns.AbilityDB[npcID] and ns.AbilityDB[npcID].mobCategory == "boss" then
                 hasBoss = true
                 break
             end

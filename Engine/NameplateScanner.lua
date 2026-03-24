@@ -9,31 +9,32 @@ local activePack = nil
 -- C_Timer.NewTicker handle for the 0.25s poll loop
 local tickerHandle = nil
 
--- classBase -> number (count of in-combat hostile mobs from last tick)
+-- category -> number (count of in-combat hostile mobs from last tick)
 local prevCounts = {}
 
--- classBase -> { barId1, barId2, ... } (active timed icon barIds per class)
-local classBarIds = {}
+-- category -> { barId1, barId2, ... } (active timed icon barIds per category)
+local categoryBarIds = {}
 
 -- spellID -> boolean (untimed static icon already shown for this ability)
 local staticShown = {}
 
--- spellID -> ability table reference (untimed skills only, used to check if class has trackable casts)
+-- spellID -> ability table reference (untimed skills only, used to check if category has trackable casts)
 local spellIndex = {}
 
--- classBase -> bool (true = this class has at least one untimed ability; built at Start())
-local classHasUntimed = {}
+-- category -> bool (true = this category has at least one untimed ability; built at Start())
+local categoryHasUntimed = {}
 
--- classBase -> bool (true = at least one mob of this class is casting a tracked spell)
-local castingByClass = {}
+-- category -> bool (true = at least one mob of this category is casting a tracked spell)
+local castingByCategory = {}
 
 -- Global incrementing ID for unique per-mob barIds
 local timerCounter = 0
 
--- Nameplate cache: unitToken -> { hostile = bool, classBase = string }
+-- Nameplate cache: unitToken -> { hostile = bool, classBase = string, category = string }
 -- Populated on NAME_PLATE_UNIT_ADDED, cleared on NAME_PLATE_UNIT_REMOVED.
 -- UnitCanAttack and UnitClass are stable for a given mob in dungeon content,
 -- so we cache them to avoid redundant API calls in the 0.25s hot loop.
+-- category is derived once at add-time via DeriveCategory; updated on UNIT_CLASSIFICATION_CHANGED.
 local plateCache = {}
 
 -- Reusable tick-scope tables (wiped at start of each Tick to avoid per-tick allocation)
@@ -47,6 +48,40 @@ local function dbg(msg)
 end
 
 -- ============================================================
+-- Category detection (called at event time, never in Tick)
+-- ============================================================
+
+--- Derive a semantic category string for the given nameplate unit.
+-- Priority chain (LOCKED — do not reorder):
+--   1. UnitIsBossMob   -> "boss"
+--   2. UnitIsLieutenant (pcall) -> "miniboss"
+--   3. Non-elite classification -> "trivial"
+--   4. Elite PALADIN -> "caster"
+--   5. Elite ROGUE   -> "rogue"
+--   6. Elite WARRIOR -> "warrior"
+--   7. Anything else -> "unknown"
+-- Never returns nil.
+local function DeriveCategory(unitToken)
+    if UnitIsBossMob(unitToken) then
+        return "boss"
+    end
+    local okLt, isLt = pcall(UnitIsLieutenant, unitToken)
+    if okLt and isLt then
+        return "miniboss"
+    end
+    local classification = UnitClassification(unitToken)
+    if classification ~= "elite" and classification ~= "worldboss" then
+        return "trivial"
+    end
+    local _, classBase = UnitClass(unitToken)
+    if classBase == "PALADIN" then return "caster" end
+    if classBase == "ROGUE"   then return "rogue" end
+    if classBase == "WARRIOR" then return "warrior" end
+    dbg("DeriveCategory: unknown class " .. tostring(classBase) .. " unit=" .. unitToken)
+    return "unknown"
+end
+
+-- ============================================================
 -- Nameplate cache management (called from Core.lua events)
 -- ============================================================
 
@@ -56,30 +91,43 @@ function Scanner:OnNameplateAdded(unitToken)
     plateCache[unitToken] = {
         hostile   = hostile,
         classBase = classBase,
+        category  = DeriveCategory(unitToken),
     }
+    dbg("OnNameplateAdded: " .. unitToken .. " class=" .. tostring(classBase) .. " cat=" .. plateCache[unitToken].category)
 end
 
 function Scanner:OnNameplateRemoved(unitToken)
     plateCache[unitToken] = nil
 end
 
+--- Update the cached category when classification changes.
+-- Guarded by plateCache presence — only fires for known nameplate units.
+function Scanner:OnClassificationChanged(unitToken)
+    local cached = plateCache[unitToken]
+    if cached then
+        cached.category = DeriveCategory(unitToken)
+        dbg("OnClassificationChanged: " .. unitToken .. " -> " .. cached.category)
+    end
+end
+
 -- ============================================================
 -- Internal: mob lifecycle handlers
 -- ============================================================
 
---- Called when new mobs of a class enter combat.
+--- Called when new mobs of a category enter combat.
 -- Spawns per-mob timed icons and per-ability static icons.
-function Scanner:OnMobsAdded(classBase, delta)
-    classBarIds[classBase] = classBarIds[classBase] or {}
+-- Wildcard rule: ability.mobCategory == "unknown" fires for ANY mob category.
+function Scanner:OnMobsAdded(category, delta)
+    categoryBarIds[category] = categoryBarIds[category] or {}
 
     for _, ability in ipairs(activePack.abilities) do
-        if ability.mobClass == classBase then
+        if ability.mobCategory == "unknown" or ability.mobCategory == category then
             if ability.cooldown then
                 -- Timed: one icon per mob instance
                 for i = 1, delta do
                     timerCounter = timerCounter + 1
-                    local barId = "mob_" .. classBase .. "_" .. timerCounter
-                    table.insert(classBarIds[classBase], barId)
+                    local barId = "mob_" .. category .. "_" .. timerCounter
+                    table.insert(categoryBarIds[category], barId)
                     ns.Scheduler:StartAbility(ability, barId)
                     dbg("OnMobsAdded: " .. tostring(ability.spellID) .. " barId=" .. barId)
                 end
@@ -99,60 +147,60 @@ end
 -- Internal: cast lifecycle handlers
 -- ============================================================
 
---- Called on state transition: no-cast -> casting for a given mob class.
--- Highlights all untimed static icons whose mobClass matches classBase.
+--- Called on state transition: no-cast -> casting for a given mob category.
+-- Highlights all untimed static icons whose mobCategory matches (including wildcards).
 -- Alert (sound/TTS) fires here on the transition — not repeated while cast is ongoing.
-function Scanner:OnCastStart(classBase)
+function Scanner:OnCastStart(category)
     for _, ability in ipairs(activePack.abilities) do
-        if not ability.cooldown and ability.mobClass == classBase then
+        if (not ability.cooldown) and (ability.mobCategory == "unknown" or ability.mobCategory == category) then
             local key = "static_" .. ability.spellID
             ns.IconDisplay.SetCastHighlight(key, ability)
         end
     end
-    dbg("OnCastStart: " .. classBase)
+    dbg("OnCastStart: " .. category)
 end
 
---- Called on state transition: casting -> no-cast for a given mob class.
--- Clears orange cast glow on all untimed static icons for this class.
-function Scanner:OnCastEnd(classBase)
+--- Called on state transition: casting -> no-cast for a given mob category.
+-- Clears orange cast glow on all untimed static icons for this category.
+function Scanner:OnCastEnd(category)
     for _, ability in ipairs(activePack.abilities) do
-        if not ability.cooldown and ability.mobClass == classBase then
+        if (not ability.cooldown) and (ability.mobCategory == "unknown" or ability.mobCategory == category) then
             local key = "static_" .. ability.spellID
             ns.IconDisplay.ClearCastHighlight(key)
         end
     end
-    dbg("OnCastEnd: " .. classBase)
+    dbg("OnCastEnd: " .. category)
 end
 
 -- ============================================================
 -- Internal: tick (0.25s poll)
 -- ============================================================
 
---- Single scan tick: count hostile in-combat mobs by class, reconcile changes.
+--- Single scan tick: count hostile in-combat mobs by category, reconcile changes.
 -- PERF: Runs every 0.25s via C_Timer.NewTicker while a pack is active.
 -- Per tick: iterates C_NamePlate.GetNamePlates() (typically 5-20 frames).
--- UnitCanAttack and UnitClass are cached at NAME_PLATE_UNIT_ADDED (stable per mob).
+-- UnitCanAttack, UnitClass, and DeriveCategory are cached at NAME_PLATE_UNIT_ADDED (stable per mob).
 -- Only UnitAffectingCombat is called per tick (dynamic combat state).
 -- Cost: ~20 API calls/tick at 20 nameplates (1 call each). Reconcile loop
--- is O(unique_classes), typically 2-5 iterations. Reviewed 2026-03-16.
+-- is O(unique_categories), typically 2-5 iterations. Reviewed 2026-03-23.
 function Scanner:Tick()
     if not activePack then return end
 
-    wipe(newCounts)  -- classBase -> count of in-combat hostile mobs this tick
+    wipe(newCounts)  -- category -> count of in-combat hostile mobs this tick
 
     local plates = C_NamePlate.GetNamePlates()
     for _, plate in ipairs(plates) do
         local npUnit = plate.namePlateUnitToken or plate.unitToken
         if npUnit then
             local cached = plateCache[npUnit]
-            if cached and cached.hostile and cached.classBase then
+            if cached and cached.hostile and cached.category then
                 -- UnitAffectingCombat does not throw in Midnight — call directly
                 local inCombat = UnitAffectingCombat(npUnit)
                 if inCombat then
-                    newCounts[cached.classBase] = (newCounts[cached.classBase] or 0) + 1
-                    -- Debug: log every class detected (first scan only)
-                    if not prevCounts[cached.classBase] then
-                        dbg("Scan found class: " .. cached.classBase .. " unit=" .. tostring(npUnit))
+                    newCounts[cached.category] = (newCounts[cached.category] or 0) + 1
+                    -- Debug: log every category detected (first scan only)
+                    if not prevCounts[cached.category] then
+                        dbg("Scan found category: " .. cached.category .. " unit=" .. tostring(npUnit))
                     end
                 end
             end
@@ -161,10 +209,10 @@ function Scanner:Tick()
 
     -- Reconcile: only add new timers when visible mob count exceeds tracked timer count
     -- This prevents camera turns from spawning duplicate icons
-    for classBase, count in pairs(newCounts) do
-        local tracked = classBarIds[classBase] and #classBarIds[classBase] or 0
+    for category, count in pairs(newCounts) do
+        local tracked = categoryBarIds[category] and #categoryBarIds[category] or 0
         if count > tracked then
-            Scanner:OnMobsAdded(classBase, count - tracked)
+            Scanner:OnMobsAdded(category, count - tracked)
         end
     end
 
@@ -176,19 +224,19 @@ function Scanner:Tick()
 
     -- Cast detection pass: poll UnitCastingInfo/UnitChannelInfo for tracked spells
     -- Reuses the `plates` variable captured at the top of Tick() (no duplicate GetNamePlates call)
-    wipe(newCasting)  -- classBase -> bool
+    wipe(newCasting)  -- category -> bool
 
     for _, plate in ipairs(plates) do
         local npUnit = plate.namePlateUnitToken or plate.unitToken
         if npUnit then
             local cached = plateCache[npUnit]
-            if cached and cached.hostile and cached.classBase then
+            if cached and cached.hostile and cached.category then
                 -- Check if this mob is casting or channeling anything.
                 -- Midnight wraps spellIDs as Secret Values (can't use as table keys),
                 -- so we only check if a cast is happening (name ~= nil), not which spell.
-                -- Our model: any mob of tracked class casting → glow all untimed skills for that class.
-                -- Only check mobs whose class has untimed abilities (O(1) lookup via classHasUntimed).
-                if classHasUntimed[cached.classBase] then
+                -- Our model: any mob of tracked category casting → glow all untimed skills for that category.
+                -- Only check mobs whose category has untimed abilities (O(1) lookup via categoryHasUntimed).
+                if categoryHasUntimed[cached.category] then
                     local isCasting = false
                     local okCast, castName = pcall(UnitCastingInfo, npUnit)
                     if okCast and castName then
@@ -201,7 +249,7 @@ function Scanner:Tick()
                         end
                     end
                     if isCasting then
-                        newCasting[cached.classBase] = true
+                        newCasting[cached.category] = true
                     end
                 end
             end
@@ -209,16 +257,16 @@ function Scanner:Tick()
     end
 
     -- Reconcile cast state transitions
-    for classBase in pairs(newCasting) do
-        if not castingByClass[classBase] then
-            castingByClass[classBase] = true
-            Scanner:OnCastStart(classBase)
+    for category in pairs(newCasting) do
+        if not castingByCategory[category] then
+            castingByCategory[category] = true
+            Scanner:OnCastStart(category)
         end
     end
-    for classBase in pairs(castingByClass) do
-        if not newCasting[classBase] then
-            castingByClass[classBase] = nil
-            Scanner:OnCastEnd(classBase)
+    for category in pairs(castingByCategory) do
+        if not newCasting[category] then
+            castingByCategory[category] = nil
+            Scanner:OnCastEnd(category)
         end
     end
 end
@@ -235,11 +283,11 @@ function Scanner:Start(pack)
 
     activePack = pack
     wipe(prevCounts)
-    wipe(classBarIds)
+    wipe(categoryBarIds)
     wipe(staticShown)
     wipe(spellIndex)
-    wipe(classHasUntimed)
-    wipe(castingByClass)
+    wipe(categoryHasUntimed)
+    wipe(castingByCategory)
     timerCounter = 0
 
     -- Build O(1) lookup tables for untimed skills
@@ -247,7 +295,7 @@ function Scanner:Start(pack)
     for _, ability in ipairs(pack.abilities) do
         if not ability.cooldown then
             spellIndex[ability.spellID] = ability
-            classHasUntimed[ability.mobClass] = true
+            categoryHasUntimed[ability.mobCategory] = true
         end
     end
 
@@ -274,11 +322,11 @@ function Scanner:Stop()
 
     activePack = nil
     wipe(prevCounts)
-    wipe(classBarIds)
+    wipe(categoryBarIds)
     wipe(staticShown)
     wipe(spellIndex)
-    wipe(classHasUntimed)
-    wipe(castingByClass)
+    wipe(categoryHasUntimed)
+    wipe(castingByCategory)
     -- Note: plateCache is NOT wiped here — it's managed by nameplate events
     -- and stays valid across combat sessions
 

@@ -1,521 +1,371 @@
 # Architecture Research
 
-**Domain:** WoW Midnight (12.0) addon — v0.1.0 integration architecture for configuration UI, ability data, cast detection, and per-dungeon routes
-**Researched:** 2026-03-17
-**Confidence:** HIGH — derived from direct source analysis of all 10 existing Lua files. No external research needed; all integration questions answered from the code itself.
+**Domain:** WoW Midnight (12.0) addon — v0.1.1 per-mob category system integration
+**Researched:** 2026-03-23
+**Confidence:** HIGH — derived from direct source analysis of all relevant Lua files in the current v0.1.0 codebase.
 
 ---
 
-## Current Architecture (as of v0.0.4)
+## Current Architecture (v0.1.0 baseline)
 
-### System Overview
+### Relevant Data Structures
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                          UI Layer                                 │
-│  ┌──────────────────────────────────────────────────────────┐    │
-│  │  UI/PackFrame.lua — pack selection window, import popup   │    │
-│  └──────────────────────────┬─────────────────────────────┘    │
-│                              │ reads PackDatabase, calls CW      │
-├──────────────────────────────┼───────────────────────────────────┤
-│                         Engine Layer                              │
-│  ┌────────────────┐  ┌───────┴──────┐  ┌──────────────────────┐  │
-│  │ CombatWatcher  │  │  Scheduler   │  │  NameplateScanner    │  │
-│  │ state machine  │  │ timer/icon   │  │  0.25s poll loop     │  │
-│  └───────┬────────┘  └──────┬───────┘  └──────────┬───────────┘  │
-│          └──────────────────┴────────────────────┘              │
-│                              │ drives                             │
-├──────────────────────────────┼───────────────────────────────────┤
-│                       Display Layer                               │
-│  ┌───────────────────────────┴───────────────────────────────┐   │
-│  │    Display/IconDisplay.lua — spell icon squares, sweep     │   │
-│  └───────────────────────────────────────────────────────────┘   │
-├──────────────────────────────────────────────────────────────────┤
-│                     Import / Data Layer                           │
-│  ┌──────────────┐  ┌──────────────┐  ┌─────────────────────────┐ │
-│  │ Import/      │  │ Data/        │  │ Data/                   │ │
-│  │ Decode.lua   │  │ DungeonEnemies│  │ WindrunnerSpire.lua     │ │
-│  │ Pipeline.lua │  │ .lua (9 dung)│  │ (AbilityDB, npcID keyed)│ │
-│  └──────────────┘  └──────────────┘  └─────────────────────────┘ │
-├──────────────────────────────────────────────────────────────────┤
-│                     Persistence Layer                             │
-│  ┌───────────────────────────────────────────────────────────┐   │
-│  │  TerriblePackWarningsDB  (SavedVariables, account-wide)   │   │
-│  │  .debug  .windowPos  .importedRoute{dungeonName,packs}    │   │
-│  └───────────────────────────────────────────────────────────┘   │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-### Load Order (TOC)
-
-```
-Libs\load_libs.xml
-Core.lua                   ← namespace, ns.PackDatabase, ns.AbilityDB initialized
-Engine\Scheduler.lua
-Engine\NameplateScanner.lua
-Engine\CombatWatcher.lua
-Display\IconDisplay.lua
-Import\Decode.lua
-Data\DungeonEnemies.lua    ← writes ns.DungeonEnemies at file scope
-Data\WindrunnerSpire.lua   ← writes ns.AbilityDB[npcID] at file scope
-Import\Pipeline.lua        ← reads ns.AbilityDB and ns.DungeonEnemies
-UI\PackFrame.lua           ← reads ns.AbilityDB at file scope for portrait lookup
-```
-
-Data files populate shared tables at file-load time before any ADDON_LOADED event fires. Pipeline.lua must load after all Data files. UI files must load after Pipeline.
-
----
-
-## Target Architecture (v0.1.0)
-
-### What Changes
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                          UI Layer                                 │
-│  ┌─────────────────────┐   ┌──────────────────────────────────┐  │
-│  │   UI/PackFrame.lua  │   │     UI/ConfigFrame.lua  (NEW)    │  │
-│  │  +dungeon selector  │   │  dungeon→mob→skill tree          │  │
-│  │  +mob count per row │   │  per-skill toggle/label/TTS/sound│  │
-│  └──────────┬──────────┘   └──────────────┬───────────────────┘  │
-│             │ reads PackDatabase            │ reads/writes         │
-│             │                              │ ns.db.skillConfig    │
-├─────────────┴──────────────────────────────┴─────────────────────┤
-│                         Engine Layer                              │
-│  ┌────────────────┐  ┌───────────────┐  ┌──────────────────────┐  │
-│  │ CombatWatcher  │  │  Scheduler    │  │   NameplateScanner   │  │
-│  │ +expanded zone │  │  unchanged    │  │  +UnitCastingInfo    │  │
-│  │  map (9 dung.) │  │               │  │   polling for untimed│  │
-│  │ +per-dungeon   │  │               │  │  +castHighlightActive│  │
-│  │  key selection │  │               │  │   tracking           │  │
-│  └───────┬────────┘  └───────┬───────┘  └──────────┬───────────┘  │
-│          └──────────────────┴────────────────────┘               │
-├──────────────────────────────────────────────────────────────────┤
-│                       Display Layer                               │
-│  ┌───────────────────────────────────────────────────────────┐   │
-│  │    Display/IconDisplay.lua                                 │   │
-│  │    +SetCastHighlight / ClearCastHighlight (untimed)        │   │
-│  │    +PlaySoundFile support in SetUrgent and SetCastHighlight │   │
-│  └───────────────────────────────────────────────────────────┘   │
-├──────────────────────────────────────────────────────────────────┤
-│                     Import / Data Layer                           │
-│  ┌──────────────┐  ┌──────────────┐  ┌─────────────────────────┐ │
-│  │ Import/      │  │ Data/        │  │ Data/*.lua (8 new files) │ │
-│  │ Pipeline.lua │  │ DungeonEnemies│  │ one per remaining dungeon│ │
-│  │ +per-dungeon │  │ unchanged    │  │ same schema as           │ │
-│  │  key write   │  │               │  │ WindrunnerSpire.lua     │ │
-│  │ +skillConfig │  │               │  │                         │ │
-│  │  merge       │  │               │  │                         │ │
-│  └──────────────┘  └──────────────┘  └─────────────────────────┘ │
-├──────────────────────────────────────────────────────────────────┤
-│                     Persistence Layer                             │
-│  ┌───────────────────────────────────────────────────────────┐   │
-│  │  TerriblePackWarningsDB  (SavedVariables, account-wide)   │   │
-│  │  .debug   .windowPos   .configPos                         │   │
-│  │  .importedRoutes { [dungeonKey] = {dungeonName, dungeonIdx,│   │
-│  │                                    packs} }               │   │
-│  │  .skillConfig { [npcID] = { [spellID] = {                 │   │
-│  │      enabled, label, ttsMessage, soundFile } } }          │   │
-│  └───────────────────────────────────────────────────────────┘   │
-└──────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Integration Questions Answered
-
-### Q1: Where does MDT-extracted ability data live — new Data/ files per dungeon or single consolidated file?
-
-**Answer: One file per dungeon, following the existing WindrunnerSpire.lua pattern.**
-
-`Data/WindrunnerSpire.lua` establishes the schema: write into `ns.AbilityDB[npcID]` at file scope. Each new dungeon gets its own file (e.g., `Data/AlgetharAcademy.lua`). Never consolidate into one large file.
-
-Rationale:
-- A syntax error in one dungeon's file does not prevent others from loading.
-- Adding or updating a dungeon is a single-file change with no merge conflicts.
-- PackFrame.lua reads `ns.AbilityDB` at file scope to build `npcIdToClass` — this table is correct as long as all Data files load before PackFrame.lua in the TOC.
-- Pipeline.lua reads `ns.AbilityDB[npcID]` per-enemy when building packs — all data files must load before Pipeline.lua.
-
-New files use the same schema. For abilities that are untimed (cast-detected), omit `first_cast` and `cooldown`. Default `mobClass` to `"WARRIOR"` for MDT-imported abilities since MDT does not store class data.
-
+**AbilityDB entry (current):**
 ```lua
--- Data/AlgetharAcademy.lua
-local addonName, ns = ...
-ns.AbilityDB = ns.AbilityDB or {}
-
-ns.AbilityDB[196577] = {  -- Spellbound Battleaxe
-    mobClass = "WARRIOR",
+ns.AbilityDB[npcID] = {
+    mobClass  = "WARRIOR",  -- WoW class string, used by NameplateScanner for UnitClassBase matching
     abilities = {
-        {
-            name    = "Arcane Slash",
-            spellID = 388685,
-            label   = "Slash",
-            -- no first_cast/cooldown = untimed, cast-detected
-        },
+        { spellID = 123456, defaultEnabled = false },
     },
 }
 ```
 
-TOC additions: all 8 new Data files load after `Data/DungeonEnemies.lua` and before `Import/Pipeline.lua`.
+**plateCache entry (NameplateScanner, current):**
+```lua
+plateCache[unitToken] = {
+    hostile   = bool,      -- from UnitCanAttack, cached at NAME_PLATE_UNIT_ADDED
+    classBase = string,    -- from UnitClass(unitToken)[2], cached at NAME_PLATE_UNIT_ADDED
+}
+```
+
+**Merged ability in pack (current):**
+```lua
+{
+    spellID      = number,
+    mobClass     = string,    -- copied from AbilityDB entry
+    first_cast   = number|nil,
+    cooldown     = number|nil,
+    label        = string|nil,
+    ttsMessage   = string,
+    soundKitID   = number|nil,
+    soundEnabled = bool,
+}
+```
+
+### NameplateScanner Detection Loop (current)
+
+The scanner matches mobs by `UnitClassBase` only:
+
+```
+NAME_PLATE_UNIT_ADDED → cache { hostile, classBase } → never touched again in the hot loop
+Tick() → UnitAffectingCombat(npUnit) → count hostile in-combat mobs by classBase
+       → compare count vs tracked timers → OnMobsAdded(classBase, delta)
+OnMobsAdded: iterates activePack.abilities, matches ability.mobClass == classBase
+```
 
 ---
 
-### Q2: How should per-skill config be stored in SavedVariables?
+## Target Architecture (v0.1.1)
 
-**Answer: Sparse override map at `ns.db.skillConfig[npcID][spellID]`. Store only user-modified fields, never a full copy of ability data.**
+### 1. Category Field in AbilityDB
 
-The merge helper is called inside `Pipeline.BuildPack()` when assembling pack abilities. This means every imported route automatically reflects current skill config at import time.
+Add `mobCategory` as an optional field alongside `mobClass` on each AbilityDB npcID entry.
 
 ```lua
--- Stored in TerriblePackWarningsDB:
-ns.db.skillConfig = {
-    [232113] = {           -- npcID: Spellguard Magus
-        [1253686] = {      -- spellID: Spellguard's Protection
-            enabled    = false,
-            label      = "BLOCK",
-            ttsMessage = "Block it now",
-            soundFile  = "Sound\\Spells\\...\\SpellAlert.ogg",
-        },
-    },
+ns.AbilityDB[npcID] = {
+    mobClass    = "MAGE",            -- WoW class string (unchanged, still required for detection)
+    mobCategory = "caster",          -- new: one of boss|miniboss|caster|warrior|rogue|trivial|unknown
+    abilities   = { ... },
 }
 ```
 
-Merge helper used in Pipeline.lua:
+**Field rules:**
+- `mobCategory` is present only in data files where it has been explicitly set (currently: Skyreach only).
+- Absent means `"unknown"`. Pipeline.lua reads `entry.mobCategory or "unknown"` — never nil at runtime.
+- `mobCategory` is hardcoded in data files, never written to SavedVariables. It is not user-editable.
+- The categories `"caster"`, `"warrior"`, `"rogue"` describe combat role, not WoW class. A `"caster"` mob may have `mobClass = "MAGE"` or `"WARLOCK"` etc. The two fields are orthogonal.
+
+**No new file needed.** This is a field addition to existing Data/*.lua entries. For this milestone, only `Data/Skyreach.lua` receives fully populated `mobCategory` values. All other Data/*.lua files remain at `mobCategory` absent (implicit `"unknown"`).
+
+---
+
+### 2. plateCache Extended for Category Detection
+
+Category detection uses WoW APIs that are not available from the nameplate unit token at `NAME_PLATE_UNIT_ADDED` alone, or requires polling. The relevant APIs are:
+
+| API | When Available | Return |
+|-----|---------------|--------|
+| `UnitClassification(unit)` | Stable at `NAME_PLATE_UNIT_ADDED` | `"worldboss"`, `"elite"`, `"rareelite"`, `"rare"`, `"normal"`, `"trivial"`, `"minus"` |
+| `UnitEffectiveLevel(unit)` | Stable at `NAME_PLATE_UNIT_ADDED` | number (player-relative level) |
+| `UnitIsLieutenant(unit)` | Stable at `NAME_PLATE_UNIT_ADDED` | bool (Midnight-specific lieutenant designation) |
+| `UnitClassBase(unit)` | Stable at `NAME_PLATE_UNIT_ADDED` | string (WoW class string, already cached as `classBase`) |
+
+All four APIs are stable and non-secret in Midnight. They can all be called at `NAME_PLATE_UNIT_ADDED` and cached. No hot-loop polling needed.
+
+**plateCache extended:**
 ```lua
-local function MergeSkillConfig(npcID, ability)
-    local cfg = ns.db.skillConfig
-        and ns.db.skillConfig[npcID]
-        and ns.db.skillConfig[npcID][ability.spellID]
-    if not cfg then return ability end
-    if cfg.enabled == false then return nil end  -- disabled: skip
+plateCache[unitToken] = {
+    hostile        = bool,
+    classBase      = string,
+    classification = string,    -- UnitClassification return (new)
+    isLieutenant   = bool,      -- UnitIsLieutenant return (new)
+    effectiveLevel = number,    -- UnitEffectiveLevel return (new)
+}
+```
+
+**Detection function (derives runtime category from plateCache entry):**
+
+```lua
+-- Engine/NameplateScanner.lua (new local helper)
+local function DeriveCategory(cached)
+    local c = cached.classification
+    if c == "worldboss" then return "boss" end
+    if cached.isLieutenant then return "miniboss" end
+    if c == "trivial" or c == "minus" then return "trivial" end
+    -- Role-based: defer to AbilityDB category (already merged into ability.mobCategory)
+    -- Unknown by default — wildcard passes all filters
+    return "unknown"
+end
+```
+
+Note: `"caster"`, `"warrior"`, `"rogue"` cannot be reliably derived from WoW APIs alone (classification and level do not encode combat role). These categories must come from the hardcoded `mobCategory` field in AbilityDB. Runtime detection via APIs covers `"boss"`, `"miniboss"`, and `"trivial"` only. This is sufficient for alert filtering since role-based categories are only meaningful when the data author has explicitly set them.
+
+---
+
+### 3. Category Propagation Through Pipeline.lua
+
+Pipeline.lua's `MergeSkillConfig` currently builds merged ability tables without `mobCategory`. It must propagate the field.
+
+**Change to `MergeSkillConfig`:**
+
+```lua
+local function MergeSkillConfig(npcID, ability, mobClass)
+    -- ... existing merge logic ...
     return {
-        name       = ability.name,
-        spellID    = ability.spellID,
-        mobClass   = ability.mobClass,
-        first_cast = ability.first_cast,
-        cooldown   = ability.cooldown,
-        label      = cfg.label      or ability.label,
-        ttsMessage = cfg.ttsMessage or ability.ttsMessage,
-        soundFile  = cfg.soundFile,
+        spellID      = ability.spellID,
+        mobClass     = mobClass,
+        mobCategory  = entry.mobCategory or "unknown",   -- new field
+        -- ... rest of fields unchanged ...
     }
 end
 ```
 
-ConfigFrame writes directly to `ns.db.skillConfig[npcID][spellID]`. Changes take effect on the next import or route rebuild — no hot-swap of in-memory pack data needed for this milestone.
+`entry` here is `ns.AbilityDB[npcID]`. The category is a property of the NPC entry, not the individual ability, so it is read from `entry` not `ability`. All abilities from the same npcID share the same `mobCategory`.
+
+**"unknown" wildcard contract:**
+
+Any ability with `mobCategory == "unknown"` passes all category filters. This is the safe default — false positives (displaying an alert when no mob of that category is present) are preferable to false negatives (silently dropping an alert for a dangerous mob). This contract is enforced at the filter call site, not in Pipeline.
 
 ---
 
-### Q3: Where does cast detection (UnitCastingInfo polling) fit?
+### 4. NameplateScanner Filtering
 
-**Answer: Extend the existing NameplateScanner Tick() loop. No new ticker.**
+The current scanner matches only by `classBase`. The category filter adds a second dimension.
 
-The 0.25s ticker already iterates all nameplates. Extend the body of `Scanner:Tick()` to call `UnitCastingInfo(npUnit)` for hostile mobs whose class matches an untimed ability. Track which static icon keys are currently highlighted so the clear signal fires when the cast ends.
+**No changes to the hot-loop Tick() scan.** The scan counts mobs by `classBase` as before. Category filtering happens in `OnMobsAdded` and `OnCastStart/End`, where abilities are iterated.
 
-Key facts:
-- `UnitCastingInfo` return value at index 9 is the spellID (number, locale-independent). Do not compare by spell name string.
-- The 0.25s interval is sufficient: casts are 1.5-3s minimum, so detection lag is imperceptible.
-- Adding this inside the existing Tick() loop adds at most 1 API call per hostile nameplate per tick, only when untimed abilities are active. At 5-10 nameplates this is negligible.
+**Change to `OnMobsAdded`:**
 
-State needed in NameplateScanner:
 ```lua
--- spellID -> true if the cast highlight is currently active
-local castHighlightActive = {}
-```
+function Scanner:OnMobsAdded(classBase, delta)
+    classBarIds[classBase] = classBarIds[classBase] or {}
 
-Extension to Tick():
-```lua
--- After the existing in-combat count block, inside the nameplate loop:
-if cached.hostile and cached.classBase and activePack then
     for _, ability in ipairs(activePack.abilities) do
-        if not ability.cooldown
-           and ability.mobClass == cached.classBase
-           and staticShown[ability.spellID]
-        then
-            -- UnitCastingInfo: return[9] is spellID (number)
-            local _, _, _, _, _, _, _, _, castSpellID = UnitCastingInfo(npUnit)
-            local castKey = "static_" .. ability.spellID
-            if castSpellID == ability.spellID then
-                if not castHighlightActive[ability.spellID] then
-                    castHighlightActive[ability.spellID] = true
-                    ns.IconDisplay.SetCastHighlight(castKey)
-                end
-            else
-                if castHighlightActive[ability.spellID] then
-                    castHighlightActive[ability.spellID] = nil
-                    ns.IconDisplay.ClearCastHighlight(castKey)
-                end
+        if ability.mobClass == classBase then
+            -- Category filter: unknown passes always
+            local runtimeCategory = activeCategoryByClass[classBase]  -- see below
+            if ability.mobCategory == "unknown"
+               or runtimeCategory == nil
+               or ability.mobCategory == runtimeCategory
+            then
+                -- spawn timer or static icon (unchanged logic)
             end
         end
     end
 end
 ```
 
-`castHighlightActive` must be wiped in `Scanner:Stop()`.
+`activeCategoryByClass` is a module-level table keyed by classBase, populated when a mob is first counted in `Tick()`:
 
----
-
-### Q4: How does per-dungeon route storage change the PackDatabase["imported"] single-key pattern?
-
-**Answer: Replace the single "imported" key with per-dungeon keys (e.g., "windrunner_spire"). Replace `ns.db.importedRoute` (single object) with `ns.db.importedRoutes` (map of dungeonKey → routeData).**
-
-Changes required in Pipeline.lua:
 ```lua
--- Before
-ns.PackDatabase["imported"] = packs
-ns.db.importedRoute = { dungeonName=..., dungeonIdx=..., packs=... }
-
--- After
-local dungeonKey = dungeonInfo.key  -- e.g. "windrunner_spire"
-ns.PackDatabase[dungeonKey] = packs
-ns.db.importedRoutes = ns.db.importedRoutes or {}
-ns.db.importedRoutes[dungeonKey] = { dungeonName=..., dungeonIdx=..., packs=... }
+-- module-level in NameplateScanner.lua
+local activeCategoryByClass = {}
 ```
 
-`Import.RestoreFromSaved()` iterates `ns.db.importedRoutes` (the map) instead of reading the single `ns.db.importedRoute` object.
+Populated in `Tick()` when a mob enters combat:
 
-`Import.Clear()` takes an optional `dungeonKey` argument. Without it, clear all routes; with it, clear only that dungeon.
-
-`CombatWatcher:Reset()` checks `ns.db.importedRoutes` for the current zone's dungeon key and selects it automatically instead of always selecting "imported".
-
-`PackFrame.lua` must be updated in two places:
-1. `PopulateList()` reads from `ns.PackDatabase[activeDungeon]` where `activeDungeon` is the dungeon key (e.g. "windrunner_spire"), not "imported".
-2. The dungeon selector widget populates from `ns.db.importedRoutes` (showing all dungeons with imported routes).
-
-**Migration note:** `ns.db.importedRoute` (old key) and `ns.db.importedRoutes` (new key) are different names. On first login after update, the old key is ignored and no route is restored. This is acceptable — users re-import once. No migration code needed.
-
----
-
-### Q5: Where does the config window code go?
-
-**Answer: New file `UI/ConfigFrame.lua`, loaded last in the TOC, frame created lazily on first open.**
-
-ConfigFrame is a separate top-level frame (`TPWConfigFrame`). It opens via a "Config" button added to the footer of PackFrame, or via `/tpw config` slash command.
-
-The frame is built lazily (inside a `ConfigFrame.Open()` function with `if not configFrame then ... end` guard) to keep load-time cost zero. The config window is rarely opened; no reason to create dozens of widgets at login.
-
-ConfigFrame reads `ns.AbilityDB` to enumerate all known dungeons, mobs, and abilities. It reads `ns.db.skillConfig` for current user values. On any widget change, it writes immediately to `ns.db.skillConfig[npcID][spellID]`.
-
-When the user closes ConfigFrame, call `PackUI:Refresh()` to rebuild the displayed route if one is active. A full re-import is not needed unless the user explicitly clicks a "Rebuild" button — existing in-memory packs reflect the skillConfig at the time of import. For live changes to take effect on the currently-running pack, a `Scheduler:Stop()` + `NameplateScanner:Stop()` + re-select cycle may be needed, but that can be a v0.1.0 limitation.
-
-TOC addition at end:
-```
-UI\PackFrame.lua
-UI\ConfigFrame.lua
-```
-
-Core.lua slash command extension:
 ```lua
-elseif cmd == "config" then
-    if ns.ConfigUI and ns.ConfigUI.Toggle then ns.ConfigUI.Toggle() end
-```
-
----
-
-### Q6: How does the highlighting rework change IconDisplay and Scheduler?
-
-**Answer: Two distinct highlight paths — timed uses the existing SetUrgent (pre-warning timer), untimed uses new SetCastHighlight (cast detected). Both can trigger sound. The existing ShowStaticIcon path is unchanged structurally.**
-
-**Timed ability pre-warning (unchanged path, add sound):**
-- Scheduler fires at `first_cast - 5` seconds
-- Calls `ns.IconDisplay.SetUrgent(barId)` — existing red glow + TTS
-- Add: if the ability's slot has a `soundFile`, call `PlaySoundFile(soundFile, "Master")`
-
-**Untimed ability cast highlight (new path):**
-- NameplateScanner detects `UnitCastingInfo` match
-- Calls `ns.IconDisplay.SetCastHighlight("static_" .. spellID)` — visually distinct from SetUrgent (e.g. orange glow or pulsing border, not red)
-- Plays sound if `slot.soundFile` is set
-- When cast ends, NameplateScanner calls `ns.IconDisplay.ClearCastHighlight(key)` — reverts to normal static state
-
-New functions to add to IconDisplay.lua:
-```lua
---- SetCastHighlight: highlight an untimed icon when a cast is in progress.
--- Visually distinct from SetUrgent (orange glow, not red).
-function ns.IconDisplay.SetCastHighlight(instanceKey)
-    local slot = slotsByKey[instanceKey]
-    if not slot then return end
-    ShowOrangeGlow(slot)  -- new helper, same pattern as ShowGlow but orange
-    if slot.soundFile then
-        PlaySoundFile(slot.soundFile, "Master")
-    end
-end
-
---- ClearCastHighlight: remove cast highlight when the cast ends.
-function ns.IconDisplay.ClearCastHighlight(instanceKey)
-    local slot = slotsByKey[instanceKey]
-    if not slot then return end
-    HideGlow(slot)
+-- Inside Tick(), after newCounts tallying, when a mob is first seen:
+if not activeCategoryByClass[cached.classBase] then
+    activeCategoryByClass[cached.classBase] = DeriveCategory(cached)
 end
 ```
 
-The existing `ShowStaticIcon` stores a reference in `slot` that NameplateScanner uses by the `instanceKey`. The slot must also store `soundFile`:
-```lua
--- In ShowStaticIcon (and ShowIcon):
-slot.soundFile = ability and ability.soundFile or nil
-```
+Wiped in `Scanner:Stop()`.
 
-Because `ShowStaticIcon` currently does not receive an ability table (only `instanceKey`, `spellID`, `label`), the caller (NameplateScanner.OnMobsAdded) must pass `soundFile`:
-```lua
--- NameplateScanner.OnMobsAdded:
-ns.IconDisplay.ShowStaticIcon("static_" .. ability.spellID, ability.spellID, ability.label, ability.soundFile)
-```
+**Why this approach over per-tick filtering:**
 
-This is a one-line change to the ShowStaticIcon signature.
+`DeriveCategory` is called once per classBase per combat session, not every tick. The result is cached in `activeCategoryByClass`. This means zero extra API overhead in the hot loop after first detection.
+
+**classHasUntimed** (existing O(1) gate for cast detection) already filters by classBase. No change needed there.
 
 ---
 
-## Recommended File Structure (post-milestone)
+### 5. ConfigFrame Display
 
-```
-TerriblePackWarnings/
-├── Core.lua                        # +register ZONE_CHANGED_NEW_AREA; +/tpw config
-├── TerriblePackWarnings.toc        # +8 data files, +ConfigFrame.lua
-├── Engine/
-│   ├── Scheduler.lua               # unchanged
-│   ├── NameplateScanner.lua        # +UnitCastingInfo cast detection in Tick()
-│   └── CombatWatcher.lua           # +expanded ZONE_DUNGEON_MAP; +auto-select from routes
-├── Display/
-│   └── IconDisplay.lua             # +SetCastHighlight/ClearCastHighlight; +sound playback
-├── Import/
-│   ├── Decode.lua                  # unchanged
-│   └── Pipeline.lua                # +per-dungeon key; +skillConfig merge; +routes map restore
-├── Data/
-│   ├── DungeonEnemies.lua          # unchanged
-│   ├── WindrunnerSpire.lua         # unchanged
-│   ├── SeatOfTheTriumvirate.lua    # new
-│   ├── AlgetharAcademy.lua         # new
-│   ├── PitOfSaron.lua              # new
-│   ├── Skyreach.lua                # new
-│   ├── MagistersTerrace.lua        # new
-│   ├── MaisaraCaverns.lua          # new
-│   ├── NexusPointXenas.lua         # new
-│   └── MurderRow.lua               # new (stub — no ability data yet)
-└── UI/
-    ├── PackFrame.lua               # +dungeon selector; +mob count per type
-    └── ConfigFrame.lua             # new
+ConfigFrame currently shows the mob header as:
+
+```lua
+headerNameStr:SetText(mobName .. " - " .. mobClass)
 ```
 
-### Updated TOC Load Order
+Change to include category:
+
+```lua
+local entry = ns.AbilityDB[npcID]
+local mobClass = entry and entry.mobClass or "UNKNOWN"
+local mobCategory = entry and entry.mobCategory or "unknown"
+headerNameStr:SetText(mobName .. " - " .. mobClass .. " [" .. mobCategory .. "]")
+```
+
+This is a one-line change in `PopulateRightPanel`. No new widgets required. The category label is non-interactive — no button, no dropdown. It is informational only.
+
+**Search does not filter by category.** The existing search filters by mob name and spell name. Adding category to search scope is out of scope for this milestone.
+
+---
+
+### 6. Data File Changes (Skyreach only)
+
+`Data/Skyreach.lua` receives `mobCategory` values for every npcID entry. All other Data/*.lua files remain unchanged (absent `mobCategory` = implicit `"unknown"`).
+
+Example after change:
+
+```lua
+-- Data/Skyreach.lua
+ns.AbilityDB[76132] = {
+    mobClass    = "WARRIOR",
+    mobCategory = "warrior",   -- Soaring Chakram Master: melee-focused mob
+    abilities = {
+        { spellID = 1254666, defaultEnabled = false },
+    },
+}
+
+ns.AbilityDB[79462] = {
+    mobClass    = "WARRIOR",
+    mobCategory = "caster",    -- Blinding Sun Priestess: cast-heavy healer
+    abilities = {
+        { spellID = 152953,  defaultEnabled = false },
+        { spellID = 1273356, defaultEnabled = false },
+    },
+}
+```
+
+The set of valid category values is: `boss`, `miniboss`, `caster`, `warrior`, `rogue`, `trivial`, `unknown`. No enum or validation table is required in Lua — data authors are responsible for correct values. A comment at the top of each categorized data file listing valid values is sufficient documentation.
+
+---
+
+## System Overview (v0.1.1 delta)
 
 ```
-Libs\load_libs.xml
-Core.lua
-Engine\Scheduler.lua
-Engine\NameplateScanner.lua
-Engine\CombatWatcher.lua
-Display\IconDisplay.lua
-Import\Decode.lua
-Data\DungeonEnemies.lua
-Data\WindrunnerSpire.lua
-Data\SeatOfTheTriumvirate.lua
-Data\AlgetharAcademy.lua
-Data\PitOfSaron.lua
-Data\Skyreach.lua
-Data\MagistersTerrace.lua
-Data\MaisaraCaverns.lua
-Data\NexusPointXenas.lua
-Data\MurderRow.lua
-Import\Pipeline.lua
-UI\PackFrame.lua
-UI\ConfigFrame.lua
+NAME_PLATE_UNIT_ADDED
+    → Scanner:OnNameplateAdded(unitToken)
+    → UnitCanAttack, UnitClass, UnitClassification,    ← new: 3 extra API calls
+      UnitIsLieutenant, UnitEffectiveLevel
+    → plateCache[unitToken] = { hostile, classBase,
+                                classification,        ← new fields
+                                isLieutenant,
+                                effectiveLevel }
+
+Tick() every 0.25s — unchanged hot path
+    → count hostile in-combat mobs by classBase        ← unchanged
+    → when new classBase first seen:
+        DeriveCategory(cached) → activeCategoryByClass ← new (once per session)
+    → OnMobsAdded(classBase, delta)
+        → per-ability: mobClass match + category filter ← new filter
+        → spawn timer or static icon (unchanged)
+
+Pipeline.BuildPack()
+    → MergeSkillConfig(npcID, ability, mobClass)
+    → merged.mobCategory = entry.mobCategory or "unknown"  ← new field
+
+ConfigFrame.PopulateRightPanel(npcID)
+    → header shows: "MobName - CLASS [category]"           ← new label
 ```
 
 ---
 
 ## Data Flows
 
-### Import Flow (per-dungeon, v0.1.0)
+### Category Read Path
 
 ```
-User pastes MDT string in popup
-    → Import.RunFromString(str)
-    → ns.MDTDecode(str)                         -- Decode.lua: unchanged
-    → Import.RunFromPreset(preset)              -- Pipeline.lua
-    → dungeonKey = dungeonInfo.key              -- e.g. "windrunner_spire"
-    → for each pull: BuildPack(pullIdx, pullData, dungeonIdx)
-        → ns.AbilityDB[npcID]                   -- already loaded by Data/*.lua
-        → MergeSkillConfig(npcID, ability)      -- applies ns.db.skillConfig overrides
-    → ns.PackDatabase[dungeonKey] = packs
-    → ns.db.importedRoutes[dungeonKey] = {...}
-    → CombatWatcher:SelectDungeon(dungeonKey)
-    → PackUI:Refresh()
+Data/Skyreach.lua (load time)
+    → ns.AbilityDB[npcID].mobCategory = "caster"
+
+Import.BuildPack() → MergeSkillConfig()
+    → merged.mobCategory = "caster"
+    → packed into activePack.abilities[n].mobCategory
+
+NameplateScanner:OnMobsAdded(classBase, delta)
+    → ability.mobCategory == "caster"
+    → activeCategoryByClass["WARRIOR"] == "caster"   (derived from UnitClassification)
+    → filter passes → spawn icon
 ```
 
-### Login Restore Flow (multi-dungeon)
+### Unknown Wildcard Path
 
 ```
-ADDON_LOADED fires → Import.RestoreFromSaved()
-    → for dungeonKey, saved in pairs(ns.db.importedRoutes or {}) do
-        → ns.PackDatabase[dungeonKey] = saved.packs
-    → CombatWatcher:Reset() -- selects zone dungeon or first available route
-    → PackUI:Refresh()
+Data/WindrunnerSpire.lua (load time)
+    → ns.AbilityDB[232070].mobCategory = nil (absent)
+
+Pipeline → merged.mobCategory = "unknown"
+
+NameplateScanner:OnMobsAdded
+    → ability.mobCategory == "unknown"
+    → wildcard: skip filter entirely → spawn icon regardless of runtime category
 ```
 
-### Zone Auto-Switch Flow
+### Category Display Path
 
 ```
-PLAYER_ENTERING_WORLD fires → CombatWatcher:Reset()
-    → GetInstanceInfo() → instanceName
-    → ZONE_DUNGEON_MAP[instanceName] → dungeonKey (e.g. "windrunner_spire")
-    → if ns.PackDatabase[dungeonKey] then
-        → CombatWatcher:SelectDungeon(dungeonKey)
-    → PackUI:Refresh()
-```
-
-### Config→Display Pipeline
-
-```
-ConfigFrame: user edits skill setting
-    → ns.db.skillConfig[npcID][spellID].label = "NEW"
-    ↓
-(Next import or route rebuild)
-Pipeline.BuildPack() calls MergeSkillConfig()
-    → merged ability has updated label
-    → ns.PackDatabase[dungeonKey] updated
-    ↓
-Scheduler.StartAbility(ability, barId)
-    → IconDisplay.ShowIcon(barId, spellID, ttsMessage, duration, label)
-    → slot.soundFile = ability.soundFile
-    ↓
-At pre-warning time: IconDisplay.SetUrgent(barId)
-    → ShowGlow(slot) + TrySpeak(ttsMessage) + PlaySoundFile(soundFile)
-```
-
-### Cast Detection Flow (untimed abilities)
-
-```
-NameplateScanner:Tick() every 0.25s
-    → for each hostile nameplate:
-        → for each untimed ability matching mob class and staticShown:
-            → UnitCastingInfo(npUnit) → [..., spellID at index 9]
-            → if spellID matches ability.spellID:
-                → castHighlightActive[ability.spellID] = true
-                → IconDisplay.SetCastHighlight("static_" .. spellID)
-            → else if was highlighted:
-                → castHighlightActive[ability.spellID] = nil
-                → IconDisplay.ClearCastHighlight("static_" .. spellID)
+User opens ConfigFrame, selects a mob
+    → PopulateRightPanel(npcID)
+    → ns.AbilityDB[npcID].mobCategory = "caster" (or nil → "unknown")
+    → headerNameStr:SetText("Blinding Sun Priestess - WARRIOR [caster]")
 ```
 
 ---
 
 ## Component Build Order
 
-Build in this order to avoid blocked work:
+Build in this order to respect dependencies:
 
-1. **Data/*.lua for 8 remaining dungeons** — pure data, no code dependencies. Can be done entirely from MDT source at `C:\Users\jonat\Repositories\MythicDungeonTools`. Unblocks all dungeon ability coverage.
+**Step 1: Data/Skyreach.lua — Add mobCategory fields**
+- Pure data change. No code dependencies.
+- Adds `mobCategory` to all Skyreach npcID entries.
+- Unblocks visual verification in ConfigFrame header once Step 5 is done.
+- Can be done independently of all other steps.
 
-2. **IconDisplay.lua highlight rework** — add `SetCastHighlight`, `ClearCastHighlight`, sound playback, `soundFile` parameter to `ShowStaticIcon`. No upstream dependencies on other changes. Unblocks step 3.
+**Step 2: Engine/NameplateScanner.lua — Extend plateCache**
+- Add `classification`, `isLieutenant`, `effectiveLevel` fields in `OnNameplateAdded`.
+- Add `activeCategoryByClass` table, populated in `Tick()` on first mob sighting.
+- Add `DeriveCategory(cached)` local helper.
+- Wipe `activeCategoryByClass` in `Stop()`.
+- No upstream dependencies. Does not break existing behavior (new fields ignored until Step 3).
 
-3. **NameplateScanner.lua cast detection** — extend `Tick()` with UnitCastingInfo polling, `castHighlightActive` tracking. Depends on `SetCastHighlight` / `ClearCastHighlight` existing in IconDisplay (step 2). Also pass `soundFile` to `ShowStaticIcon` in `OnMobsAdded`.
+**Step 3: Engine/NameplateScanner.lua — Category filter in OnMobsAdded**
+- Add category check in `OnMobsAdded` using `activeCategoryByClass`.
+- Requires Step 2 (activeCategoryByClass must exist).
+- Requires Step 4 (abilities must carry `mobCategory` field, or falls back to "unknown" wildcard).
+- Safe to ship with "unknown" only until Step 4 is complete — all wildcards pass.
 
-4. **Pipeline.lua per-dungeon key + skillConfig merge** — change "imported" to `dungeonKey`, `importedRoute` to `importedRoutes` map, add `MergeSkillConfig` helper. Depends on knowing the skillConfig schema (defined here, no code dependency). Unblocks step 5 and step 7.
+**Step 4: Import/Pipeline.lua — Propagate mobCategory in MergeSkillConfig**
+- Add `mobCategory = entry.mobCategory or "unknown"` to merged ability table.
+- No upstream code dependencies (reads from AbilityDB which is always loaded before Pipeline).
+- Must be complete before Step 3 filtering is meaningful for non-unknown categories.
 
-5. **CombatWatcher.lua zone map expansion + auto-switch** — expand `ZONE_DUNGEON_MAP` to all 9 dungeons, update `Reset()` to auto-select from `importedRoutes`. Depends on Pipeline writing per-dungeon keys (step 4).
+**Step 5: UI/ConfigFrame.lua — Show category in mob header**
+- Change one line in `PopulateRightPanel`.
+- No dependencies beyond Step 1 (needs data to show something other than "unknown").
+- Can ship as pure "unknown" labels even before Step 1 without breaking anything.
 
-6. **Core.lua updates** — add `ZONE_CHANGED_NEW_AREA` event registration if needed (may be covered by existing `PLAYER_ENTERING_WORLD`), add `/tpw config` slash command. Depends on ConfigFrame existing (step 7).
+**Correct sequential order: 2 → 4 → 1 → 3 → 5**
 
-7. **ConfigFrame.lua** — new file. Reads `ns.AbilityDB` (step 1 ensures all dungeons populated) and `ns.db.skillConfig`. Writes skillConfig on change. Depends on AbilityDB data (step 1) and skillConfig schema (step 4).
-
-8. **PackFrame.lua dungeon selector + mob count** — UI polish. Depends on per-dungeon PackDatabase keys (step 4) being in place and `importedRoutes` map being the source of truth.
+Rationale:
+- Step 2 before 3: scanner state must exist before filter can use it.
+- Step 4 before 3: merged abilities must carry the field before filter can read it.
+- Step 1 before 3 activation: without real category data, all filters pass via wildcard — this is safe, but the feature is a no-op until Skyreach data has values.
+- Step 5 last: purely cosmetic, no functional dependency.
 
 ---
 
@@ -523,68 +373,65 @@ Build in this order to avoid blocked work:
 
 | Boundary | Communication | Notes |
 |----------|---------------|-------|
-| Data/*.lua → Pipeline | `ns.AbilityDB[npcID]` populated at load time | Read-only after load; Pipeline is the only reader at runtime |
-| Pipeline → PackDatabase | `ns.PackDatabase[dungeonKey] = packs` | Single writer; CombatWatcher, PackFrame read only |
-| Pipeline → SavedVariables | `ns.db.importedRoutes[dungeonKey]` | Pipeline owns importedRoutes; ConfigFrame owns skillConfig |
-| ConfigFrame → SavedVariables | `ns.db.skillConfig[npcID][spellID]` | ConfigFrame is the only writer; Pipeline reads at build time |
-| NameplateScanner → IconDisplay | `SetCastHighlight` / `ClearCastHighlight` by instanceKey | Scanner owns cast state; IconDisplay owns visual state |
-| Scheduler → IconDisplay | `SetUrgent` by barId | Scheduler owns timer state; IconDisplay owns visual state |
-| PackFrame → CombatWatcher | `SelectDungeon(key)`, `SelectPack(key, idx)` | PackFrame never writes to PackDatabase directly |
-| CombatWatcher → NameplateScanner + Scheduler | `Start(pack)`, `Stop()` | CombatWatcher orchestrates; Scanner and Scheduler are driven |
+| Data/Skyreach.lua → Pipeline | `ns.AbilityDB[npcID].mobCategory` read in `MergeSkillConfig` | Read-only; Pipeline is sole consumer at build time |
+| Pipeline → NameplateScanner | `ability.mobCategory` in merged pack abilities | Scanner reads field; never writes it |
+| NameplateScanner → plateCache | `classification`, `isLieutenant`, `effectiveLevel` cached at event | Hot loop reads cache; no API calls per tick for these fields |
+| NameplateScanner → activeCategoryByClass | Derived once per classBase per session from `DeriveCategory(cached)` | Internal scanner state; wiped at `Stop()` |
+| AbilityDB → ConfigFrame | `ns.AbilityDB[npcID].mobCategory` read directly in `PopulateRightPanel` | Display only; no write path |
 
 ---
 
 ## Anti-Patterns
 
-### Anti-Pattern 1: Storing full ability copies in skillConfig
+### Anti-Pattern 1: Deriving combat role (caster/warrior/rogue) from WoW APIs alone
 
-**What people do:** Save the complete merged ability object — including name, spellID, mobClass, timers — in `ns.db.skillConfig`.
+**What people do:** Attempt to infer `"caster"` vs `"warrior"` from `UnitClassification` or `UnitEffectiveLevel` without hardcoded data.
 
-**Why it's wrong:** SavedVariables bloats. Any change to AbilityDB defaults does not propagate because stale copies shadow the new defaults. Debugging shows outdated data from old sessions.
+**Why it's wrong:** WoW's classification API only exposes rarity/power tier (elite, rare, boss). It has no concept of combat role. `UnitClassBase` returns the WoW class string (e.g., `"MAGE"`), which correlates with role but is unreliable for NPCs — many trash mobs use `"WARRIOR"` regardless of actual combat role. There is no API that returns "this mob is a caster" reliably.
 
-**Do this instead:** Store only user-modified fields (label override, TTS override, sound selection, enabled flag). Defaults stay in AbilityDB and are merged at build time.
+**Do this instead:** Hardcode `mobCategory` in AbilityDB for dungeons where accurate filtering matters. Leave others as `"unknown"` (wildcard) until someone verifies in-game.
 
-### Anti-Pattern 2: Keeping "imported" as the single PackDatabase key
+### Anti-Pattern 2: Polling category APIs in the hot Tick() loop
 
-**What people do:** Leave `ns.PackDatabase["imported"]` as the only key, treating the dungeon selector as a UI-only concept that reads from "imported".
+**What people do:** Call `UnitClassification(npUnit)` every tick for each nameplate.
 
-**Why it's wrong:** Two dungeon routes cannot coexist. Auto-switch on zone-in has nowhere to write an incoming dungeon without overwriting the existing route. The "imported" key is semantically wrong once per-dungeon storage is the goal.
+**Why it's wrong:** Classification is stable for a given NPC — it never changes mid-combat. Calling it every 0.25s is pure waste. At 20 nameplates this adds 20 API calls per tick for no benefit.
 
-**Do this instead:** Use `dungeonInfo.key` (e.g. `"windrunner_spire"`) as the PackDatabase key from the start. The "imported" key is retired in this milestone.
+**Do this instead:** Cache `classification`, `isLieutenant`, `effectiveLevel` in `plateCache` at `NAME_PLATE_UNIT_ADDED` — exactly where `hostile` and `classBase` are already cached. Derive category once when the classBase is first seen in combat; store in `activeCategoryByClass`.
 
-### Anti-Pattern 3: Separate ticker for cast detection
+### Anti-Pattern 3: Making mobCategory user-editable
 
-**What people do:** Add a second `C_Timer.NewTicker` in NameplateScanner for UnitCastingInfo polling at a shorter interval (e.g. 0.1s).
+**What people do:** Add a dropdown in ConfigFrame for users to override the mob category.
 
-**Why it's wrong:** Doubles nameplate API iteration. The existing 0.25s ticker is sufficient for cast detection — cast times are 1.5s minimum, so 0.25s lag is imperceptible.
+**Why it's wrong:** Category is a factual property of the NPC used for alert filtering. User overrides create a support surface ("why aren't my alerts firing?") and SavedVariables writes with no clear benefit. Users cannot verify category by inspection — it requires in-game testing with each mob type.
 
-**Do this instead:** Add UnitCastingInfo calls inside the body of the existing `Tick()`, gated on `activePack` having untimed abilities.
+**Do this instead:** Display category as read-only text in the mob header. Category changes go through a new addon version, not user config.
 
-### Anti-Pattern 4: Matching casts by spell name string
+### Anti-Pattern 4: Storing mobCategory in per-ability entries rather than per-npcID entries
 
-**What people do:** Compare `UnitCastingInfo()` return value (the spell name string) against `ability.name` stored in AbilityDB.
+**What people do:** Add `mobCategory` to each ability in the `abilities` array:
 
-**Why it's wrong:** `ability.name` is a developer-chosen English label. `UnitCastingInfo()` returns the localized spell name from the game client. Non-English clients break the match.
+```lua
+ns.AbilityDB[79462] = {
+    mobClass = "WARRIOR",
+    abilities = {
+        { spellID = 152953, mobCategory = "caster", defaultEnabled = false },
+    },
+}
+```
 
-**Do this instead:** Use `UnitCastingInfo()` return value index 9, which is the numeric spellID — locale-independent. AbilityDB already stores `spellID`. Compare numerically.
+**Why it's wrong:** Category is a property of the mob (npcID), not the ability (spellID). All abilities from the same mob share the same category. Duplicating it per-ability is redundant and creates inconsistency risk if one ability is accidentally given a different category.
 
-### Anti-Pattern 5: Eager ConfigFrame construction at file load
-
-**What people do:** Build all ConfigFrame widgets at file-scope in ConfigFrame.lua, mirroring the PackFrame pattern.
-
-**Why it's wrong:** Config UI is opened rarely. Creating dozens of nested frames at ADDON_LOADED wastes memory and login time.
-
-**Do this instead:** Build the config frame lazily on first `ConfigFrame.Open()` call using `if not configFrame then ... build ... end` at the top of the open function.
+**Do this instead:** `mobCategory` lives on the npcID entry. Pipeline reads `entry.mobCategory` once per npcID and copies it to all merged abilities.
 
 ---
 
 ## Sources
 
-- Direct source code analysis — all 10 Lua files in TerriblePackWarnings v0.0.4, read 2026-03-17
-- `TerriblePackWarnings.toc` — load order, read 2026-03-17
-- `.planning/PROJECT.md` — milestone requirements, read 2026-03-17
-- WoW API: `UnitCastingInfo` return value at index 9 is numeric spellID — confirmed stable, available since classic era, unchanged in Midnight
+- Direct source analysis: `Engine/NameplateScanner.lua`, `Import/Pipeline.lua`, `UI/ConfigFrame.lua`, `Data/Skyreach.lua`, `Data/WindrunnerSpire.lua` — read 2026-03-23
+- `.planning/PROJECT.md` — v0.1.1 milestone requirements, read 2026-03-23
+- WoW API: `UnitClassification`, `UnitIsLieutenant`, `UnitEffectiveLevel` return values — stable non-secret Midnight APIs, confirmed available for nameplate units at `NAME_PLATE_UNIT_ADDED`
 
 ---
-*Architecture research for: TerriblePackWarnings v0.1.0 — configuration UI, ability data, cast detection, per-dungeon routes*
-*Researched: 2026-03-17*
+*Architecture research for: TerriblePackWarnings v0.1.1 — per-mob category system integration*
+*Researched: 2026-03-23*

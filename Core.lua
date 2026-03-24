@@ -13,6 +13,7 @@ frame:RegisterEvent("PLAYER_REGEN_DISABLED")
 frame:RegisterEvent("PLAYER_REGEN_ENABLED")
 frame:RegisterEvent("NAME_PLATE_UNIT_ADDED")
 frame:RegisterEvent("NAME_PLATE_UNIT_REMOVED")
+frame:RegisterEvent("UNIT_CLASSIFICATION_CHANGED")
 
 frame:SetScript("OnEvent", function(self, event, ...)
     if event == "ADDON_LOADED" then
@@ -88,6 +89,10 @@ frame:SetScript("OnEvent", function(self, event, ...)
     elseif event == "NAME_PLATE_UNIT_REMOVED" then
         local unitToken = ...
         ns.NameplateScanner:OnNameplateRemoved(unitToken)
+
+    elseif event == "UNIT_CLASSIFICATION_CHANGED" then
+        local unitToken = ...
+        ns.NameplateScanner:OnClassificationChanged(unitToken)
     end
 end)
 

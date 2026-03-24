@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.1.1 — Adding Mob Categories
+
+- Per-mob category system: boss, miniboss, caster, warrior, rogue, trivial
+- Mobs are now detected and matched by their category at runtime
+- Color-coded category tags in the config window (e.g., [Boss], [Caster])
+- Search by category in the config window (e.g., type "boss" or "caster")
+- All 8 Midnight S1 dungeons fully categorized from in-game verification
+- Unverified mobs treated as wildcards so you never miss a warning
+
 ## v0.1.0 — Configuration and Skill Data
 
 - Configuration window for browsing all dungeon mobs and their skills

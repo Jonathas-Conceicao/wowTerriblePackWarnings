@@ -3,11 +3,13 @@ local addonName, ns = ...
 ns.AbilityDB = ns.AbilityDB or {}
 
 -- Pit of Saron ability database
--- Keyed by npcID; mobClass defaults to WARRIOR, abilities from MDT spells
+-- Keyed by npcID
+-- mobCategory: semantic role — "boss"|"miniboss"|"caster"|"warrior"|"rogue"|"trivial"|"unknown"
+--   (not to be confused with the runtime WoW class token e.g. "WARRIOR"; that is never stored here)
 
 -- Deathwhisper Necrolyte (252551)
 ns.AbilityDB[252551] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1258448, defaultEnabled = false },
     },
@@ -15,7 +17,7 @@ ns.AbilityDB[252551] = {
 
 -- Risen Soldier (252602)
 ns.AbilityDB[252602] = {
-    mobClass = "WARRIOR",
+    mobCategory = "trivial",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1258451, defaultEnabled = false },
     },
@@ -23,7 +25,7 @@ ns.AbilityDB[252602] = {
 
 -- Arcanist Cadaver (252603)
 ns.AbilityDB[252603] = {
-    mobClass = "WARRIOR",
+    mobCategory = "trivial",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1258448, defaultEnabled = false },
         { spellID = 1271479, defaultEnabled = false },
@@ -32,7 +34,7 @@ ns.AbilityDB[252603] = {
 
 -- Gloombound Shadebringer (252567)
 ns.AbilityDB[252567] = {
-    mobClass = "WARRIOR",
+    mobCategory = "caster",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1258431, defaultEnabled = false },
     },
@@ -40,7 +42,7 @@ ns.AbilityDB[252567] = {
 
 -- Quarry Tormentor (252561)
 ns.AbilityDB[252561] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1258433, defaultEnabled = false },
         { spellID = 1258434, defaultEnabled = false },
@@ -49,7 +51,7 @@ ns.AbilityDB[252561] = {
 
 -- Dreadpulse Lich (252563)
 ns.AbilityDB[252563] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1258798, defaultEnabled = false },
         { spellID = 1258802, defaultEnabled = false },
@@ -61,7 +63,7 @@ ns.AbilityDB[252563] = {
 
 -- Rotting Ghoul (252558)
 ns.AbilityDB[252558] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1258459, defaultEnabled = false },
     },
@@ -69,7 +71,7 @@ ns.AbilityDB[252558] = {
 
 -- Ymirjar Graveblade (252610)
 ns.AbilityDB[252610] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1258439, defaultEnabled = false },
         { spellID = 1258445, defaultEnabled = false },
@@ -81,15 +83,18 @@ ns.AbilityDB[252610] = {
 
 -- Leaping Geist (252559)
 ns.AbilityDB[252559] = {
-    mobClass = "WARRIOR",
+    mobCategory = "trivial",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1258464, defaultEnabled = false },
     },
 }
 
+-- Mindless Laborer (252557)
+ns.AbilityDB[252557] = { mobCategory = "trivial", abilities = {} }
+
 -- Plungetalon Gargoyle (252606)
 ns.AbilityDB[252606] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1258997, defaultEnabled = false },
         { spellID = 1271543, defaultEnabled = false },
@@ -98,7 +103,7 @@ ns.AbilityDB[252606] = {
 
 -- Lumbering Plaguehorror (252555)
 ns.AbilityDB[252555] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1259116, defaultEnabled = false },
         { spellID = 1259132, defaultEnabled = false },
@@ -107,7 +112,7 @@ ns.AbilityDB[252555] = {
 
 -- Iceborn Proto-Drake (257190)
 ns.AbilityDB[257190] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1271009, defaultEnabled = false },
         { spellID = 1278986, defaultEnabled = false },
@@ -116,7 +121,7 @@ ns.AbilityDB[257190] = {
 
 -- Wrathbone Enforcer (252565)
 ns.AbilityDB[252565] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1258435, defaultEnabled = false },
     },
@@ -124,7 +129,7 @@ ns.AbilityDB[252565] = {
 
 -- Rimebone Coldwraith (252566)
 ns.AbilityDB[252566] = {
-    mobClass = "WARRIOR",
+    mobCategory = "caster",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1258436, defaultEnabled = false },
         { spellID = 1258437, defaultEnabled = false },
@@ -133,7 +138,7 @@ ns.AbilityDB[252566] = {
 
 -- Glacieth (252564)
 ns.AbilityDB[252564] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1259188, defaultEnabled = false },
         { spellID = 1259202, defaultEnabled = false },
@@ -145,7 +150,7 @@ ns.AbilityDB[252564] = {
 
 -- Krick (252621)
 ns.AbilityDB[252621] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1264027, defaultEnabled = false },
         { spellID = 1264246, defaultEnabled = false },
@@ -158,7 +163,7 @@ ns.AbilityDB[252621] = {
 
 -- Ick (252625)
 ns.AbilityDB[252625] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1264287, defaultEnabled = false },
         { spellID = 1264299, defaultEnabled = false },
@@ -171,7 +176,7 @@ ns.AbilityDB[252625] = {
 
 -- Forgemaster Garfrost (252635)
 ns.AbilityDB[252635] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1261299, defaultEnabled = false },
         { spellID = 1261315, defaultEnabled = false },
@@ -188,7 +193,7 @@ ns.AbilityDB[252635] = {
 
 -- Scourgelord Tyrannus (252648)
 ns.AbilityDB[252648] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1262582, defaultEnabled = false },
         { spellID = 1262596, defaultEnabled = false },
@@ -202,7 +207,7 @@ ns.AbilityDB[252648] = {
 
 -- Rimefang (252653)
 ns.AbilityDB[252653] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1262739, defaultEnabled = false },
         { spellID = 1262745, defaultEnabled = false },
@@ -213,9 +218,15 @@ ns.AbilityDB[252653] = {
     },
 }
 
+-- Rotling (254684)
+ns.AbilityDB[254684] = {
+    mobCategory = "trivial",  -- semantic role; see header for vocabulary
+    abilities = {},
+}
+
 -- Scourge Plaguespreader (254691)
 ns.AbilityDB[254691] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1262941, defaultEnabled = false },
         { spellID = 1263000, defaultEnabled = false },
@@ -224,10 +235,9 @@ ns.AbilityDB[254691] = {
 
 -- Shade of Krick (255037)
 ns.AbilityDB[255037] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1264186, defaultEnabled = false },
         { spellID = 1271678, defaultEnabled = false },
     },
 }
-

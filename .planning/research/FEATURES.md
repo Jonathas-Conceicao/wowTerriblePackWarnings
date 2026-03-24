@@ -1,396 +1,292 @@
 # Feature Research
 
-**Domain:** WoW Mythic+ addon — configuration UI, ability data population, cast detection, sound alerts, per-dungeon route management
-**Researched:** 2026-03-17
-**Confidence:** HIGH (sourced directly from wow-ui-source and MythicDungeonTools repositories)
+**Domain:** WoW Mythic+ addon — per-mob category system (boss, miniboss, caster, warrior, rogue, trivial, unknown)
+**Researched:** 2026-03-23
+**Confidence:** HIGH (sourced from wow-ui-source API documentation, Blizzard_NamePlates Lua, and existing TPW codebase)
 
 ---
 
-## Feature Area 1: Configuration Panel (Dungeon → Mob → Skill Hierarchy)
+## Scope
 
-### How WoW addons do per-spell config trees
+This document covers features needed for v0.1.1: adding a per-mob category system with runtime detection and alert filtering. Features already shipped in v0.1.0 are not repeated here.
 
-**Pattern source:** Blizzard_CooldownViewer (`CooldownViewerSettings.lua`, `CooldownViewerSettingsAlerts.lua`)
+---
 
-CDM (Cooldown Manager) in Midnight uses a three-layer hierarchy:
-1. Top-level: category list (spells by type/class, collapsible with `SetCollapsed`)
-2. Mid-level: spell/cooldown item row (icon, name, drag-to-reorder)
-3. Detail panel: slides in to the right (`SetPoint("TOPLEFT", owner, "TOPRIGHT", ...)`) for per-spell alert editing
+## Feature Area 1: Category Assignment in Data Files
 
-Key patterns observed:
-- The edit panel is a separate frame docked to the right, not inline with the list. It opens when a row is clicked.
-- Per-cooldown alerts support multiple entries (one spell can have several alerts).
-- Alert type is picked first (Sound vs Visual), then event type (available/expiring), then payload (which sound).
-- CDM stores enum integers (`CooldownViewerSound.*`) not soundKitIDs — soundKitIDs are in the data table for playback only.
+### How category data is structured in M+ addons
 
-For TPW, the appropriate simplification is a flat tree inside a scrollable list:
-- Level 1: Dungeon name (read-only header, built from AbilityDB keys)
-- Level 2: Mob name row (collapsible)
-- Level 3: Skill row with inline controls (checkbox, label EditBox, TTS EditBox, sound dropdown)
+**Observed patterns:**
+- MDT stores `isBoss = true` as a boolean flag per enemy entry. No miniboss, caster, or role-based categories exist in MDT's schema. MDT distinguishes only boss vs. non-boss.
+- BigWigs/LittleWigs hardcode per-ability timers per encounter but do not expose a "mob category" concept for filtering trash abilities. Every tracked trash mob gets its abilities tracked unconditionally.
+- TPW's existing `AbilityDB` uses `mobClass` (a WoW class string like `"WARRIOR"`) per npcID for nameplate matching. This is a runtime detection key, not a semantic category.
 
-This avoids the CDM slide-out panel complexity while matching the expected WoW addon config UX. WeakAuras uses a similar inline-row approach for aura-per-aura settings.
+**The gap:** No existing M+ addon system provides what TPW needs — a semantic category per mob that controls which alert rules apply. This is a novel feature for TPW. The design space is well-understood from first principles.
 
-**Complexity note:** Tree rendering with a flat pool of reusable frames (like DBM option rows) is the pattern. Avoid ScrollingMessageFrame — use a manual ScrollFrame with a frame pool.
+**Recommended design:** Add a `category` field to each npcID entry in the AbilityDB data files alongside `mobClass`. The category is a hardcoded string set by the addon author, never user-editable.
+
+```lua
+-- Example entry with category
+ns.AbilityDB[76132] = {
+    mobClass = "WARRIOR",
+    category = "caster",   -- NEW: semantic role
+    abilities = { ... },
+}
+```
+
+**Category vocabulary (7 values):**
+- `"boss"` — final encounter boss, spawns encounter-level mechanics
+- `"miniboss"` — lieutenant-tier mob, higher health, dangerous abilities worth dedicated focus
+- `"caster"` — ranged spellcaster, priority interrupt target
+- `"warrior"` — melee DPS mob, front-line threat
+- `"rogue"` — melee mob with evasion/stealth/stun abilities
+- `"trivial"` — low-threat mob, abilities rarely lethal (adds, totems, summoned minions)
+- `"unknown"` — not yet categorized (default for all dungeons except the pilot)
+
+**Warrior/rogue split rationale:** The melee subtype distinction has concrete filtering value. A rogue-category mob signals "expect stuns, step out of AoE, watch for stealth re-entry" whereas a warrior-category mob signals "interrupt the big swing, face away." Collapsing both to `"melee"` loses this signal. The cost is one extra string value in the vocabulary — low.
 
 ### Table Stakes (Users Expect These)
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Per-skill enable/disable checkbox | Every WoW config addon supports disabling individual alerts | LOW | Boolean stored per (npcID, spellID) in SavedVariables |
-| Custom label per skill | WeakAuras, DBM all let users rename displayed text | LOW | EditBox, stored as string override on top of default name |
-| Keyboard-accessible EditBoxes | WoW addons that trap keys must handle escape/enter | LOW | `EditBox:SetScript("OnEscapePressed", ...)` pattern |
-| Settings persist across sessions | SavedVariables pattern — users expect zero re-config per session | LOW | Write to `TerriblePackWarningsDB` on change |
-| Visual scan of all skills at once | Users want to see what's configured for a dungeon without clicking per-mob | MEDIUM | Scrollable list with all mobs and skills visible |
+| `category` field on every npcID in AbilityDB | Without a category field there is nothing to filter on at runtime | LOW | Add field to each entry; default `"unknown"` requires no entry at all (reader falls back) |
+| `"unknown"` is the default (not `nil` crash) | Addon must handle un-categorized mobs gracefully | LOW | Read as `entry.category or "unknown"` everywhere; no crash path |
+| All dungeons default to `"unknown"` except pilot dungeon | Shipping partial data is better than inaccurate data | LOW | Only Skyreach categorized in v0.1.1; all others remain `"unknown"` |
 
 ### Differentiators (Competitive Advantage)
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| TTS text override per skill | Per-skill TTS callout ("big hit!", "move!") is unique to TPW | LOW | EditBox alongside label field, passed to C_VoiceChat.SpeakText |
-| Sound dropdown per skill (CDM-style) | Familiar UX from built-in CDM, skill-level granularity | MEDIUM | See Feature Area 2 for sound list |
-| Dungeon → Mob → Skill collapsible tree | Organized hierarchy vs flat lists in most addons | MEDIUM | Frame pool + toggle logic |
+| Warrior/rogue melee subtype split | Finer-grained filtering than "melee vs. caster" | LOW | One extra string value; pay-off in filtering precision |
+| Category visible in config UI | Players can see what category each mob is without knowing WoW internals | LOW | Read-only display field in mob header; see Feature Area 4 |
 
-### Anti-Features
-
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| Global mute toggle in config | "Disable all sounds fast" seems useful | Creates confusion when sounds return unexpectedly; users forget state | Per-skill checkbox; CombatWatcher already handles idle state |
-| Import/export config profiles | Power users want to share settings | Adds serialization complexity and a separate UI surface before core works | Defer to future milestone; SavedVariables portability is a v2 concern |
-| In-config sound preview button | CDM does this (play sample button per row) | Requires PlaySound call from UI context — works but adds frame-per-row complexity | Add as P2 enhancement after dropdown works |
-
----
-
-## Feature Area 2: Sound Alert System
-
-### CDM sound pattern (verified from wow-ui-source)
-
-**Source files:** `CooldownViewerSoundAlertData.lua`, `CooldownViewerSettingsConstants.lua`, `CooldownViewerSettingsAlerts.lua`
-
-CDM organizes sounds into 6 named categories using a nested table (`CooldownViewerSoundData`). Each entry has:
-- `soundEnum` — integer constant from `CooldownViewerSound` enum (stable, never changes)
-- `soundKitID` — the WoW internal ID used with `PlaySound`
-- `text` — localized display string
-
-The dropdown is built recursively from this table using `BuildSoundMenus`, which creates nested submenus for each category. A "play sample" utility button is attached to each row via `MenuTemplates.AttachUtilityButton`.
-
-For TPW, the sound dropdown should use the same `soundKitID` values directly via `PlaySound(soundKitID, "Master")`. There is no need to replicate the CDM enum layer — TPW can store `soundKitID` integers directly in SavedVariables.
-
-### Sound Library — All CDM Sounds with SoundKitIDs
-
-**Category: Animals (10 sounds)**
-
-| Name | soundKitID |
-|------|-----------|
-| Cat | 316401 |
-| Chicken | 316406 |
-| Cow | 316407 |
-| Gnoll | 316409 |
-| Goat | 316715 |
-| Lion | 316411 |
-| Panther | 316412 |
-| Rattlesnake | 316413 |
-| Sheep | 316414 |
-| Wolf | 316415 |
-
-**Category: Devices (11 sounds)**
-
-| Name | soundKitID |
-|------|-----------|
-| Boat Horn | 316442 |
-| Air Horn | 316436 |
-| Bike Horn | 316713 |
-| Cash Register | 316446 |
-| Jackpot Bell | 316717 |
-| Jackpot Coins | 316718 |
-| Jackpot Fail | 316719 |
-| Rotary Phone Dial | 316433 |
-| Rotary Phone Ring | 316492 |
-| Stove Pipe | 316425 |
-| Trashcan Lid | 316430 |
-
-**Category: Impacts (10 sounds)**
-
-| Name | soundKitID |
-|------|-----------|
-| Anvil Strike | 316528 |
-| Bubble Smash | 316419 |
-| Low Thud | 316531 |
-| Metal Clanks | 316532 |
-| Metal Rattle | 316486 |
-| Metal Scrape | 316484 |
-| Metal Warble | 316536 |
-| Pop Click | 316434 |
-| Strange Clang | 316453 |
-| Sword Scrape | 316535 |
-
-**Category: Instruments (12 sounds)**
-
-| Name | soundKitID |
-|------|-----------|
-| Bell Ring | 316493 |
-| Bell Trill | 316712 |
-| Brass | 316722 |
-| Chime Ascending | 316447 |
-| Guitar Chug | 316477 |
-| Guitar Pinch | 316482 |
-| Pitch Pipe Distressed | 316509 |
-| Pitch Pipe Note | 316501 |
-| Synth Big | 316540 |
-| Synth Buzz | 316476 |
-| Synth High | 316460 |
-| Warhorn | 316723 |
-
-**Category: War2 (12 sounds)**
-
-| Name | soundKitID |
-|------|-----------|
-| Abstract Whoosh | 316731 |
-| Choir | 316733 |
-| Construction | 316735 |
-| Magic Chimes | 316736 |
-| Pig Squeal | 316745 |
-| Saws | 316738 |
-| Seal | 316746 |
-| Slow | 316748 |
-| Smith | 316749 |
-| Synth Stinger | 316739 |
-| Trumpet Rally | 316740 |
-| Zippy Magic | 316737 |
-
-**Category: War3 (12 sounds)**
-
-| Name | soundKitID |
-|------|-----------|
-| Bell | 316773 |
-| Crunchy Bell | 316774 |
-| Drum Splash | 316768 |
-| Error | 316775 |
-| Fanfare | 316769 |
-| Gate Open | 316776 |
-| Gold | 316770 |
-| Magic Shimmer | 316778 |
-| Ringout | 316771 |
-| Rooster | 316765 |
-| Shimmer Bell | 316779 |
-| Wolf Howl | 316766 |
-
-**Recommended defaults for TPW:**
-- Timed skill pre-warning (5s): `316447` (Chime Ascending) — distinct, not alarming
-- Untimed skill cast detection: `316531` (Low Thud) — immediate, punchy
-- "None" option: store `0` or `nil`, skip PlaySound call
-
-### Table Stakes
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| None option in sound dropdown | Users who prefer TTS-only expect a silent option | LOW | Sentinel value (0 or nil), skip PlaySound call |
-| Immediate playback on select (preview) | CDM does this; users expect to hear the sound before committing | LOW | Call PlaySound from dropdown OnClick |
-| Sound fires at correct moment | Alert happens at ability trigger, not randomly | LOW | Scheduler already owns timing; just call PlaySound there |
-
-### Differentiators
-
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| Per-skill sound selection vs global | Skill-specific sounds help distinguish alert types audibly | MEDIUM | Stored per (npcID, spellID); loaded from SavedVariables in Scheduler |
-| CDM-identical sound library | Users who use CDM recognize sounds; zero learning curve | LOW | Use same soundKitIDs sourced from wow-ui-source |
-
-### Anti-Features
+### Anti-Features (Commonly Requested, Often Problematic)
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Custom file path sound support | Power users want their own sounds | WoW sandboxes file access; only WoW data directory sound paths work | Use the full CDM library — 67 sounds is enough variety |
-| Volume slider per skill | CDM has category volume control | Adds SavedVariable complexity before core value is proven | Use Master channel; global volume is user's responsibility |
+| User-editable categories | Power users want to reclassify mobs | Categories are used for filtering logic — user changes would silently break filter assumptions; requires moderation layer | Hardcode categories in addon data; update via addon releases |
+| Per-category ability cooldown overrides | "Miniboss casters should have different timers than normal casters" | Adds a third config dimension (npcID × spellID × category) on top of existing two-dimensional config | Use per-skill config (npcID × spellID) already in place; categories only filter, not override |
 
 ---
 
-## Feature Area 3: Per-Dungeon Route Management
+## Feature Area 2: Runtime Category Detection from Nameplates
 
-### How route addons handle multiple dungeons
+### What APIs are available in Midnight
 
-**Source:** `MythicDungeonTools/Modules/DungeonSelect.lua`, MDT preset data structures
+**Verified from `wow-ui-source/Interface/AddOns/Blizzard_APIDocumentationGenerated/UnitDocumentation.lua`:**
 
-MDT stores routes as presets keyed by dungeon index:
+All three candidate APIs share `SecretArguments = "AllowedWhenUntainted"` — the same annotation as `UnitClass` and `UnitCanAttack`, which TPW already calls successfully on nameplate unit tokens in `NameplateScanner.lua`. This means they are safe to call from untainted addon code on nameplate unit tokens.
 
-```
-db.presets[currentDungeonIdx][presetIdx].value.pulls
+| API | Signature | Returns | Confirmed use in Blizzard UI |
+|-----|-----------|---------|------------------------------|
+| `UnitClassification(unit)` | unit token | `"worldboss"`, `"rareelite"`, `"elite"`, `"rare"`, `"normal"`, `"trivial"`, `"minus"` | Yes — `Blizzard_NamePlateUnitFrame.lua` line 359 calls it to check `"minus"` on nameplate units |
+| `UnitIsLieutenant(unit)` | unit token | `true` / `false` | API docs only; not used in any Blizzard UI Lua file in wow-ui-source |
+| `UnitEffectiveLevel(unit)` | unit token (documented as "name: cstring") | number | Used on player/target tokens in Blizzard UI; same `SecretArguments` pattern |
+
+**Key insight from `Blizzard_NamePlateUnitFrame.lua`:** Blizzard's own nameplate code calls `UnitClassification(self.unit)` on a nameplate unit token (a Secret Value), proving the pattern works in Midnight. TPW calls `UnitClass` on the same type of token and it works — `UnitClassification` is structurally identical.
+
+**`UnitIsLieutenant` confidence note:** The function exists in the API documentation with the same taint annotation but appears in no Blizzard UI Lua files. It is likely valid but untested in any known addon context. LOW confidence on runtime behavior. Use it speculatively; wrap in `pcall` or test in-game before shipping.
+
+**Detection logic recommended:**
+
+```lua
+-- At NAME_PLATE_UNIT_ADDED, cache alongside classBase:
+local classification = UnitClassification(unitToken)
+local isLieutenant = UnitIsLieutenant(unitToken)
+
+-- Derive runtime category from classification + lieutenant flag:
+local function DeriveRuntimeCategory(classification, isLieutenant)
+    if isLieutenant then return "miniboss" end
+    if classification == "worldboss" or classification == "rareelite" then return "boss" end
+    if classification == "trivial" or classification == "minus" then return "trivial" end
+    -- "elite", "rare", "normal" fall through — category comes from AbilityDB data
+    return nil  -- signals "use data-file category"
+end
 ```
 
-Each dungeon has its own independent preset list. Dungeon switching via `MDT:UpdateToDungeon(dungeonIdx)` replaces the active data set entirely without destroying other dungeon data.
+The runtime-derived category acts as an override for `"boss"`, `"miniboss"`, and `"trivial"`. For `"caster"`, `"warrior"`, and `"rogue"` — which cannot be detected from WoW classification APIs — the category comes exclusively from the hardcoded data file entry.
 
-The dungeon selector in MDT is a row of 40x40 icon buttons along the top of the main frame. Each button shows the dungeon icon (from `mapInfo.iconId` or `C_Spell.GetSpellTexture(teleportId)`), a short name label (`mapInfo.shortName`), and a hover tooltip with full name and timer. A `selectedTexture` atlas overlay (`bags-glow-artifact`) marks the active dungeon.
+**Why not use `UnitEffectiveLevel` for trivial detection:** Level-relative trivial detection is unreliable in instanced content where mobs are scaled. `UnitClassification` returning `"trivial"` or `"minus"` is the correct signal; it is already computed by the game engine with full scaling context.
 
-For TPW, the dungeon selector should be simpler:
-- A dropdown or tab-style button row of dungeon short names (9 dungeons for Midnight S1)
-- Selected dungeon determines which route slot is active
-- Zone-in auto-switch using `PLAYER_ENTERING_WORLD` checking `C_Map.GetBestMapForUnit("player")` against a mapID table
-
-Storage pattern: `TerriblePackWarningsDB.routes[dungeonKey]` where `dungeonKey` is the dungeon name or index from `DungeonEnemies`. Each slot holds the processed pack data for that dungeon's imported route (same structure as current `PackDatabase["imported"]`).
-
-### Table Stakes
+### Table Stakes (Users Expect These)
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Per-dungeon route storage (independent) | Importing WS route should not overwrite a previously imported GB route | LOW | Nest route data under dungeon key in SavedVariables |
-| Dungeon selector UI visible in TPW window | Users need to know which dungeon is active | LOW | Dropdown or button row; 9 dungeons for S1 |
-| Zone-in auto-switch to correct dungeon | M+ players enter dungeon and expect correct route to be active | MEDIUM | Event: PLAYER_ENTERING_WORLD + C_Map.GetBestMapForUnit; compare to mapID table |
-| Clear route per dungeon (not all dungeons) | Clearing WS data should not affect GB data | LOW | Clear only `routes[dungeonKey]` |
+| Bosses detected at runtime (no data-file category required) | Bosses are reliably `"worldboss"` or `"rareelite"` classification; hardcoding is redundant | LOW | Read `UnitClassification` at `NAME_PLATE_UNIT_ADDED`; cache result |
+| Trivial mobs detected at runtime | `"trivial"` and `"minus"` from `UnitClassification` map cleanly; avoids hand-labeling every totem | LOW | Same call as boss detection; trivial = classification is trivial or minus |
+| Unknown-as-wildcard: unknown mobs never filtered | If category is unknown, all alerts for that mob fire unconditionally | LOW | Filter check: `if category == "unknown" or userWants[category] then alert end` |
 
-### Differentiators
+### Differentiators (Competitive Advantage)
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Zone-in auto-switch | Zero-click correct dungeon on zone-in, unlike MDT which requires manual selection | MEDIUM | mapID to dungeonKey lookup table needed; dungeon mapIDs available via C_ChallengeMode or hardcoded |
+| Lieutenant detection via `UnitIsLieutenant` | Automatically promotes undocumented mini-boss-tier mobs without manual data work | LOW (if API works) | Cache at `NAME_PLATE_UNIT_ADDED`; verify in-game before shipping |
+| Data-file category takes precedence for role-based types | Caster/warrior/rogue are semantic roles the game has no API for; data files are authoritative | LOW | Runtime detection only overrides for boss/miniboss/trivial; role-based types come from data |
 
-### Anti-Features
+### Anti-Features (Commonly Requested, Often Problematic)
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Multiple presets per dungeon | MDT supports multiple route presets per dungeon | Not needed for TPW — one active route per dungeon is the use case | Single route slot per dungeon; re-import to replace |
-| Route editing within TPW | Users might want to add/remove pulls | Route editing belongs in MDT/Keystone.guru; TPW is a read-only consumer | Hard import boundary: TPW only reads, never edits route structure |
+| Deriving `"caster"` from cast frequency at runtime | "The mob is always casting, so it must be a caster" | Cast frequency from a 0.25s poll is noisy; a warrior mob with frequent swings would be miscategorized | Hardcode `"caster"` in data files where verified; no runtime inference |
+| Using `UnitEffectiveLevel` to detect trivial mobs | Level comparison seems logical | Level scaling in instanced content makes relative level unreliable; `UnitClassification` already handles trivial | Use classification API only |
 
 ---
 
-## Feature Area 4: Mob Count Display in Pull Rows
+## Feature Area 3: Filtering Alerts by Mob Category
 
-### How MDT shows mob counts per pull
+### How category filtering works with the unknown-as-wildcard pattern
 
-**Source:** `AceGUIWidget-MythicDungeonToolsPullButton.lua`, `SetNPCData` method (lines 855–882)
+**Core invariant:** A false positive (alert fires when it arguably shouldn't) is better than a false negative (alert doesn't fire when it should). This drives the unknown-as-wildcard design.
 
-MDT's pull row contains:
-1. A pull number label (`self.pullNumber:SetText(self.index)`)
-2. Up to `maxPortraitCount = 7` portrait slots
-3. Each portrait shows `fontString:SetText("x"..data.quantity)` — the count of that mob type in the pull
-4. Portraits are sorted `table.sort(enemyTable, function(a,b) return a.count > b.count end)` — most frequent mob type first
-5. A `percentageFontString` shows pull forces count or percent for route planning purposes
+**Filter logic:**
+```
+For a given alert to fire:
+  IF mob.category == "unknown": ALWAYS fire (wildcard)
+  ELSE: fire only if user has enabled this category in their filter settings
+```
 
-The portrait fontstring uses `OUTLINE` font drawn over the portrait texture. The `quantity` field on each enemy entry reflects the count of that specific NPC type in the pull group.
+**Implementation location:** The filter check belongs in `NameplateScanner.lua` inside `OnMobsAdded` and `OnCastStart`, not in the Scheduler or IconDisplay. The scanner already has the mob context (`classBase` → npcID lookup is feasible via the pack's ability list).
 
-For TPW's existing PackFrame (already has `MAX_PORTRAITS = 8` and a portrait pool), adding mob counts requires:
-- Tracking quantity per (pull, npcID) when building pack data from the MDT route during import
-- Adding a FontString overlay on each portrait frame (same "x3" format)
-- Sorting portraits by quantity descending before display
+**Category filter storage:** A simple boolean table in SavedVariables:
+```lua
+TerriblePackWarningsDB.categoryFilter = {
+    boss     = true,
+    miniboss = true,
+    caster   = true,
+    warrior  = true,
+    rogue    = true,
+    trivial  = false,  -- sensible default: don't alert on trivial mobs
+    -- "unknown" is never stored here; always treated as true
+}
+```
 
-### Table Stakes
+**Complexity note:** The scanner currently iterates `activePack.abilities` and matches on `ability.mobClass`. To filter by category, the ability needs a `category` field (inherited from AbilityDB via Pipeline). This is a data propagation task: `Pipeline.lua`'s `MergeSkillConfig` must pass through `category` from the AbilityDB entry into the merged ability table.
+
+### Table Stakes (Users Expect These)
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Count label on each portrait ("x3") | MDT shows this; users familiar with MDT expect the same visual | LOW | Add FontString overlay to existing portrait frames in PackFrame |
-| Sorting by count descending | MDT does this; most common mob visible first | LOW | Sort at display time, not storage time |
+| Per-category on/off toggle | Users want to silence trivial-mob noise without disabling the full category manually per skill | MEDIUM | Boolean table in SavedVariables; UI in ConfigFrame |
+| Unknown mobs always fire (wildcard) | Users must not lose alerts on un-categorized mobs | LOW | Single conditional in filter check; `category == "unknown"` bypasses filter |
+| Category filter persists across sessions | User sets "ignore trivial" once | LOW | Store in `TerriblePackWarningsDB`; load on startup |
 
-### Differentiators
+### Differentiators (Competitive Advantage)
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Count per mob type not just total | Distinct per-type counts help identify which mob is the threat | LOW | Already the MDT pattern; natural to replicate |
+| Sensible default filter state | `trivial = false` default means noise reduction without configuration | LOW | Set defaults in db initialization |
+| Category filter separate from per-skill enable/disable | Users can mute a whole category without touching individual skill toggles | MEDIUM | Two independent filtering layers; category filter is coarser-grained |
 
-### Anti-Features
+### Anti-Features (Commonly Requested, Often Problematic)
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Total forces count / percent bar | MDT shows cumulative forces count and running percentage per pull | Not applicable to TPW (no Keystone forces tracking) | Omit entirely; TPW pull rows are read-only displays |
+| Per-pull category override | "In this specific pull I don't care about warriors" | Pull-level state management adds significant complexity to the scanner; pull transitions are already edge cases | Per-category global filter is sufficient; use per-skill disable for exceptions |
+| Category-based volume scaling | "Miniboss alerts should be louder" | Requires audio normalization layer; soundKitID playback has no volume parameter in `PlaySound` | Use alert sound selection per skill to convey priority |
 
 ---
 
-## Feature Area 5: Untimed Skill Highlighting via Cast Detection
+## Feature Area 4: Displaying Category Info in Config UI
 
-### How cast detection works in Midnight (no CLEU)
+### What the config tree currently shows
 
-**Source:** CLAUDE.md constraints, `Blizzard_CombatAudioAlertManager.lua` patterns, PROJECT.md
+The existing `ConfigFrame.lua` displays a mob header with format `"MobName - WARRIOR"` (mob name plus `entry.mobClass`). The category field is a natural addition to this header.
 
-Midnight disables `COMBAT_LOG_EVENT_UNFILTERED`. The only cast detection available for hostile nameplates is polling `UnitCastingInfo(unitID)` and `UnitChannelInfo(unitID)` on the nameplate unit token within the existing 0.25s poll loop.
+**Pattern for read-only display in WoW config UIs:**
+- Blizzard's encounter journal uses colored labels with no interactable controls for metadata fields
+- WeakAuras uses gray italic text for read-only tags
+- MDT uses colored background rows for different enemy types (boss vs. trash)
 
-`UnitCastingInfo` returns: `name, text, texture, startTimeMS, endTimeMS, isTradeSkill, castID, notInterruptible, spellID`
+**Recommended:** Add category as a styled tag appended to the mob header, visually distinct (e.g., italicized or color-coded) to signal it is not editable. No separate control — just text.
 
-The Blizzard CombatAudioAlert system (using `UNIT_SPELLCAST_START` etc.) works for `"player"` and `"target"` unit tokens only — not for arbitrary nameplate units. This confirms nameplate polling is the only valid path for TPW.
+**Color coding by category:**
 
-Detection approach for untimed skills:
-- During the poll loop, for each plate in `plateCache`, call `UnitCastingInfo(unitToken)`
-- Compare the returned `spellID` against the skill's spellID from AbilityDB
-- On match: trigger the untimed skill highlight immediately (no timer, direct show)
-- Guard against re-triggering: track `lastCastID` per unit to avoid repeat fires for the same cast
+| Category | Color | Rationale |
+|----------|-------|-----------|
+| boss | Gold `|cffffd100` | Standard WoW boss color (used in LFG journal, MDT) |
+| miniboss | Orange `|cffff7e00` | Between boss gold and normal; signals elevated threat |
+| caster | Cyan `|cff00ccff` | Mage/caster class color convention |
+| warrior | Gray-white `|cffc69b3d` | Warrior class color |
+| rogue | Yellow `|cffffff00` | Rogue class color |
+| trivial | Dark gray `|cff9d9d9d` | Low visual weight; signals low priority |
+| unknown | Gray `|cff808080` | Neutral; signals "not yet categorized" |
 
-### Table Stakes
+### Table Stakes (Users Expect These)
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Highlight shows when cast begins | Users expect instant feedback on dangerous cast start | MEDIUM | Add spellID check to existing poll loop; castID dedup guard |
-| Highlight clears when cast ends | Stale highlight after cast end confuses users | LOW | Clear when UnitCastingInfo returns nil for that unit |
-| TTS fires on cast detect | Verbal warning is the primary alert modality in TPW | LOW | Same TTS call path as timed skills; call C_VoiceChat.SpeakText |
+| Category visible in mob header | Users need to know what category a mob is to understand why alerts do or don't fire | LOW | Append to existing `"MobName - WARRIOR"` header text; single `SetText` change |
+| Category is not an editable control | Non-editable metadata should not look clickable | LOW | Text only, no Button or EditBox |
+| Category filter toggle UI in config | Users need a way to enable/disable categories without hunting through every skill | MEDIUM | Add a row of checkboxes above the dungeon tree (one per category) |
 
-### Differentiators
+### Differentiators (Competitive Advantage)
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| 5s pre-warning on timed + cast detection for untimed | Covers both predictive and reactive warning patterns in one addon | MEDIUM | Timed is already built; untimed adds the reactive layer |
+| Color-coded category tags | Immediate visual scan reveals mob priority without reading labels | LOW | WoW color escape codes in SetText |
+| Category filter panel at top of config | One-click noise reduction for trivial/warrior/etc. rather than per-skill disable | MEDIUM | 7 checkboxes or toggles; reads/writes `categoryFilter` SavedVariable |
 
-### Anti-Features
+### Anti-Features (Commonly Requested, Often Problematic)
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| UNIT_SPELLCAST_START event for nameplates | Event is available for player/target but Midnight blocks it for arbitrary nameplate units | Using it would silently fail for the main use case | Polling UnitCastingInfo in the existing loop is the only valid approach |
+| Filter mobs in config tree by category | "Show me only casters" | Config tree is already filtered by search; a second filter layer adds UI complexity before the first is validated | Search already covers this; category text in the header is scannable |
+| Category edit button with confirmation | "What if the category is wrong?" | User-editable categories break the runtime detection contract (see Feature Area 1 anti-features) | Request corrections via GitHub issue; update in next addon release |
 
 ---
 
 ## Feature Dependencies
 
 ```
-Per-Dungeon Route Storage
-    └──required by──> Dungeon Selector UI
-                          └──required by──> Zone-in Auto-Switch
+category field in AbilityDB data files
+    └──required by──> Pipeline propagates category to pack abilities
+                          └──required by──> NameplateScanner filter check
+                          └──required by──> ConfigFrame category display
 
-AbilityDB Population (all 9 dungeons)
-    └──required by──> Config Tree (must have data to configure)
-    └──required by──> Mob Count Display (needs pull->npcID->count data)
-    └──required by──> Untimed Cast Detection (needs spellID per skill)
+Runtime category detection (UnitClassification + UnitIsLieutenant)
+    └──enhances──> category field (runtime override for boss/miniboss/trivial)
+    └──depends on──> NAME_PLATE_UNIT_ADDED cache (already exists in plateCache)
 
-Config Tree (Dungeon->Mob->Skill)
-    └──required by──> Per-Skill Toggles
-    └──required by──> Custom Label Override
-    └──required by──> TTS Text Override
-    └──required by──> Sound Dropdown per Skill
+categoryFilter SavedVariable
+    └──required by──> NameplateScanner filter check (reads it per tick)
+    └──required by──> ConfigFrame category filter toggles (writes it)
 
-Untimed Cast Detection
-    └──depends on──> Nameplate Poll Loop (already exists)
-    └──depends on──> AbilityDB spellID entries
-
-Sound Dropdown
-    └──enhances──> Timed Pre-Warning
-    └──enhances──> Untimed Cast Detection alert
+unknown-as-wildcard invariant
+    └──constrains──> NameplateScanner filter check (unknown always passes)
+    └──constrains──> categoryFilter UI (no toggle for "unknown" — it is always on)
 ```
 
 ### Dependency Notes
 
-- **AbilityDB population required first:** Config tree and mob count display both need ability data before the UI has anything to render. Populate all 9 dungeons before building config UI.
-- **Per-dungeon route storage before dungeon selector:** The selector has nothing to switch between if route storage is still flat. Migrate `PackDatabase["imported"]` to `PackDatabase[dungeonKey]` first.
-- **Untimed cast detection requires spellID in AbilityDB:** MDT ability data includes `spellId` per enemy spell entry — this is the field to match against `UnitCastingInfo`. Verify all added abilities include spellID when populating AbilityDB from MDT data.
-- **Sound dropdown is independent:** Can be built without other features, but loading/saving requires config tree storage to exist first.
+- **Pipeline must propagate `category`:** `MergeSkillConfig` in `Pipeline.lua` currently merges `spellID`, `mobClass`, and timer fields. Adding `category` requires reading it from `ns.AbilityDB[npcID].category` at merge time and including it in the returned ability table. This is a one-line addition.
+- **Runtime detection is additive, not a replacement:** Data-file category is the ground truth for role-based types (caster/warrior/rogue). Runtime detection only overrides for structural types (boss/miniboss/trivial) that WoW classification APIs reliably expose. They compose, not conflict.
+- **Unknown-as-wildcard is a hard constraint on filter logic:** Any future category filtering feature must respect this. Do not add an "unknown" toggle to the filter UI.
+- **`UnitIsLieutenant` needs in-game validation:** Cache it at `NAME_PLATE_UNIT_ADDED` alongside `classBase`, but wrap in `pcall` until confirmed working in a real dungeon pull. It is the only API in this milestone that has no confirmed in-game usage in any known Lua file.
 
 ---
 
-## MVP Definition for v0.1.0
+## MVP Definition for v0.1.1
 
 ### Launch With
 
-- [ ] AbilityDB data for all 9 Midnight S1 dungeons (untimed, WARRIOR default class) — foundational data layer for all other features
-- [ ] Per-dungeon route storage (`routes[dungeonKey]`) — enables independent route per dungeon
-- [ ] Dungeon selector in TPW window — lets users switch active dungeon
-- [ ] Zone-in auto-switch on `PLAYER_ENTERING_WORLD` — zero-click correct dungeon on zone-in
-- [ ] Mob count display on pull rows ("x3" overlay on portraits) — visual completeness
-- [ ] Config window with dungeon->mob->skill tree — per-skill settings access point
-- [ ] Per-skill: enable/disable checkbox, custom label, TTS text field, sound dropdown
-- [ ] Untimed skill highlighting via UnitCastingInfo polling
-- [ ] Timed skill 5s pre-warning highlight with sound alert
+- [ ] `category` field on all Skyreach npcID entries in `Data/Skyreach.lua` — pilot dungeon, fully categorized
+- [ ] All other dungeons' AbilityDB entries default to `"unknown"` (no field = unknown; read as `entry.category or "unknown"`)
+- [ ] `Pipeline.lua` propagates `category` from AbilityDB into merged ability tables
+- [ ] `NameplateScanner.lua` caches `UnitClassification` + `UnitIsLieutenant` at `NAME_PLATE_UNIT_ADDED`
+- [ ] Runtime category derivation: boss/miniboss/trivial overridden by runtime detection; caster/warrior/rogue from data file only
+- [ ] `categoryFilter` table in `TerriblePackWarningsDB` with sensible defaults (trivial = false, all others = true)
+- [ ] Filter check in `NameplateScanner:OnMobsAdded` and `OnCastStart`; unknown-as-wildcard invariant enforced
+- [ ] Category tag displayed in mob header in `ConfigFrame.lua` (read-only, color-coded)
+- [ ] Category filter toggle panel in `ConfigFrame.lua` (7 checkboxes, "unknown" always on, not shown)
 
 ### Add After Validation (v1.x)
 
-- [ ] Sound preview button in dropdown — add after dropdown itself is validated working
-- [ ] Config search/filter — add after users report difficulty finding skills in large dungeons
+- [ ] Expand category assignments to remaining 7 dungeons — trigger: Skyreach categorization confirmed accurate after in-game testing
+- [ ] Add category color coding to pack selection window (PackFrame) portrait rows — trigger: user feedback requests visual priority signal in route UI
 
 ### Future Consideration (v2+)
 
-- [ ] Community config profiles and import/export
-- [ ] Multiple route presets per dungeon
-- [ ] Volume control per skill category
+- [ ] Per-category sound/alert override (different alert type for miniboss vs. caster) — defer until base category filter is validated useful
 
 ---
 
@@ -398,48 +294,43 @@ Sound Dropdown
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|---------------------|----------|
-| AbilityDB all 9 dungeons | HIGH | MEDIUM (MDT data extraction, manual work per dungeon) | P1 |
-| Per-dungeon route storage | HIGH | LOW (data structure change + migration) | P1 |
-| Config window tree | HIGH | MEDIUM (frame pool + ScrollFrame) | P1 |
-| Per-skill toggle/label/TTS | HIGH | LOW (EditBox + checkbox per row) | P1 |
-| Sound dropdown (CDM library) | MEDIUM | MEDIUM (CDM sound table + dropdown build) | P1 |
-| Dungeon selector UI | HIGH | LOW (dropdown or button row) | P1 |
-| Zone-in auto-switch | HIGH | MEDIUM (mapID lookup table) | P1 |
-| Mob count display | MEDIUM | LOW (FontString overlay on existing portraits) | P1 |
-| Untimed cast detection | HIGH | MEDIUM (spellID match in poll loop + castID dedup) | P1 |
-| Sound preview button | LOW | LOW | P2 |
-| Config filter/search | LOW | MEDIUM | P3 |
+| `category` field in AbilityDB (Skyreach) | HIGH | LOW (data entry for ~15 mobs) | P1 |
+| Pipeline propagates category | HIGH | LOW (one-line addition to MergeSkillConfig) | P1 |
+| Runtime detection (UnitClassification) | HIGH | LOW (add two calls to NAME_PLATE_UNIT_ADDED handler) | P1 |
+| categoryFilter SavedVariable + defaults | HIGH | LOW (db init, trivial=false default) | P1 |
+| Filter check in NameplateScanner | HIGH | LOW (two-line guard in OnMobsAdded/OnCastStart) | P1 |
+| Category display in ConfigFrame header | MEDIUM | LOW (append to SetText in mob header) | P1 |
+| Category filter toggle panel in ConfigFrame | MEDIUM | MEDIUM (7 checkboxes + read/write SavedVariable) | P1 |
+| UnitIsLieutenant for miniboss detection | MEDIUM | LOW (one extra call, but needs in-game validation) | P2 |
+| Category assignments for remaining 7 dungeons | HIGH | MEDIUM (data entry for 190+ mobs) | P2 |
 
 **Priority key:**
-- P1: Must have for v0.1.0 launch
-- P2: Should have, add when core is stable
-- P3: Nice to have, future consideration
+- P1: Must have for v0.1.1 launch
+- P2: Should have; add after in-game validation of pilot dungeon
 
 ---
 
 ## Competitor Feature Analysis
 
-| Feature | MDT | DBM/BigWigs | Our Approach |
-|---------|-----|-------------|--------------|
-| Dungeon switching | Icon button row (40x40), all dungeons, selectedTexture overlay | N/A (boss-only addon) | Dropdown or tab bar (9 dungeons for S1) |
-| Pull mob counts | "x3" portrait label, sorted by count descending | N/A | Same pattern: "x3" overlay on portrait |
-| Per-skill config | N/A (MDT is planner, not alerter) | Per-boss enable/disable, preset sound select | Per-skill tree with checkbox/label/TTS/sound |
-| Sound alerts | N/A | Limited preset sounds (raid warning, bell) | Full CDM 67-sound library via soundKitID |
-| Cast detection | N/A | CLEU-based (blocked in Midnight) | UnitCastingInfo nameplate polling in existing loop |
+| Feature | MDT | BigWigs/LittleWigs | Plater | TPW Approach |
+|---------|-----|--------------------|--------|--------------|
+| Mob category field | `isBoss` boolean only; no caster/warrior/rogue/trivial | No category concept; boss mods target specific encounter bosses | Scripted per-nameplate rules (no static category system) | Hardcoded `category` field in AbilityDB, 7 values |
+| Category-based filtering | N/A | N/A | Custom scripts per user | `categoryFilter` SavedVariable; unknown-as-wildcard |
+| Runtime boss/lieutenant detection | Uses `isBoss` data, not runtime API | Uses encounter journal IDs, not nameplate APIs | Uses nameplate `UnitClassification` in custom scripts | `UnitClassification` + `UnitIsLieutenant` at nameplate add |
+| Category in UI | Colored pull rows (boss vs. trash) | N/A | Nameplate color scripts per player | Read-only color-coded tag in ConfigFrame mob header |
 
 ---
 
 ## Sources
 
-- `C:/Users/jonat/Repositories/wow-ui-source/Interface/AddOns/Blizzard_CooldownViewer/CooldownViewerSoundAlertData.lua` — CDM sound library (67 sounds, 6 categories, all soundKitIDs verified)
-- `C:/Users/jonat/Repositories/wow-ui-source/Interface/AddOns/Blizzard_CooldownViewer/CooldownViewerSettingsConstants.lua` — CooldownViewerSound enum (integer identifiers, 0–67)
-- `C:/Users/jonat/Repositories/wow-ui-source/Interface/AddOns/Blizzard_CooldownViewer/CooldownViewerSettingsAlerts.lua` — CDM dropdown build pattern (BuildSoundMenus, nested menus, play sample button via MenuTemplates.AttachUtilityButton)
-- `C:/Users/jonat/Repositories/wow-ui-source/Interface/AddOns/Blizzard_CooldownViewer/CooldownViewerSettings.lua` — Category collapse/expand pattern, frame pool patterns
-- `C:/Users/jonat/Repositories/wow-ui-source/Interface/AddOns/Blizzard_CombatAudioAlerts/Blizzard_CombatAudioAlertManager.lua` — UnitCastingInfo usage for cast detection, UNIT_SPELLCAST_START event scope (player/target only)
-- `C:/Users/jonat/Repositories/MythicDungeonTools/AceGUIWidgets/AceGUIWidget-MythicDungeonToolsPullButton.lua` — SetNPCData method, portrait count display ("x"..data.quantity), count-descending sort pattern
-- `C:/Users/jonat/Repositories/MythicDungeonTools/Modules/DungeonSelect.lua` — Dungeon switching pattern (UpdateToDungeon), icon button row, per-dungeon preset storage structure
-- `C:/Users/jonat/Repositories/TerriblePackWarnings/UI/PackFrame.lua` — Existing portrait pool, MAX_PORTRAITS=8 constant, npcID/displayId lookup
+- `C:/Users/jonat/Repositories/wow-ui-source/Interface/AddOns/Blizzard_APIDocumentationGenerated/UnitDocumentation.lua` — `UnitClassification`, `UnitIsLieutenant`, `UnitEffectiveLevel` API signatures; all confirmed `SecretArguments = "AllowedWhenUntainted"` (HIGH confidence)
+- `C:/Users/jonat/Repositories/wow-ui-source/Interface/AddOns/Blizzard_NamePlates/Blizzard_NamePlateUnitFrame.lua` line 359 — Blizzard's own nameplate calls `UnitClassification(self.unit)` on a nameplate unit token; confirms the API works in Midnight on nameplate tokens (HIGH confidence)
+- `C:/Users/jonat/Repositories/wow-ui-source/Interface/AddOns/Blizzard_NamePlates/Blizzard_NamePlateClassificationFrame.lua` — `UnitClassification` return value set: `"worldboss"`, `"rareelite"`, `"elite"`, `"rare"`, `"normal"`, `"trivial"`, `"minus"` (HIGH confidence)
+- `C:/Users/jonat/Repositories/MythicDungeonTools/Developer/Schema.lua` and `Midnight/Skyreach.lua` — MDT's category system is `isBoss` boolean only; no caster/warrior/role categorization (HIGH confidence)
+- `C:/Users/jonat/Repositories/TerriblePackWarnings/Engine/NameplateScanner.lua` — existing `plateCache` structure, `OnNameplateAdded` handler, `UnitClass`/`UnitCanAttack` calls on nameplate tokens (confirmed working pattern for `UnitClassification` addition)
+- `C:/Users/jonat/Repositories/TerriblePackWarnings/Import/Pipeline.lua` — `MergeSkillConfig` function; propagation point for `category` field
+- `C:/Users/jonat/Repositories/TerriblePackWarnings/UI/ConfigFrame.lua` line 563-564 — existing mob header format `"MobName - WARRIOR"`; category tag addition point
 
 ---
-*Feature research for: TerriblePackWarnings v0.1.0 — Configuration and Skill Data milestone*
-*Researched: 2026-03-17*
+*Feature research for: TerriblePackWarnings v0.1.1 — Mob Category System*
+*Researched: 2026-03-23*

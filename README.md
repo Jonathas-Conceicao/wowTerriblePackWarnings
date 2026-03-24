@@ -13,9 +13,7 @@ better than nothing, feel free to use this as you see fit.
 
 This addon is in **early stages of development**. Profiles and
 configuration formats may change between updates and are not guaranteed
-to be backwards compatible until a stable version is reached. Correctly
-tagging most mobs with the correct class is a top priority and is coming
-in a minor TPW patch soon.
+to be backwards compatible until a stable version is reached.
 
 ## AI Usage
 
@@ -31,19 +29,24 @@ me to the best of my abilities.
 
 ## Features
 
+- **Mob category tagging** -- every mob is categorized as boss, miniboss,
+  caster, warrior, rogue, or trivial with color-coded tags in the config
+  window. Categories are detected at runtime and used to filter which
+  abilities trigger alerts. Unknown mobs are treated as wildcards so you
+  never miss a warning.
 - **Per-skill configuration** -- choose which abilities to track per mob,
   set custom labels, timers, and sound/TTS alerts
 - **Timed ability warnings** -- spell icons with cooldown sweep countdown
   for abilities with known cast timers
 - **Cast detection and alerts** -- untimed skill icons glow orange when
-  any mob of the same class starts casting, with optional sound or TTS
-  alerts on cast detection
+  a mob of the matching category starts casting, with optional sound or
+  TTS alerts on cast detection
 - **MDT route import** -- paste an MDT/Keystone.guru export string to load
   your route with per-dungeon storage
 - **8 Midnight S1 dungeons** -- ability data extracted from MDT for
   Algethar Academy, Magisters' Terrace, Maisara Caverns, Nexus Point
   Xenas, Pit of Saron, Seat of the Triumvirate, Skyreach, and
-  Windrunner Spire
+  Windrunner Spire -- all mobs categorized from in-game verification
 
 ## Usage
 
@@ -90,18 +93,19 @@ A more flexible usage that doesn't require a strict route:
 ## Data Status
 
 Ability data for all 8 Midnight Season 1 dungeons has been extracted
-from MythicDungeonTools. However:
+from MythicDungeonTools. All mobs have been categorized by role (boss,
+miniboss, caster, warrior, rogue, trivial) from in-game verification.
+See `MobCategories.md` for the complete mob category index.
 
-- **Most mobs default to WARRIOR class** -- the actual mob classes have
-  not been verified in-game yet. This means nameplate matching may not
-  work correctly for mobs whose real class differs from WARRIOR.
 - **No abilities have pre-set timers** -- all timing data must be
   configured by the player through the profile system.
 - **Ability coverage varies** -- some dungeons have more complete spell
   data than others.
+- **Some mobs remain "unknown"** -- a few spawns and boss adds could
+  not be verified and are tagged as unknown (treated as wildcard at
+  runtime so alerts still fire).
 
-This data will be populated and corrected over time. If you have
-verified mob classes or ability timers, contributions are greatly
+If you have verified ability timers, contributions are greatly
 appreciated.
 
 ## Known Limitations
@@ -111,8 +115,8 @@ appreciated.
   (Midnight wraps spell IDs as secret values) -- it can only detect
   that a mob is casting *something*
 - Mob health values are secret -- HP-based ability timing is not possible
-- Untimed sound alerts trigger on any cast from the matching class,
-  which can produce false positives in mixed-class packs
+- Untimed sound alerts trigger on any cast from a mob of the matching
+  category, which can produce false positives
 - Auto mode advances packs on combat end, which may not match your
   actual pull order
 - Leaving a season dungeon automatically sets mode to Disable -- you
@@ -120,7 +124,6 @@ appreciated.
 
 ## Planned
 
-- Verified mob class data for all Season 1 dungeons
 - Repositioning and sizing of spell icon display through Edit Mode
 - Community-contributed ability profiles with verified timers
 - Additional quality-of-life UI improvements

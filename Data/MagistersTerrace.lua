@@ -3,11 +3,13 @@ local addonName, ns = ...
 ns.AbilityDB = ns.AbilityDB or {}
 
 -- Magisters Terrace ability database
--- Keyed by npcID; mobClass defaults to WARRIOR, abilities from MDT spells
+-- Keyed by npcID
+-- mobCategory: semantic role — "boss"|"miniboss"|"caster"|"warrior"|"rogue"|"trivial"|"unknown"
+--   (not to be confused with the runtime WoW class token e.g. "WARRIOR"; that is never stored here)
 
 -- Arcane Magister (232369)
 ns.AbilityDB[232369] = {
-    mobClass = "WARRIOR",
+    mobCategory = "caster",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 468962, defaultEnabled = false },
         { spellID = 468966, defaultEnabled = false },
@@ -15,9 +17,12 @@ ns.AbilityDB[232369] = {
     },
 }
 
+-- Animated Codex (234089)
+ns.AbilityDB[234089] = { mobCategory = "trivial", abilities = {} }
+
 -- Blazing Pyromancer (251861)
 ns.AbilityDB[251861] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1254294, defaultEnabled = false },
         { spellID = 1254301, defaultEnabled = false },
@@ -28,7 +33,7 @@ ns.AbilityDB[251861] = {
 
 -- Runed Spellbreaker (240973)
 ns.AbilityDB[240973] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1244907, defaultEnabled = false },
         { spellID = 1283901, defaultEnabled = false },
@@ -38,7 +43,7 @@ ns.AbilityDB[240973] = {
 
 -- Voidling (234069)
 ns.AbilityDB[234069] = {
-    mobClass = "WARRIOR",
+    mobCategory = "trivial",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1248229, defaultEnabled = false },
         { spellID = 1255434, defaultEnabled = false },
@@ -47,7 +52,7 @@ ns.AbilityDB[234069] = {
 
 -- Hollowsoul Shredder (234065)
 ns.AbilityDB[234065] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1227020, defaultEnabled = false },
         { spellID = 1248229, defaultEnabled = false },
@@ -56,16 +61,19 @@ ns.AbilityDB[234065] = {
 
 -- Dreaded Voidwalker (234064)
 ns.AbilityDB[234064] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1248229, defaultEnabled = false },
         { spellID = 1248327, defaultEnabled = false },
     },
 }
 
+-- Vigilant Librarian (234067)
+ns.AbilityDB[234067] = { mobCategory = "unknown", abilities = {} }
+
 -- Shadowrift Voidcaller (234068)
 ns.AbilityDB[234068] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1217087, defaultEnabled = false },
         { spellID = 1255462, defaultEnabled = false },
@@ -75,7 +83,7 @@ ns.AbilityDB[234068] = {
 
 -- Devouring Tyrant (234066)
 ns.AbilityDB[234066] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1248138, defaultEnabled = false },
         { spellID = 1248219, defaultEnabled = false },
@@ -86,7 +94,7 @@ ns.AbilityDB[234066] = {
 
 -- Void Infuser (249086)
 ns.AbilityDB[249086] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1245068, defaultEnabled = false },
         { spellID = 1248229, defaultEnabled = false },
@@ -96,7 +104,7 @@ ns.AbilityDB[249086] = {
 
 -- Arcanotron Custos (231861)
 ns.AbilityDB[231861] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 474345, defaultEnabled = false },
         { spellID = 474496, defaultEnabled = false },
@@ -108,7 +116,7 @@ ns.AbilityDB[231861] = {
 
 -- Seranel Sunlash (231863)
 ns.AbilityDB[231863] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1224903, defaultEnabled = false },
         { spellID = 1225015, defaultEnabled = false },
@@ -126,7 +134,7 @@ ns.AbilityDB[231863] = {
 
 -- Gemellus (231864)
 ns.AbilityDB[231864] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1223847, defaultEnabled = false },
         { spellID = 1223936, defaultEnabled = false },
@@ -142,7 +150,7 @@ ns.AbilityDB[231864] = {
 
 -- Degentrius (231865)
 ns.AbilityDB[231865] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1215087, defaultEnabled = false },
         { spellID = 1215897, defaultEnabled = false },
@@ -157,7 +165,7 @@ ns.AbilityDB[231865] = {
 
 -- Brightscale Wyrm (232106)
 ns.AbilityDB[232106] = {
-    mobClass = "WARRIOR",
+    mobCategory = "trivial",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 467068, defaultEnabled = false },
         { spellID = 1254595, defaultEnabled = false },
@@ -166,7 +174,7 @@ ns.AbilityDB[232106] = {
 
 -- Arcane Sentry (234062)
 ns.AbilityDB[234062] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 473258, defaultEnabled = false },
         { spellID = 1282050, defaultEnabled = false },
@@ -178,7 +186,7 @@ ns.AbilityDB[234062] = {
 
 -- Sunblade Enforcer (234124)
 ns.AbilityDB[234124] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1252910, defaultEnabled = false },
         { spellID = 1253224, defaultEnabled = false },
@@ -188,7 +196,7 @@ ns.AbilityDB[234124] = {
 
 -- Lightward Healer (234486)
 ns.AbilityDB[234486] = {
-    mobClass = "WARRIOR",
+    mobCategory = "caster",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1254306, defaultEnabled = false },
         { spellID = 1255187, defaultEnabled = false },
@@ -197,7 +205,7 @@ ns.AbilityDB[234486] = {
 
 -- Gemellus (239636)
 ns.AbilityDB[239636] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1223936, defaultEnabled = false },
         { spellID = 1224104, defaultEnabled = false },
@@ -210,9 +218,15 @@ ns.AbilityDB[239636] = {
     },
 }
 
+-- Void-Infused Brightscale (241354)
+ns.AbilityDB[241354] = {
+    mobCategory = "trivial",  -- semantic role; see header for vocabulary
+    abilities = {},
+}
+
 -- Celestial Drifter (241397)
 ns.AbilityDB[241397] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1248015, defaultEnabled = false },
     },
@@ -220,7 +234,7 @@ ns.AbilityDB[241397] = {
 
 -- Unstable Voidling (255376)
 ns.AbilityDB[255376] = {
-    mobClass = "WARRIOR",
+    mobCategory = "trivial",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1248229, defaultEnabled = false },
         { spellID = 1264951, defaultEnabled = false },
@@ -229,7 +243,7 @@ ns.AbilityDB[255376] = {
 
 -- Hollowsoul Shredder (257447)
 ns.AbilityDB[257447] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1227020, defaultEnabled = false },
         { spellID = 1248229, defaultEnabled = false },
@@ -238,10 +252,9 @@ ns.AbilityDB[257447] = {
 
 -- Spellwoven Familiar (259387)
 ns.AbilityDB[259387] = {
-    mobClass = "WARRIOR",
+    mobCategory = "caster",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1279994, defaultEnabled = false },
         { spellID = 1279995, defaultEnabled = false },
     },
 }
-

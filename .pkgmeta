@@ -21,3 +21,4 @@ ignore:
   - "*.png"
   - RELEASE_NOTES.md
   - CHANGELOG.md
+  - MobCategories.md

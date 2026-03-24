@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A World of Warcraft addon for Midnight (12+ API) that brings ability warnings to dungeon trash packs in Mythic+ content. Players import an MDT/Keystone.guru route, configure which skills to track with custom timers and alerts, and the addon displays spell icons with countdown sweeps, cast detection highlights, and sound/TTS callouts -- giving M+ players threat awareness on trash that they normally only get on bosses.
+A World of Warcraft addon for Midnight (12+ API) that brings ability warnings to dungeon trash packs in Mythic+ content. Players import an MDT/Keystone.guru route, configure which skills to track with custom timers and alerts, and the addon displays spell icons with countdown sweeps, cast detection highlights, and sound/TTS callouts -- giving M+ players threat awareness on trash that they normally only get on bosses. Mobs are categorized by role (boss, miniboss, caster, warrior, rogue, trivial) with runtime detection and category-based alert filtering.
 
 ## Core Value
 
@@ -10,13 +10,17 @@ When a player imports a route and pulls, they see accurate, timed ability warnin
 
 ## Current State
 
-**Shipped:** v0.1.0 (2026-03-22)
-**Code:** 6,294 lines of Lua across 19 files + 3 bundled libraries
+**Shipped:** v0.1.1 (2026-03-24)
+**Code:** 6,414 lines of Lua across 19 files + 3 bundled libraries
 **Tech stack:** Plain Lua, WoW FrameXML, C_VoiceChat TTS, nameplate scanning, LibDeflate + AceSerializer
 
 **What works:**
 - Per-skill configuration window with dungeon→mob→skill tree, search, and profile management
 - Ability data for all 8 Midnight S1 dungeons (190+ mobs from MDT)
+- Per-mob category system: boss, miniboss, caster, warrior, rogue, trivial, unknown
+- Runtime category detection via UnitClassification, UnitIsLieutenant, UnitClassBase (DeriveCategory priority chain)
+- Category-based scanner matching with unknown-as-wildcard (false positives over false negatives)
+- Color-coded category tags in config UI with category-aware search
 - Per-dungeon route storage with zone-in auto-switch
 - Cast detection via UnitCastingInfo nameplate polling (Secret Values workaround)
 - Timed ability warnings with cooldown sweep and 5s pre-warning
@@ -24,6 +28,7 @@ When a player imports a route and pulls, they see accurate, timed ability warnin
 - Profile system: create/delete/switch, import/export as shareable strings
 - Combat modes: Auto/Manual/Disable
 - Skill preview with cooldown sweep from config window
+- MobCategories.md reference doc with all 8 dungeons fully categorized
 
 ## Requirements
 
@@ -54,6 +59,13 @@ When a player imports a route and pulls, they see accurate, timed ability warnin
 - Profile system with import/export -- v0.1.0
 - Per-skill timed toggle with timer fields -- v0.1.0
 - Per-skill sound alert checkbox -- v0.1.0
+- Per-mob mobCategory field in AbilityDB (7 categories) -- v0.1.1
+- Runtime category detection (DeriveCategory priority chain) -- v0.1.1
+- Category-based scanner matching with unknown-as-wildcard -- v0.1.1
+- Color-coded category tags in config UI -- v0.1.1
+- Category-aware config search with partial match and hyphen normalization -- v0.1.1
+- All 8 S1 dungeons fully categorized from in-game verification -- v0.1.1
+- isBoss field removed, boss detection unified through mobCategory -- v0.1.1
 
 ### Active
 
@@ -65,6 +77,9 @@ When a player imports a route and pulls, they see accurate, timed ability warnin
 - Auto-detection of current pack without route addon -- no reliable API
 - Route editing within TPW -- editing stays in MDT/Keystone.guru
 - Spell-specific cast detection -- spellIDs are Secret Values in Midnight
+- User-editable categories -- categories are factual properties of NPCs
+- UnitEffectiveLevel for detection -- unusable on nameplates (takes cstring name, UnitName is Secret Value)
+- Per-category sound/alert override -- defer until base category system is validated useful
 
 ## Context
 
@@ -72,15 +87,16 @@ When a player imports a route and pulls, they see accurate, timed ability warnin
 - **API constraints:** Midnight restricts combat log reading, spell IDs from casts, and health values (all Secret Values). Nameplate scanning and cast name detection work.
 - **Display system:** Custom spell icon squares with CooldownFrameTemplate sweep. TTS via C_VoiceChat.SpeakText. Sound via PlaySound on Master channel.
 - **Import system:** LibDeflate + AceSerializer decode MDT export strings and encode profile strings.
-- **Architecture:** Self-contained display + nameplate detection. Profile system for per-skill configuration. Per-dungeon route storage.
+- **Architecture:** Self-contained display + nameplate detection. Profile system for per-skill configuration. Per-dungeon route storage. Category-based scanner matching with DeriveCategory runtime detection.
+- **Category system:** Mobs categorized by role (boss/miniboss/caster/warrior/rogue/trivial/unknown). Runtime detection via UnitIsBossMob → UnitIsLieutenant → UnitClassification → UnitClassBase priority chain. Unknown = wildcard at runtime.
 
 ## Constraints
 
 - **API:** Midnight 12+ addon API only
 - **Framework:** Plain Lua + XML + bundled libs (LibDeflate, AceSerializer via LibStub)
 - **Data:** Ability cooldown timers configured by users (no reliable source)
-- **Cast detection:** Class-based only (Secret Values prevent spell-specific detection)
-- **Mob classes:** Most default to WARRIOR (requires in-game verification)
+- **Cast detection:** Category-based only (Secret Values prevent spell-specific detection)
+- **Category detection:** UnitEffectiveLevel unusable on nameplates; UnitIsLieutenant unverified in Blizzard UI but pcall-wrapped
 
 ## Key Decisions
 
@@ -99,6 +115,12 @@ When a player imports a route and pulls, they see accurate, timed ability warnin
 | Profile system for skill config | Shareable configurations, multiple setups per player | Good |
 | Auto-disable on non-S1 zone-out | Prevents stale tracking outside dungeons | Good |
 | Rebuild packs on config close | Natural workflow boundary, avoids per-keystroke rebuilds | Good |
+| mobCategory replaces mobClass in AbilityDB | Category is the semantic concept; WoW class is runtime-only | Good |
+| Category-based scanner matching (not class-based) | Two mobs of same WoW class can be different categories | Good |
+| DeriveCategory priority chain: boss→lieutenant→classification→class→unknown | Lieutenants are often PALADINs; must check before class | Good |
+| Unknown = wildcard (false positives over false negatives) | Unknown ability fires for any mob; unknown mob triggers only unknown abilities | Good |
+| Pipeline copies mobCategory onto abilities at runtime | Scanner reads ability.mobCategory directly; not saved to SavedVariables | Good |
+| isBoss removed from DungeonEnemies | Unified through AbilityDB mobCategory = "boss"; no duplication | Good |
 
 ---
-*Last updated: 2026-03-22 after v0.1.0 milestone*
+*Last updated: 2026-03-24 after v0.1.1 milestone*

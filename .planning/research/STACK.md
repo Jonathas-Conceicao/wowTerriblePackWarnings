@@ -1,8 +1,8 @@
 # Stack Research
 
 **Domain:** World of Warcraft Midnight (12.0) addon — dungeon pack warning timers
-**Researched:** 2026-03-17 (v0.1.0 update; original 2026-03-13)
-**Confidence:** HIGH (all v0.1.0 findings verified from local source files; original v0.0.x stack unchanged)
+**Researched:** 2026-03-17 (v0.1.0 update; original 2026-03-13); 2026-03-23 (v0.1.1 update)
+**Confidence:** HIGH (all v0.1.0 findings verified from local source files; original v0.0.x stack unchanged; v0.1.1 findings verified from wow-ui-source 12.0.1.66337)
 
 ---
 
@@ -347,6 +347,190 @@ is simpler, already proven in `PackFrame.lua`, and has no extra dependency.
 
 ---
 
+## v0.1.1 New API: Mob Category Detection
+
+### Goal
+
+Derive per-mob categories (boss, miniboss, caster, warrior, rogue, trivial, unknown) at nameplate
+scan time. Categories are used for alert filtering — e.g., suppress certain warnings when no
+warrior-type mob is alive.
+
+### API Inventory
+
+All four APIs below are verified in `wow-ui-source 12.0.1.66337` — specifically
+`Interface/AddOns/Blizzard_APIDocumentationGenerated/UnitDocumentation.lua`. All carry
+`SecretArguments = "AllowedWhenUntainted"`, meaning addon code (which is always untainted) may call
+them freely. None have `SecretWhen*` or `ConditionalSecret` on their **return values** — the
+results are not Secret Values.
+
+#### `UnitClassification(unitToken)` — string
+
+Returns the PvE difficulty tier of a unit. Verified return strings from Blizzard UI source
+(NamePlateClassificationFrame.lua, TargetFrame.lua, UnitFrame.lua):
+
+| Return value | Meaning |
+|---|---|
+| `"worldboss"` | World boss / instanced boss |
+| `"elite"` | Elite mob |
+| `"rareelite"` | Rare elite |
+| `"rare"` | Rare mob |
+| `"normal"` | Standard trash mob |
+| `"minus"` | "Minus" mob — counts as 0 for M+ percent, reduced scaling |
+| `"trivial"` | Grey-skull trivial (level too low relative to player) |
+
+Not documented but implied by the `"minus"` check in `UnitFrame.lua` line 1020: returns a non-nil
+string even for nameplateN units. Safe to call at `NAME_PLATE_UNIT_ADDED` and cache.
+
+**Confidence: HIGH** — return values confirmed from two Blizzard UI files
+(`Blizzard_NamePlateClassificationFrame.lua` and `Blizzard_UnitFrame/Mainline/TargetFrame.lua`).
+
+**In Midnight dungeons:** Trash mobs return `"normal"`. Bosses return `"worldboss"`. No
+`SecretWhen*` restriction on the return — value is readable. The nameplate-specific frame
+(`Blizzard_NamePlateClassificationFrame.lua`) calls `UnitClassification(self.unitToken)` directly,
+confirming it works on `nameplateN` tokens.
+
+#### `UnitIsBossMob(unitToken)` — bool
+
+Returns `true` if the unit is considered a boss by the game engine. Distinct from
+`UnitClassification() == "worldboss"` in subtle ways (some lieutenants may return `true` here).
+Used by `TargetFrame.lua` line 427 for gold dragon portrait frame display.
+
+**Confidence: HIGH** — verified in UnitDocumentation.lua (line 1720) and TargetFrame.lua (line 427).
+
+Use this as the authoritative boss signal, not `UnitClassification() == "worldboss"`, since it is
+a single boolean and covers edge cases.
+
+#### `UnitIsLieutenant(unitToken)` — bool
+
+Returns `true` if the unit is a "lieutenant" — Blizzard's term for a miniboss-tier enemy that is
+above trash but below a full boss. Present in the API documentation (UnitDocumentation.lua line
+1995) but **has zero usage in any Blizzard UI file** in the 12.0.1.66337 source tree.
+
+**Confidence: MEDIUM** — documented and has correct signature, but no Blizzard UI code exercises
+it. In-game behavior unverified. Use with `pcall` defensively:
+
+```lua
+local ok, isLt = pcall(UnitIsLieutenant, unitToken)
+local isLieutenant = ok and isLt or false
+```
+
+#### `UnitClassBase(unitToken)` — classFilename, classID
+
+Returns the mob's class tag (e.g., `"WARRIOR"`, `"MAGE"`, `"ROGUE"`). Already used in the existing
+`NameplateScanner.lua` (`OnNameplateAdded`). The `className` (localized display name) is marked
+`ConditionalSecret = true` in `UnitClass()`, but `UnitClassBase()` returns only `classFilename` and
+`classID` — neither is marked secret.
+
+**Confidence: HIGH** — already in production use in TPW v0.1.0.
+
+#### `UnitEffectiveLevel(unitToken)` — number
+
+Returns the unit's effective level (scaling applied level for instanced content). Argument is typed
+as `cstring` in the documentation, but in practice accepts `UnitToken` (confirmed by Blizzard usage
+in `TargetFrame.lua` line 267: `UnitEffectiveLevel(self.unit)` where `self.unit` is a unit token).
+
+**Not needed for the category system.** Level data is not a reliable discriminator for
+boss/miniboss/trash in Mythic+ — all Midnight S1 mobs scale to player item level and return similar
+effective levels. Omit from the detection logic.
+
+**Confidence: HIGH** — available, but not useful for this feature.
+
+### Secret Value Status Summary
+
+| API | Return Secret? | Safe in Midnight M+? |
+|-----|---------------|----------------------|
+| `UnitClassification(nameplateN)` | No | Yes — no `SecretWhen*` on return |
+| `UnitIsBossMob(nameplateN)` | No | Yes — no `SecretWhen*` on return |
+| `UnitIsLieutenant(nameplateN)` | No | Yes — no `SecretWhen*` on return; behavior unverified |
+| `UnitClassBase(nameplateN)` | No | Yes — already in use in v0.1.0 |
+| `UnitEffectiveLevel(nameplateN)` | No | Yes — but not useful for category detection |
+
+### Recommended Category Detection Logic
+
+Derive category at `NAME_PLATE_UNIT_ADDED`, cache in `plateCache`. This is the right place: it runs
+once per mob appearance, not in the hot 0.25s tick loop.
+
+```lua
+function Scanner:OnNameplateAdded(unitToken)
+    local hostile = UnitCanAttack("player", unitToken)
+    local classFilename, _ = UnitClassBase(unitToken)
+
+    local category = "unknown"
+    if UnitIsBossMob(unitToken) then
+        category = "boss"
+    else
+        local ok, isLt = pcall(UnitIsLieutenant, unitToken)
+        if ok and isLt then
+            category = "miniboss"
+        elseif classFilename == "MAGE" or classFilename == "PRIEST" or classFilename == "WARLOCK"
+               or classFilename == "SHAMAN" or classFilename == "DRUID" or classFilename == "EVOKER" then
+            category = "caster"
+        elseif classFilename == "ROGUE" or classFilename == "DEMONHUNTER" then
+            category = "rogue"
+        elseif classFilename == "WARRIOR" or classFilename == "PALADIN" or classFilename == "DEATHKNIGHT"
+               or classFilename == "MONK" or classFilename == "HUNTER" then
+            category = "warrior"
+        end
+        -- "trivial" comes from UnitClassification if needed:
+        local classification = UnitClassification(unitToken)
+        if classification == "trivial" or classification == "minus" then
+            category = "trivial"
+        end
+    end
+
+    plateCache[unitToken] = {
+        hostile   = hostile,
+        classBase = classFilename,
+        category  = category,
+    }
+end
+```
+
+**Design notes:**
+- `UnitIsBossMob` checked first — authoritative, no ambiguity.
+- `UnitIsLieutenant` wrapped in `pcall` since no in-game verification exists.
+- Class-to-category mapping is heuristic; Skyreach data will be manually hardcoded in AbilityDB
+  so runtime detection is a fallback for unknown mobs.
+- `"trivial"` and `"minus"` mobs are explicitly suppressed (never generate alerts). The
+  `classification == "minus"` check catches the special M+ zero-count mobs.
+- Category `"unknown"` is the wildcard: unknown mobs are never filtered, so warnings still fire.
+
+### Integration Points with Existing NameplateScanner
+
+The existing `plateCache` already stores `hostile` and `classBase`. Add `category` as a third field
+at `NAME_PLATE_UNIT_ADDED` — zero changes to the 0.25s tick loop.
+
+The `OnMobsAdded` / `OnCastStart` handlers currently filter by `ability.mobClass == classBase`.
+Add a secondary filter: `ability.category == nil or ability.category == cached.category` where
+`ability.category` is the new field in AbilityDB entries (nil = no category filter = applies to
+all).
+
+### AbilityDB Schema Extension
+
+Add an optional `category` field per mob entry in Data/ files:
+
+```lua
+ns.AbilityDB[npcID] = {
+    mobClass = "MAGE",
+    category = "caster",   -- new field; nil means "unknown" (wildcard)
+    abilities = { ... },
+}
+```
+
+For Skyreach: hardcode `category` on every npcID. For all other dungeons: omit `category` (nil),
+which means unknown and passes all filters.
+
+### What NOT to Use for Category Detection
+
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| `UnitEffectiveLevel` for boss/trash discrimination | All M+ mobs scale to similar levels — not a reliable discriminator | `UnitIsBossMob` for bosses, `UnitClassification` for trivial |
+| `UnitClassification() == "worldboss"` as boss signal | Does not cover all boss-tier mobs; `UnitIsBossMob` is the canonical check | `UnitIsBossMob(unitToken)` |
+| `UnitClassification` as primary category signal | Only reliable for trivial/minus — normal/elite strings don't map to caster/warrior/rogue | `UnitClassBase` for class-based categories |
+| Polling classification APIs in the 0.25s tick | Classification is stable for the lifetime of a nameplate (mob doesn't change tier mid-combat) | Cache at `NAME_PLATE_UNIT_ADDED`, read from cache in tick |
+
+---
+
 ## API Reference Summary
 
 | API | Key Return Values | Notes |
@@ -358,6 +542,10 @@ is simpler, already proven in `PackFrame.lua`, and has no extra dependency.
 | `MDT.dungeonEnemies[idx][i].spells` | `{[spellID] = {}, ...}` | Keys are spell IDs. Values always empty in Midnight MDT data. |
 | `MDT.dungeonEnemies[idx][i].id` | npcID (number) | Primary key for `ns.AbilityDB`. |
 | `MDT.dungeonEnemies[idx][i].name` | mob display name (string) | Use for config UI labels. |
+| `UnitClassification(unitToken)` | `"worldboss"`, `"elite"`, `"rareelite"`, `"rare"`, `"normal"`, `"minus"`, `"trivial"` | No Secret Value restriction. Cache at nameplate added. |
+| `UnitIsBossMob(unitToken)` | `bool` | Authoritative boss check. No Secret Value restriction. |
+| `UnitIsLieutenant(unitToken)` | `bool` | Miniboss check. Documented, not exercised in Blizzard UI. Use pcall. |
+| `UnitClassBase(unitToken)` | `classFilename, classID` | Already in use. Maps to caster/warrior/rogue categories. |
 
 ---
 
@@ -365,13 +553,15 @@ is simpler, already proven in `PackFrame.lua`, and has no extra dependency.
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| New external libraries | No new Libs needed for v0.1.0 features | Native WoW API: C_Spell, UnitCastingInfo, PlaySound |
+| New external libraries | No new Libs needed for v0.1.0–v0.1.1 features | Native WoW API throughout |
 | `ScrollBox` / `DataProvider` pattern | Requires Blizzard Mixin infrastructure not in TPW | `ScrollFrame + UIPanelScrollFrameTemplate` (already in PackFrame.lua) |
 | `UIDropDownMenu_Initialize` | Deprecated in Midnight | Simple Button + popup list frame |
 | `DropdownButton:SetupMenu()` | Modern pattern but requires `rootDescription` Mixin infrastructure | Simple Button + popup list frame (consistent with TPW style) |
 | `SOUNDKIT` constants for alert sounds | SOUNDKIT maps UI-event sounds (cursor clicks, window open) — not the CDM alert sounds | Raw soundKitID numbers from CDM's curated table |
 | Auto-deriving ability timers from cast timing | Cast detection is for untimed skill highlights only | Keep predefined cooldowns for timed abilities; use cast detection only for untimed |
 | `ResizeLayoutFrame` | Requires children to expose `GetLayoutChildrenBounds` | Manual `SetPoint` anchoring (already used in PackFrame.lua) |
+| `UnitEffectiveLevel` for category detection | Level not a reliable boss/trash discriminator in scaled M+ content | `UnitIsBossMob` + `UnitClassBase` |
+| Polling classification in the 0.25s tick loop | Classification is stable per nameplate lifetime | Cache once at `NAME_PLATE_UNIT_ADDED` |
 
 ---
 
@@ -395,6 +585,7 @@ is simpler, already proven in `PackFrame.lua`, and has no extra dependency.
 | Manual ScrollFrame layout | `ResizeLayoutFrame` + `GridLayoutFrame` | Only if building a fully dynamic drag-reorder UI like CDM |
 | Flat sound list (8–12 options) | Full CDM nested category menu (60+ sounds) | Full list if users request more variety; the flat list covers the useful range |
 | UnitCastingInfo polling in existing 0.25s loop | Separate ticker for cast detection | Adding to existing loop avoids timer proliferation; 0.25s resolution is sufficient for cast detection |
+| `UnitIsBossMob` as boss signal | `UnitClassification() == "worldboss"` | If `UnitIsBossMob` is found to misbehave in-game; the classification string is a valid fallback |
 
 ---
 
@@ -409,6 +600,10 @@ is simpler, already proven in `PackFrame.lua`, and has no extra dependency.
 | `PlaySound(soundKitID)` | All modern | Stable |
 | `ScrollFrame + UIPanelScrollFrameTemplate` | All modern | Stable |
 | `CreateFrame("CheckButton")` | All modern | Stable |
+| `UnitClassification(nameplateN)` | 120001 | No return value restrictions. Confirmed in NamePlateClassificationFrame.lua. |
+| `UnitIsBossMob(nameplateN)` | 120001 | No return value restrictions. Confirmed in TargetFrame.lua. |
+| `UnitIsLieutenant(nameplateN)` | 120001 | Documented. Not used in any Blizzard UI file — verify in-game. |
+| `UnitClassBase(nameplateN)` | 120001 | In production use in TPW v0.1.0. |
 
 ---
 
@@ -417,6 +612,14 @@ is simpler, already proven in `PackFrame.lua`, and has no extra dependency.
 - `C:\Users\jonat\Repositories\MythicDungeonTools\Midnight\WindrunnerSpire.lua` — MDT enemy/spell table structure (HIGH confidence, direct source read)
 - `C:\Users\jonat\Repositories\MythicDungeonTools\Midnight\MaisaraCaverns.lua` — Confirmed same structure across dungeons (HIGH confidence)
 - `C:\Users\jonat\Repositories\wow-ui-source\Interface\AddOns\Blizzard_APIDocumentationGenerated\UnitDocumentation.lua` lines 811–877 — UnitCastingInfo/UnitChannelInfo return values and restriction flags (HIGH confidence)
+- `C:\Users\jonat\Repositories\wow-ui-source\Interface\AddOns\Blizzard_APIDocumentationGenerated\UnitDocumentation.lua` lines 912–960 — UnitClassBase, UnitClassification signatures; no SecretWhen on returns (HIGH confidence)
+- `C:\Users\jonat\Repositories\wow-ui-source\Interface\AddOns\Blizzard_APIDocumentationGenerated\UnitDocumentation.lua` lines 1720–1733 — UnitIsBossMob signature (HIGH confidence)
+- `C:\Users\jonat\Repositories\wow-ui-source\Interface\AddOns\Blizzard_APIDocumentationGenerated\UnitDocumentation.lua` lines 1995–2008 — UnitIsLieutenant signature (HIGH confidence for existence; MEDIUM for in-game behavior)
+- `C:\Users\jonat\Repositories\wow-ui-source\Interface\AddOns\Blizzard_APIDocumentationGenerated\UnitDocumentation.lua` lines 1086–1099 — UnitEffectiveLevel signature (HIGH confidence)
+- `C:\Users\jonat\Repositories\wow-ui-source\Interface\AddOns\Blizzard_NamePlates\Blizzard_NamePlateClassificationFrame.lua` lines 77–127 — UnitClassification return values in use: "elite", "worldboss", "rare", "rareelite" (HIGH confidence)
+- `C:\Users\jonat\Repositories\wow-ui-source\Interface\AddOns\Blizzard_NamePlates\Blizzard_NamePlateUnitFrame.lua` line 359 — `UnitClassification(unitToken) == "minus"` confirms "minus" is a valid return (HIGH confidence)
+- `C:\Users\jonat\Repositories\wow-ui-source\Interface\AddOns\Blizzard_UnitFrame\Mainline\TargetFrame.lua` lines 370–440 — UnitClassification full branch coverage ("minus", "rare", "rareelite", "elite"); UnitIsBossMob usage line 427 (HIGH confidence)
+- `C:\Users\jonat\Repositories\wow-ui-source\Interface\AddOns\Blizzard_UnitFrame\Mainline\UnitFrame.lua` line 1020 — UnitClassification("minus") usage (HIGH confidence)
 - `C:\Users\jonat\Repositories\wow-ui-source\Interface\AddOns\Blizzard_APIDocumentationGenerated\SoundDocumentation.lua` lines 52–71 — PlaySound signature (HIGH confidence)
 - `C:\Users\jonat\Repositories\wow-ui-source\Interface\AddOns\Blizzard_APIDocumentationGenerated\SpellDocumentation.lua` lines 336–350, 1061–1073 — C_Spell.GetSpellInfo signature and SpellInfo struct (HIGH confidence)
 - `C:\Users\jonat\Repositories\wow-ui-source\Interface\AddOns\Blizzard_CooldownViewer\CooldownViewerSoundAlertData.lua` — CDM-curated soundKitID list with category organization (HIGH confidence)
@@ -425,9 +628,9 @@ is simpler, already proven in `PackFrame.lua`, and has no extra dependency.
 - `C:\Users\jonat\Repositories\wow-ui-source\Interface\AddOns\Blizzard_CooldownViewer\CooldownViewerSettings.lua` lines 97–103, 127–148 — Collapse/expand mixin pattern and category list structure (HIGH confidence)
 - `C:\Users\jonat\Repositories\wow-ui-source\Interface\AddOns\Blizzard_CombatAudioAlerts\Blizzard_CombatAudioAlertManager.lua` lines 826–862 — UnitCastingInfo/UnitChannelInfo usage pattern (HIGH confidence)
 - `C:\Users\jonat\Repositories\TerriblePackWarnings\UI\PackFrame.lua` — Existing ScrollFrame + manual row layout pattern (HIGH confidence)
-- `C:\Users\jonat\Repositories\TerriblePackWarnings\Engine\NameplateScanner.lua` — Existing 0.25s tick loop structure for integration point (HIGH confidence)
+- `C:\Users\jonat\Repositories\TerriblePackWarnings\Engine\NameplateScanner.lua` — Existing 0.25s tick loop and plateCache structure for integration point (HIGH confidence)
 
 ---
 
-*Stack research for: TerriblePackWarnings v0.1.0 — Configuration and Skill Data milestone*
-*Researched: 2026-03-17*
+*Stack research for: TerriblePackWarnings v0.1.1 — Mob Category Detection milestone*
+*Researched: 2026-03-23*

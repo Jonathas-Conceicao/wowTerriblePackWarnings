@@ -15,39 +15,12 @@ for _, enemies in pairs(ns.DungeonEnemies) do
     end
 end
 
-local npcIdToClass = {}
-for npcID, entry in pairs(ns.AbilityDB or {}) do
-    if entry.mobClass then
-        npcIdToClass[npcID] = entry.mobClass
-    end
-end
-
-local CLASS_ICON = {
-    WARRIOR     = "Interface\\Icons\\ClassIcon_Warrior",
-    PALADIN     = "Interface\\Icons\\ClassIcon_Paladin",
-    HUNTER      = "Interface\\Icons\\ClassIcon_Hunter",
-    ROGUE       = "Interface\\Icons\\ClassIcon_Rogue",
-    PRIEST      = "Interface\\Icons\\ClassIcon_Priest",
-    DEATHKNIGHT = "Interface\\Icons\\ClassIcon_DeathKnight",
-    SHAMAN      = "Interface\\Icons\\ClassIcon_Shaman",
-    MAGE        = "Interface\\Icons\\ClassIcon_Mage",
-    WARLOCK     = "Interface\\Icons\\ClassIcon_Warlock",
-    MONK        = "Interface\\Icons\\ClassIcon_Monk",
-    DRUID       = "Interface\\Icons\\ClassIcon_Druid",
-    DEMONHUNTER = "Interface\\Icons\\ClassIcon_DemonHunter",
-    EVOKER      = "Interface\\Icons\\ClassIcon_Evoker",
-}
 
 --- Set the best available portrait for an NPC.
 local function GetPortraitTexture(tex, npcID)
     local displayId = npcIdToDisplayId[npcID]
     if displayId and displayId > 0 then
         SetPortraitTextureFromCreatureDisplayID(tex, displayId)
-        return
-    end
-    local mobClass = npcIdToClass[npcID]
-    if mobClass and CLASS_ICON[mobClass] then
-        tex:SetTexture(CLASS_ICON[mobClass])
         return
     end
     tex:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
@@ -527,6 +500,16 @@ local function RebuildLayout()
     leftScrollFrame:UpdateScrollChildRect()
 end
 
+local CATEGORY_COLORS = {
+    boss      = "FFD700",
+    miniboss  = "FF8C00",
+    caster    = "00BFFF",
+    warrior   = "CD853F",
+    rogue     = "FFE566",
+    trivial   = "808080",
+    unknown   = "A0A0A0",
+}
+
 ------------------------------------------------------------------------
 -- PopulateRightPanel: show per-skill settings for the selected mob
 ------------------------------------------------------------------------
@@ -560,8 +543,11 @@ PopulateRightPanel = function(npcID, matchedSpellIDs)
                 end
             end
         end
-        local mobClass = entry.mobClass or "UNKNOWN"
-        headerNameStr:SetText(mobName .. " - " .. mobClass)
+        local cat = entry.mobCategory or "unknown"
+        local colorHex = CATEGORY_COLORS[cat] or "A0A0A0"
+        local displayCat = cat:sub(1,1):upper() .. cat:sub(2)
+        local categoryTag = "|cff" .. colorHex .. "[" .. displayCat .. "]|r"
+        headerNameStr:SetText(mobName .. " " .. categoryTag)
         if hDivider then hDivider:Show() end
     end
 
@@ -1139,7 +1125,7 @@ local function ApplySearchFilter(text)
         return
     end
 
-    local filter = text:lower()
+    local filter = text:lower():gsub("%-", "")  -- strip hyphens: "mini-boss" -> "miniboss"
     currentSearchText = filter
     currentMatchedMobs = {}
     currentMatchedSpells = {}
@@ -1151,8 +1137,15 @@ local function ApplySearchFilter(text)
             local npcID = mob.npcID
             local mobNameMatch = (mob.name or ""):lower():find(filter, 1, true)
 
-            if mobNameMatch then
-                -- Mob name match: show all abilities
+            -- Category match: check mob's category against search filter
+            local categoryMatch = false
+            local catEntry = ns.AbilityDB[npcID]
+            if catEntry and catEntry.mobCategory then
+                categoryMatch = catEntry.mobCategory:find(filter, 1, true) ~= nil
+            end
+
+            if mobNameMatch or categoryMatch then
+                -- Mob name or category match: show all abilities
                 currentMatchedMobs[npcID] = true
                 -- Do NOT populate currentMatchedSpells for this mob (show all)
             else

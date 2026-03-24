@@ -3,11 +3,13 @@ local addonName, ns = ...
 ns.AbilityDB = ns.AbilityDB or {}
 
 -- Seat of the Triumvirate ability database
--- Keyed by npcID; mobClass defaults to WARRIOR, abilities from MDT spells
+-- Keyed by npcID
+-- mobCategory: semantic role — "boss"|"miniboss"|"caster"|"warrior"|"rogue"|"trivial"|"unknown"
+--   (not to be confused with the runtime WoW class token e.g. "WARRIOR"; that is never stored here)
 
 -- Merciless Subjugator (124171)
 ns.AbilityDB[124171] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1262506, defaultEnabled = false },
         { spellID = 1262509, defaultEnabled = false },
@@ -17,7 +19,7 @@ ns.AbilityDB[124171] = {
 
 -- Rift Warden (122571)
 ns.AbilityDB[122571] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1264505, defaultEnabled = false },
         { spellID = 1264532, defaultEnabled = false },
@@ -28,7 +30,7 @@ ns.AbilityDB[122571] = {
 
 -- Ruthless Riftstalker (122413)
 ns.AbilityDB[122413] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1262519, defaultEnabled = false },
         { spellID = 1277339, defaultEnabled = false },
@@ -38,7 +40,7 @@ ns.AbilityDB[122413] = {
 
 -- Ravenous Umbralfin (255320)
 ns.AbilityDB[255320] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1264670, defaultEnabled = false },
         { spellID = 1264678, defaultEnabled = false },
@@ -47,7 +49,7 @@ ns.AbilityDB[255320] = {
 
 -- Umbral War-Adept (122421)
 ns.AbilityDB[122421] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1269183, defaultEnabled = false },
         { spellID = 1280326, defaultEnabled = false },
@@ -56,7 +58,7 @@ ns.AbilityDB[122421] = {
 
 -- Dire Voidbender (122404)
 ns.AbilityDB[122404] = {
-    mobClass = "WARRIOR",
+    mobCategory = "caster",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1262526, defaultEnabled = false },
         { spellID = 1262527, defaultEnabled = false },
@@ -65,7 +67,7 @@ ns.AbilityDB[122404] = {
 
 -- Void-Infused Destroyer (252756)
 ns.AbilityDB[252756] = {
-    mobClass = "WARRIOR",
+    mobCategory = "unknown",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1262335, defaultEnabled = false },
         { spellID = 1262429, defaultEnabled = false },
@@ -75,7 +77,7 @@ ns.AbilityDB[252756] = {
 
 -- Grand Shadow-Weaver (122423)
 ns.AbilityDB[122423] = {
-    mobClass = "WARRIOR",
+    mobCategory = "miniboss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1262508, defaultEnabled = false },
         { spellID = 1264286, defaultEnabled = false },
@@ -84,7 +86,7 @@ ns.AbilityDB[122423] = {
 
 -- Viceroy Nezhar (122056)
 ns.AbilityDB[122056] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 244750, defaultEnabled = false },
         { spellID = 246913, defaultEnabled = false },
@@ -98,7 +100,7 @@ ns.AbilityDB[122056] = {
 
 -- Zuraal the Ascended (122313)
 ns.AbilityDB[122313] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 244579, defaultEnabled = false },
         { spellID = 1263282, defaultEnabled = false },
@@ -114,7 +116,7 @@ ns.AbilityDB[122313] = {
 
 -- Saprish (122316)
 ns.AbilityDB[122316] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 246943, defaultEnabled = false },
         { spellID = 1263523, defaultEnabled = false },
@@ -124,7 +126,7 @@ ns.AbilityDB[122316] = {
 
 -- Darkfang (122319)
 ns.AbilityDB[122319] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 245742, defaultEnabled = false },
         { spellID = 246943, defaultEnabled = false },
@@ -133,7 +135,7 @@ ns.AbilityDB[122319] = {
 
 -- Famished Broken (122322)
 ns.AbilityDB[122322] = {
-    mobClass = "WARRIOR",
+    mobCategory = "trivial",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1269468, defaultEnabled = false },
         { spellID = 1269469, defaultEnabled = false },
@@ -143,7 +145,7 @@ ns.AbilityDB[122322] = {
 
 -- Shadowguard Champion (122403)
 ns.AbilityDB[122403] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1262517, defaultEnabled = false },
         { spellID = 1264036, defaultEnabled = false },
@@ -152,7 +154,7 @@ ns.AbilityDB[122403] = {
 
 -- Dark Conjurer (122405)
 ns.AbilityDB[122405] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1262510, defaultEnabled = false },
         { spellID = 1262522, defaultEnabled = false },
@@ -160,9 +162,18 @@ ns.AbilityDB[122405] = {
     },
 }
 
+-- Bound Voidcaller (122412)
+ns.AbilityDB[122412] = { mobCategory = "warrior", abilities = {} }
+
+-- Coalesced Void (122716)
+ns.AbilityDB[122716] = {
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
+    abilities = {},
+}
+
 -- Umbral Tentacle (122827)
 ns.AbilityDB[122827] = {
-    mobClass = "WARRIOR",
+    mobCategory = "warrior",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 249082, defaultEnabled = false },
         { spellID = 1268733, defaultEnabled = false },
@@ -171,7 +182,7 @@ ns.AbilityDB[122827] = {
 
 -- L'ura (124729)
 ns.AbilityDB[124729] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1264159, defaultEnabled = false },
         { spellID = 1264196, defaultEnabled = false },
@@ -194,7 +205,7 @@ ns.AbilityDB[124729] = {
 
 -- Shadewing (125340)
 ns.AbilityDB[125340] = {
-    mobClass = "WARRIOR",
+    mobCategory = "boss",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 246943, defaultEnabled = false },
         { spellID = 248829, defaultEnabled = false },
@@ -203,11 +214,13 @@ ns.AbilityDB[125340] = {
     },
 }
 
+-- Depravation Wave Stalker (255551)
+ns.AbilityDB[255551] = { mobCategory = "unknown", abilities = {} }
+
 -- Void Tentacle (256424)
 ns.AbilityDB[256424] = {
-    mobClass = "WARRIOR",
+    mobCategory = "unknown",  -- semantic role; see header for vocabulary
     abilities = {
         { spellID = 1269081, defaultEnabled = false },
     },
 }
-

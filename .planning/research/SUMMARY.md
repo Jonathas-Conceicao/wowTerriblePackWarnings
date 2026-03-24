@@ -1,195 +1,191 @@
 # Project Research Summary
 
-**Project:** TerriblePackWarnings v0.1.0 — Configuration and Skill Data
-**Domain:** WoW Midnight (12.0) Mythic+ dungeon pack warning addon
-**Researched:** 2026-03-17
+**Project:** TerriblePackWarnings v0.1.1 — Mob Category System
+**Domain:** WoW Midnight (12.0) Mythic+ nameplate scanning addon
+**Researched:** 2026-03-23
 **Confidence:** HIGH
 
 ## Executive Summary
 
-TerriblePackWarnings is a WoW Midnight (12.0) addon that gives Mythic+ players real-time ability warnings for dungeon trash packs. The v0.1.0 milestone expands the working v0.0.4 foundation into a full-featured warning system: per-dungeon route storage for all 9 Midnight S1 dungeons, per-skill configuration UI, cast detection for untimed abilities, and sound alert selection. Research was conducted entirely against primary sources — local copies of `wow-ui-source`, `MythicDungeonTools`, and the existing TerriblePackWarnings codebase — so confidence across all four research areas is HIGH.
+The v0.1.1 milestone adds a per-mob category system (boss/miniboss/caster/warrior/rogue/trivial/unknown) to the existing TerriblePackWarnings nameplate scanner. No comparable M+ addon provides semantic role-based category filtering — MDT exposes only a binary `isBoss` flag, BigWigs has no category concept for trash, and Plater uses per-user custom scripts. TPW's approach is a novel, statically-hardcoded category per npcID in the AbilityDB data files, combined with runtime detection of structural tiers (boss/miniboss/trivial) from WoW APIs at `NAME_PLATE_UNIT_ADDED`. The feature delivers meaningful noise reduction for players: by defaulting `trivial = false` in the category filter, the addon is quieter out of the box without any manual configuration.
 
-The recommended approach is conservative: extend the existing architecture without introducing new libraries or UI frameworks. The `NameplateScanner`'s existing 0.25s tick loop is the only valid cast detection mechanism in Midnight (COMBAT_LOG_EVENT_UNFILTERED is disabled), so untimed ability highlighting integrates directly into that loop. The configuration UI follows the same `ScrollFrame + UIPanelScrollFrameTemplate + manual row stacking` pattern already proven in `PackFrame.lua`. Sound alerts use raw `soundKitID` values from Blizzard's Cooldown Manager (CDM) curated library via bare `PlaySound(soundKitID)` calls. All 9 dungeon ability datasets must be hand-authored in `Data/*.lua` files — MDT's `spells` table is a spellID reference list only, with no timing, label, or priority data.
+The recommended implementation uses three confirmed-stable Midnight APIs: `UnitClassification(unitToken)`, `UnitIsLieutenant(unitToken)`, and `UnitClassBase(unitToken)`. All three are marked `AllowedWhenUntainted` with no return-value Secret Value restrictions, and Blizzard's own nameplate code calls `UnitClassification` on nameplate unit tokens directly. One API explicitly documented alongside these — `UnitEffectiveLevel` — is a critical trap: it takes a `cstring` name argument (not a unit token), and getting a unit name from a nameplate requires `UnitName`, which returns a Secret Value in instances. `UnitEffectiveLevel` must not be used at all for category detection.
 
-The most significant risks are architectural rather than API-level. The `PackDatabase["imported"]` single-key pattern must be atomically refactored across four files simultaneously or the system silently breaks. `UnitCastingInfo` must be paired with a pre-built spellID index at pack activation to avoid O(nameplates x abilities) performance in the tick loop. Sound and TTS alerts must be throttled per spellID to prevent audio stacking when multiple mobs cast the same ability. None of these risks are novel — the research identifies exact code patterns to address each one before implementation begins.
+The feature is architecturally additive and low-risk. The implementation touches five files in a strict dependency order (Scanner → Pipeline → Skyreach data → Scanner filter → ConfigFrame display). No SavedVariables schema migration is needed. `UnitIsLieutenant` is the only unverified API — it is documented in 12.0.0 with correct taint annotations but appears in no Blizzard UI Lua file, so it requires in-game validation before being treated as reliable.
+
+---
 
 ## Key Findings
 
 ### Recommended Stack
 
-No new external libraries are needed for v0.1.0. The entire feature set is implementable with native WoW API. Blizzard's own Cooldown Manager (CDM) in `wow-ui-source` is an authoritative implementation reference for every new UI component in this milestone — its ScrollFrame layout, collapse/expand pattern, sound library, and PlaySound usage are all directly applicable.
+No new libraries or frameworks are needed for v0.1.1. The existing Lua 5.1 + native WoW API stack handles everything. The three APIs central to this milestone (`UnitClassification`, `UnitIsLieutenant`, `UnitClassBase`) are all stable, non-secret, and confirmed safe on nameplate unit tokens in Midnight dungeon instances. The `UNIT_CLASSIFICATION_CHANGED` event must be registered in Core.lua alongside the new classification caching — Blizzard's own nameplate classification frame uses this event for updates, confirming classification can change mid-encounter and the cache must be kept current.
 
 **Core technologies:**
-- Lua 5.1 (WoW dialect) + TOC `## Interface: 120001` — only language available; 120001 is a hard load requirement
-- `C_Spell.GetSpellInfo(spellID)` — resolves spell names and icons from raw MDT spellIDs; marked `AllowedWhenTainted`, available everywhere
-- `UnitCastingInfo("nameplateN")` / `UnitChannelInfo("nameplateN")` — cast detection for untimed abilities; restriction flag is `SecretWhenUnitSpellCastRestricted` (PvP-only), not a dungeon block; validate in first in-dungeon session
-- `PlaySound(soundKitID)` — one-argument call; soundKitIDs from CDM's `CooldownViewerSoundAlertData.lua` (67 curated sounds, 6 categories)
-- `ScrollFrame + UIPanelScrollFrameTemplate + manual SetPoint stacking` — config tree layout; same pattern as existing `PackFrame.lua`; avoids ScrollBox/DataProvider which requires Mixin infrastructure not in TPW
-- `SavedVariables: TerriblePackWarningsDB` with `schemaVersion` field — must be established before writing any new v0.1.0 fields
+- `UnitClassification(unitToken)`: structural tier detection — confirmed used by `Blizzard_NamePlateUnitFrame.lua` on nameplate tokens; no Secret Value restrictions; returns `"worldboss"`, `"elite"`, `"rareelite"`, `"rare"`, `"normal"`, `"trivial"`, `"minus"`
+- `UnitIsLieutenant(unitToken)`: miniboss tier signal — documented in 12.0.0, not exercised in any Blizzard UI file; wrap in `pcall` until in-game verified
+- `UnitClassBase(unitToken)`: role-based category mapping (caster/warrior/rogue) — already in production use in v0.1.0; no changes needed
+- `UNIT_CLASSIFICATION_CHANGED` event: cache invalidation for classification — confirmed real in `Blizzard_NamePlateClassificationFrame.lua` line 26; must be registered alongside `NAME_PLATE_UNIT_ADDED`
 
-**Avoid:**
-- `UIDropDownMenu_Initialize` (deprecated in Midnight) — use Button + popup list instead
-- `ScrollBox`/`DataProvider` — requires Blizzard Mixin infrastructure not present in TPW
-- `SOUNDKIT.*` constants for alert sounds — maps UI interaction sounds, not CDM alert sounds; use raw numeric IDs from CDM's curated table
-- `ResizeLayoutFrame` — requires `GetLayoutChildrenBounds` on children; manual `SetPoint` is simpler and already proven
+**Explicitly excluded:**
+- `UnitEffectiveLevel`: unusable for nameplate-based detection — takes `cstring` name, not `UnitToken`; name retrieval from nameplates requires `UnitName` which is `SecretWhenUnitIdentityRestricted` in instances
+- `ScrollBox/DataProvider`, `UIDropDownMenu`, `ResizeLayoutFrame`: not needed; existing `ScrollFrame + UIPanelScrollFrameTemplate` pattern from `PackFrame.lua` is sufficient for any ConfigFrame additions
 
 ### Expected Features
 
-**Must have (v0.1.0 launch):**
-- AbilityDB data for all 9 Midnight S1 dungeons — foundational; blocks all other features until done
-- Per-dungeon route storage (`ns.db.importedRoutes[dungeonKey]`) — replaces flat `PackDatabase["imported"]`; enables independent routes per dungeon
-- Dungeon selector in TPW window — dropdown or tab bar showing all 9 dungeons with status
-- Zone-in auto-switch on `PLAYER_ENTERING_WORLD` — zero-click correct dungeon selection using `C_Map.GetBestMapForUnit` + mapID table
-- Config window with dungeon→mob→skill tree — per-skill: enable/disable checkbox, custom label, TTS text field, sound dropdown
-- Mob count overlay on pack portraits ("x3" format, sorted by count descending, MDT pattern)
-- Untimed skill highlighting via `UnitCastingInfo` polling — fires on cast start, clears on cast end
-- Sound alert per skill — selected from CDM 67-sound library, stored as soundKitID in `ns.db.skillConfig`
+The research identified a clear MVP scope with explicit P1 and P2 priority tiers.
 
-**Should have (v0.1.x after validation):**
-- Sound preview on dropdown select — `PlaySound` call from the dropdown `OnClick` handler
-- TTS text override per skill — unique differentiator; already in schema, surface it in config UI
+**Must have (table stakes for v0.1.1 launch):**
+- `mobCategory` field on all Skyreach npcID entries in `Data/Skyreach.lua` — pilot dungeon fully categorized
+- All other dungeons default to `"unknown"` (absent field = unknown; never nil at runtime via `entry.mobCategory or "unknown"`)
+- `Pipeline.lua` propagates `mobCategory` from AbilityDB into merged ability tables (one-line addition in `MergeSkillConfig`)
+- `NameplateScanner.lua` caches `UnitClassification` + `UnitIsLieutenant` at `NAME_PLATE_UNIT_ADDED`; registers `UNIT_CLASSIFICATION_CHANGED` for cache updates
+- `categoryFilter` table in `TerriblePackWarningsDB` with defaults: `trivial = false`, all others `true`
+- Category filter check in `OnMobsAdded` with unknown-as-wildcard invariant enforced: `ability.mobCategory == "unknown" OR ability.mobCategory == runtimeCategory`
+- Category tag (read-only, color-coded) appended to mob header in `ConfigFrame.lua`
+- Category filter toggle panel in `ConfigFrame.lua` (checkboxes for each category except "unknown")
+
+**Should have (after in-game validation):**
+- Expand category assignments to remaining 7 dungeons — after Skyreach accuracy is confirmed
+- Color-coded category display using WoW color escape codes (boss=gold, miniboss=orange, caster=cyan, warrior=brown, rogue=yellow, trivial=dark gray, unknown=gray)
+- `ShouldShowAbility(ability, runtimeCategory)` extracted as a named helper predicate
 
 **Defer (v2+):**
-- Config profile import/export — serialization complexity before core value is proven
-- Multiple route presets per dungeon — not the TPW use case
-- Volume slider per skill category — user's Master volume is sufficient for v0.1.0
-- Config filter/search — add only after users report navigation difficulty
+- Per-category sound/alert override — defer until base category filter is validated useful
+- Category color coding in PackFrame portrait rows
 
 **Anti-features (never build):**
-- Real-time cast detection via CLEU — blocked in Midnight M+
-- Total forces count / percent bar — belongs in MDT, not TPW
-- Multiple route presets per dungeon — single active route is the use case; re-import to replace
-- Global mute toggle — per-skill checkbox plus CombatWatcher idle state covers this
+- User-editable categories — categories are factual properties of NPCs; user overrides create silent filter breakage and a support surface with no benefit
+- Per-ability `mobCategory` field — category is a property of the npcID, not the spellID; duplicating per-ability creates inconsistency risk
 
 ### Architecture Approach
 
-The v0.1.0 architecture extends the existing layered design (UI → Engine → Display → Import/Data → Persistence) with targeted additions to each layer. The key structural changes are: (1) `PackDatabase["imported"]` retires in favor of `PackDatabase[dungeonKey]` across four files in one atomic refactor; (2) eight new `Data/*.lua` files following the `WindrunnerSpire.lua` schema; (3) `NameplateScanner.Tick()` gains `UnitCastingInfo` polling with a pre-built O(1) spellID index; (4) `IconDisplay.lua` gains `SetCastHighlight`/`ClearCastHighlight` for untimed highlights; (5) new `UI/ConfigFrame.lua` built lazily on first open. No new libraries, no new timers, no new namespace patterns.
+The v0.1.1 delta is strictly additive: new fields on existing data structures, new cached values in `plateCache`, one new lookup table (`activeCategoryByClass`), and one new filter predicate in `OnMobsAdded`. The hot Tick() loop is unchanged — category detection runs once per mob at `NAME_PLATE_UNIT_ADDED`, derived category is stored once per classBase in `activeCategoryByClass`, and the filter check in `OnMobsAdded` is a two-line guard outside the tick body.
 
-**Major components (new or changed):**
-1. `Data/*.lua` (8 new files) — hand-authored AbilityDB entries for 8 remaining dungeons; schema matches `WindrunnerSpire.lua` exactly
-2. `UI/ConfigFrame.lua` (new) — lazily constructed dungeon→mob→skill config tree; reads `ns.AbilityDB`, writes `ns.db.skillConfig[npcID][spellID]`
-3. `Import/Pipeline.lua` (extended) — per-dungeon key writes, `MergeSkillConfig()` sparse-override helper, `importedRoutes` map restore
-4. `Engine/NameplateScanner.lua` (extended) — `UnitCastingInfo` polling in existing `Tick()`, pre-built spellID index at `Start()`, `castHighlightActive` table
-5. `Engine/CombatWatcher.lua` (extended) — full 9-dungeon `ZONE_DUNGEON_MAP`, `Reset()` iterates `importedRoutes` for auto-select
-6. `Display/IconDisplay.lua` (extended) — `SetCastHighlight`/`ClearCastHighlight`, `PlaySound` at alert trigger, per-spellID throttle table in `SetUrgent`
-7. `UI/PackFrame.lua` (extended) — dungeon selector widget, mob count "x3" overlay on portrait frames
+The canonical data ownership is: `AbilityDB` holds the hardcoded semantic role (caster/warrior/rogue/trivial); `plateCache` holds the runtime-detected structural tier (boss/miniboss/trivial from WoW APIs). These two sources compose but never merge — `mobCategory` must not enter the SavedVariables-backed packed route data.
 
-**Recommended build order (dependencies flow downward):**
-1. Data files (8 dungeons) — no code dependencies; unblocks everything else
-2. IconDisplay highlight + sound — no upstream dependencies
-3. NameplateScanner cast detection — depends on step 2
-4. Pipeline per-dungeon key + skillConfig merge — cross-cutting refactor; atomic across four files
-5. CombatWatcher zone map + auto-switch — depends on step 4
-6. ConfigFrame — depends on steps 1 and 4
-7. PackFrame dungeon selector + mob count — depends on step 4
+**Major components and their v0.1.1 changes:**
+1. `Data/Skyreach.lua` — add `mobCategory` field to all npcID entries; all other Data/*.lua unchanged
+2. `Engine/NameplateScanner.lua` — extend `plateCache` with `classification`/`isLieutenant`; add `activeCategoryByClass` table; add `DeriveCategory()` helper; add category filter in `OnMobsAdded`; register `UNIT_CLASSIFICATION_CHANGED`
+3. `Import/Pipeline.lua` — propagate `mobCategory` in `MergeSkillConfig`; read from `ns.AbilityDB[npcID]`, NOT from individual ability entries
+4. `UI/ConfigFrame.lua` — append read-only category tag to mob header; add category filter checkboxes panel
+5. `Core.lua` — register `UNIT_CLASSIFICATION_CHANGED` event; route to new scanner handler
+
+**Dependency-respecting build order:** Scanner extension (step 2) → Pipeline propagation (step 3) → Skyreach data (step 1) → Scanner filter activation (step 2 continued) → ConfigFrame display (step 4/5)
 
 ### Critical Pitfalls
 
-1. **`UnitCastingInfo` O(N×M) tick loop** — Build a `spellID → ability` O(1) lookup index at `NameplateScanner:Start(pack)` time. Gate the call behind a class filter. Never iterate the ability list per nameplate per tick. This is the highest-impact performance risk and has zero recovery cost if done correctly from the start.
+1. **`UnitEffectiveLevel` is unusable for nameplate category detection** — it takes a `cstring` name argument, not a `UnitToken`. Getting a nameplate mob's name requires `UnitName(npUnit)`, which is `SecretWhenUnitIdentityRestricted` in dungeon instances. The entire chain is blocked. Do not implement it; grep for `UnitEffectiveLevel` at the end — must return zero results.
 
-2. **"imported" key migration breaks CombatWatcher silently** — The migration across `Pipeline.lua`, `CombatWatcher.lua`, `PackFrame.lua`, and `Import.lua` must be atomic. Grep all files for the `"imported"` literal and `importedRoute` before shipping. A partial migration produces no Lua errors but leaves the system in idle state with no diagnostic feedback.
+2. **Unknown wildcard must be an explicit positive exemption, never a nil check** — writing `if not ability.mobCategory or ability.mobCategory == detectedCategory` treats absent fields as wildcards and silently breaks as entries accumulate without the field. The correct form: `if ability.mobCategory == "unknown" or ability.mobCategory == runtimeCategory`. `"unknown"` is the explicit string; nil is never valid at the filter call site.
 
-3. **Sound and TTS alert stacking on multi-mob pulls** — Add a per-spellID throttle table (`alertThrottle[spellID] = GetTime()`) in `SetUrgent` before the `PlaySound` and `TrySpeak` calls. Build this simultaneously with the sound dropdown — do not defer. At 5 mobs casting the same ability, five `PlaySound` calls in 0.25s create audio chaos.
+3. **`mobCategory` must never enter SavedVariables via Pipeline's merged ability object** — if `category` is added to the merged ability table in `MergeSkillConfig`, it gets written into `ns.db.importedRoutes` on import. All routes saved before the field was added will lack it, creating migration debt where none was needed. Category belongs in `AbilityDB` and `plateCache` only.
 
-4. **SavedVariables schema corruption on upgrade** — Add `schemaVersion` to `TerriblePackWarningsDB` before writing any new v0.1.0 fields. On `ADDON_LOADED`, detect the old single-route structure (`ns.db.importedRoute` exists, `ns.db.importedRoutes` does not) and migrate. Users should not need to re-import after an addon update.
+4. **`UnitClassification` must be cached at event time and updated via `UNIT_CLASSIFICATION_CHANGED`, not polled per tick** — calling it per tick at 20 nameplates adds ~40 extra API calls per tick (240/sec) with no benefit; classification is stable between events. `UNIT_CLASSIFICATION_CHANGED` exists precisely for invalidation. Cache at `NAME_PLATE_UNIT_ADDED`, update in handler, never call in `Tick()`.
 
-5. **MDT ability data is a spellID list, not an ability database** — MDT's `spells` table is `{[spellID] = {}}` with always-empty sub-tables (confirmed in all 9 dungeon files). Timing, labels, and danger classification must be hand-authored. Validate every spellID with `C_Spell.GetSpellInfo(id)` in-game before committing. Plan time for manual authoring; automated extraction produces unusable empty entries.
+5. **`mobClass` (WoW class token `"WARRIOR"`) and `mobCategory` (semantic role `"warrior"`) must not be conflated** — `classBarIds` and `classHasUntimed` in the scanner are keyed on `mobClass` WoW class strings. If `mobCategory` values are accidentally used as keys, no timer ever spawns — no nameplate returns `"caster"` or `"warrior"` from `UnitClass()`. The value sets must remain visually distinct: `mobClass` is uppercase WoW tokens; `mobCategory` is lowercase role strings.
+
+---
 
 ## Implications for Roadmap
 
-The feature set falls into four natural phases ordered by dependency graph and risk. The ordering follows the component build order from ARCHITECTURE.md.
+Based on research, suggested phase structure:
 
-### Phase 1: Ability Data Foundation
+### Phase 1: Data Layer and Schema Definition
+**Rationale:** All downstream code depends on a settled `mobCategory` field definition. Establishing the schema, documenting the two-field distinction (`mobClass` vs `mobCategory`), and populating Skyreach data are pure data work with no code dependencies — they unblock all later phases and provide immediate visual value in ConfigFrame once Phase 4 lands. Doing this first prevents the `mobClass`/`mobCategory` confusion pitfall by locking in the value vocabulary before any code references it.
+**Delivers:** `mobCategory` on all Skyreach npcID entries; explicit comment header in each data file documenting valid category values and field semantics; confirmed `"unknown"` as the explicit default string (never nil)
+**Addresses:** Category field in AbilityDB (FEATURES P1); Skyreach pilot dungeon fully categorized
+**Avoids:** `mobClass`/`mobCategory` confusion pitfall (Pitfall 4); nil-as-wildcard footgun (Pitfall 3); SavedVariables contamination decided before code is written (Pitfall 6)
+**Research flag:** Skip — schema is fully specified in ARCHITECTURE.md; work is data entry, not API research
 
-**Rationale:** AbilityDB population is a hard prerequisite for every other feature. Config UI, cast detection, dungeon selector, and mob count display all need populated `ns.AbilityDB` entries before they have anything to render or match against. This work is pure data authoring with no code risk — the right thing to do first and can be validated independently of all other work.
-**Delivers:** `Data/*.lua` files for all 9 dungeons; every npcID and spellID validated in-game via `C_Spell.GetSpellInfo`; `Data/DungeonEnemies.lua` updated with mapID entries for all 9 dungeons
-**Addresses:** AbilityDB all 9 dungeons (P1); mob count display data foundation; `ZONE_DUNGEON_MAP` mapID table
-**Avoids:** Pitfall 8 (MDT data gaps) — manual authoring workflow established before any code depends on it; grey placeholder icons from invalid spellIDs caught before shipping
-**Research flag:** Skip — WindrunnerSpire.lua is the complete pattern; work is data entry with in-game verification, not API research
+### Phase 2: Runtime Detection in NameplateScanner
+**Rationale:** Scanner changes are the critical path — they block the filter feature. Extending `plateCache` and wiring `UNIT_CLASSIFICATION_CHANGED` before writing any filter logic ensures the cache is populated and up-to-date before it is consumed. `UnitIsLieutenant` must be wrapped in `pcall` here and its behavior confirmed with an in-game test before Phase 3 filter logic treats it as reliable.
+**Delivers:** `classification` and `isLieutenant` cached in `plateCache` at `NAME_PLATE_UNIT_ADDED`; `DeriveCategory()` helper; `activeCategoryByClass` table populated per session and wiped on `Stop()`; `UNIT_CLASSIFICATION_CHANGED` registered and routed to a new `OnClassificationChanged` handler; `pcall` guard on `UnitIsLieutenant`
+**Uses:** `UnitClassification` (HIGH confidence), `UnitIsLieutenant` (MEDIUM confidence — needs in-game validation), `UNIT_CLASSIFICATION_CHANGED` event (confirmed in Blizzard source)
+**Avoids:** Per-tick polling pitfall (Pitfall 5); taint contamination from UI paths (Pitfall 2); `UnitEffectiveLevel` usage (Pitfall 1)
+**Research flag:** Needs in-game validation — `UnitIsLieutenant` is unverified in any known codebase; test whether it returns meaningful values on the first dungeon pull
 
-### Phase 2: Per-Dungeon Route Storage (Structural Refactor)
+### Phase 3: Pipeline Propagation
+**Rationale:** One-line change to `MergeSkillConfig` but must be correct before the filter in Phase 4 is meaningful. Delivering this as a discrete step prevents accidentally routing `mobCategory` into the SavedVariables-backed route data — the decision was made in Phase 1 but the implementation boundary is enforced here.
+**Delivers:** `mobCategory` field on all merged ability tables produced by `MergeSkillConfig`; confirmed `entry.mobCategory or "unknown"` pattern (never nil); confirmed category is read from `ns.AbilityDB[npcID]`, not per-ability entries
+**Avoids:** SavedVariables contamination (Pitfall 6); per-ability category duplication anti-pattern
 
-**Rationale:** The `PackDatabase["imported"]` single-key pattern blocks multi-dungeon support and must be refactored before any UI takes dependencies on per-dungeon keys. This is the highest-risk architectural change because it touches four files simultaneously and fails silently if done partially. Doing it second while the codebase is still clean avoids compounding the refactor with new UI code taking the wrong pattern.
-**Delivers:** `ns.db.importedRoutes[dungeonKey]` map, per-dungeon PackDatabase keys, `MergeSkillConfig()` sparse-override helper, `schemaVersion` in SavedVariables, old-to-new migration on `ADDON_LOADED`
-**Addresses:** Per-dungeon route storage (P1); schema migration safety; Import.Clear() per-dungeon scope
-**Avoids:** Pitfall 7 (migration breaking CombatWatcher) — done atomically with grep verification; Pitfall 3 (schema corruption) — schemaVersion established here before config writes begin
-**Research flag:** Skip — ARCHITECTURE.md provides exact code changes for all four affected files and the full data flow
+### Phase 4: Category Filter in NameplateScanner
+**Rationale:** With runtime detection (Phase 2) and propagated category fields (Phase 3) both in place, the filter predicate can be written correctly from the first line. The unknown-as-wildcard invariant is the only non-obvious logic; it must be verified with both Skyreach (filtered) and non-Skyreach (wildcard passes all) dungeon routes before shipping.
+**Delivers:** `ShouldShowAbility(ability, runtimeCategory)` predicate helper; category filter guard in `OnMobsAdded`; debug validation pass at `Scanner:Start()` for missing category fields; `categoryFilter` SavedVariable with `trivial = false` default
+**Addresses:** Per-category on/off toggle (FEATURES P1); unknown-as-wildcard invariant (FEATURES table stakes); sensible default filter state (trivial suppressed)
+**Avoids:** Wildcard logic failure modes A and B (Pitfall 3); taint contamination from config writes (Pitfall 2)
+**Research flag:** Needs dual in-dungeon verification — (1) Skyreach route: only matching categories show; (2) non-Skyreach route: all abilities display despite `"unknown"` category
 
-### Phase 3: Cast Detection and Sound Alerts
-
-**Rationale:** Cast detection extends `NameplateScanner.Tick()` at a well-understood integration point. Sound alert throttling must be built alongside the sound dropdown — not deferred — because multi-mob test scenarios are the only way to validate the throttle behavior. Both features share the same `SetUrgent` call path and should be developed and tested together.
-**Delivers:** `UnitCastingInfo` polling in `Tick()` with O(1) spellID index; `SetCastHighlight`/`ClearCastHighlight` in `IconDisplay.lua`; `PlaySound` at alert trigger points; per-spellID throttle in `SetUrgent`; `Data/Sounds.lua` with CDM 67-sound library; sound dropdown UI
-**Addresses:** Untimed cast detection (P1); timed pre-warning sound (P1); sound throttle (Pitfall 5)
-**Avoids:** Pitfall 1 (O(N×M) tick loop) — spellID index built at `Start()` time; Pitfall 5 (sound stacking) — throttle built simultaneously with PlaySound
-**Research flag:** Needs early in-game validation — `UnitCastingInfo` on nameplate units is documented as PvP-restricted (not dungeon-blocked) but must be confirmed against a live hostile cast in the first test session. If the 9th return value is nil in M+ content, the fallback is nameplate event-based detection.
-
-### Phase 4: Configuration UI and Pack Selection Polish
-
-**Rationale:** ConfigFrame depends on Phase 1 (AbilityDB populated) and Phase 2 (skillConfig schema defined in SavedVariables). PackFrame dungeon selector depends on Phase 2 (per-dungeon PackDatabase keys). Building this last ensures the data and engine layers it depends on are stable and the UI only needs to render correct data, not work around engine limitations.
-**Delivers:** `UI/ConfigFrame.lua` (lazily constructed) with dungeon→mob→skill tree, per-skill checkbox/label/TTS/sound widgets; PackFrame dungeon selector; mob count "x3" portrait overlay; zone-in auto-switch in CombatWatcher; `/tpw config` slash command
-**Addresses:** Config window tree (P1); per-skill toggle/label/TTS (P1); dungeon selector (P1); zone-in auto-switch (P1); mob count display (P1); sound dropdown (P1)
-**Avoids:** Pitfall 6 (config frame hitch) — lazy construction, accordion expand/collapse, frame pool from PackFrame pattern; Pitfall 4 (config bloat) — sparse-default skillConfig storage, orphan cleanup on route clear; UX pitfall of disabled skills leaving icons visible — disabled skills remove icon from IconDisplay entirely
-**Research flag:** Skip for core layout (established ScrollFrame + accordion pattern from CDM). Sound dropdown popup is a minor question — reuse existing popup patterns from the PackFrame import dialog.
+### Phase 5: ConfigFrame Display
+**Rationale:** Purely cosmetic; no functional dependency on any other phase beyond Skyreach data (Phase 1) for non-"unknown" labels. Can be parallelized with Phase 4 without risk, but is lower priority if time is constrained.
+**Delivers:** Color-coded read-only category tag in mob header (`"MobName - WARRIOR [caster]"`); category filter checkbox panel (one per category; "unknown" excluded — always on, never shown); no editable controls for category; WoW color escape codes for each category tier
+**Addresses:** Category visible in config (FEATURES P1); category filter toggle UI (FEATURES P1)
+**Avoids:** User-editable category anti-feature; nil write path for category in config handlers (taint Pitfall 2)
+**Research flag:** Skip — one-line `SetText` change and CheckButton creation are established patterns already in ConfigFrame.lua and PackFrame.lua
 
 ### Phase Ordering Rationale
 
-- Phase 1 before everything: ability data is the single blocker with zero code risk; front-loading this eliminates the most common integration failure (empty or invalid AbilityDB)
-- Phase 2 before UI: the structural refactor must complete before PackFrame or ConfigFrame take dependencies on per-dungeon keys; a partial migration is worse than no migration and produces no error signals
-- Phase 3 before Phase 4: cast detection and sound must be testable independently of the config UI; the sound throttle must be proven against multi-mob pulls before the config UI exposes per-skill sound selection to users
-- Phase 4 last: config UI and pack selection polish are the user-visible surface; building last ensures the data and engine layers they depend on are stable
+- Phase 1 before everything: schema vocabulary must be locked before any code references the fields; prevents the `mobClass`/`mobCategory` naming confusion pitfall from manifesting in implementation
+- Phase 2 before Phase 4: scanner state (`activeCategoryByClass`) must exist before the filter reads it; `UNIT_CLASSIFICATION_CHANGED` must be wired before the cache is depended on
+- Phase 3 before Phase 4: merged abilities must carry `mobCategory` before the filter can apply non-wildcard checks — Phase 4 with only Phase 2 complete would see all abilities as `"unknown"` (safe, but the feature would be a no-op)
+- Phase 4 before Phase 5: correct filtering is more important than display; the checkbox UI is meaningless if the underlying filter logic is wrong
+- Phase 5 last: additive display change; shipping with "unknown" labels before Phase 1 is complete does not break anything
 
 ### Research Flags
 
-Needs early in-game validation (Phase 3):
-- **`UnitCastingInfo("nameplateN")` in M+ dungeons** — documented as PvP-restricted only, not dungeon-blocked. Must be confirmed with a live test against a visible hostile cast. If the 9th return value is nil in instanced content, the fallback path (nameplate event-based detection) is a contained change to `NameplateScanner.lua`.
+Needs in-game validation during Phase 2:
+- **`UnitIsLieutenant` runtime behavior:** Documented in 12.0.0 API docs with correct taint annotation but appears in zero Blizzard UI Lua files. Test on the first dungeon pull with `pcall` wrapping. If it returns nil or errors for all mobs, remove it and collapse `"miniboss"` to `"unknown"` for this milestone.
 
-Data lookup needed before Phase 2 ships:
-- **9-dungeon `ZONE_DUNGEON_MAP` mapIDs** — 7 of the 9 mapIDs need to be read from `MDT.mapInfo[dungeonIndex].mapID` in each dungeon file. This is a one-time lookup, not an API question.
+Needs dual verification during Phase 4:
+- **Unknown-as-wildcard correctness:** Import a WindrunnerSpire route (all `"unknown"` categories) and confirm all abilities still display correctly. Import a Skyreach route and confirm category filtering applies. Both scenarios must pass before shipping.
 
-Phases with standard patterns (skip deeper research):
-- **Phase 1:** WindrunnerSpire.lua is the complete pattern; data entry + in-game spellID verification
-- **Phase 2:** ARCHITECTURE.md provides exact code changes; migration pattern is fully specified
-- **Phase 4:** CDM's CooldownViewerSettings.lua / .xml is a complete implementation reference for the ScrollFrame + accordion config tree
+Phases with standard patterns (no additional research needed):
+- **Phase 1:** Pure data entry in the established `Data/*.lua` table format; no API risk
+- **Phase 3:** Single-field addition to existing `MergeSkillConfig`; identical pattern to existing `mobClass` propagation
+- **Phase 5:** ScrollFrame layout, color escape codes, and CheckButton creation are all established patterns already used in `PackFrame.lua` and `ConfigFrame.lua`
+
+---
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All APIs verified against wow-ui-source: UnitDocumentation.lua (UnitCastingInfo), SoundDocumentation.lua (PlaySound), SpellDocumentation.lua (C_Spell.GetSpellInfo). CDM source confirms ScrollFrame and PlaySound patterns for production Midnight addons. |
-| Features | HIGH | MDT source confirms `spells` table structure across all 9 dungeon files. PackFrame.lua confirms existing portrait pool pattern. Feature set derived from CDM (config pattern), MDT (dungeon switching pattern), and existing TPW codebase. |
-| Architecture | HIGH | Derived from direct source read of all 10 existing Lua files + TOC. Every integration point, data flow, and build order step is fully specified with exact code samples in ARCHITECTURE.md. |
-| Pitfalls | HIGH (API), MEDIUM (throttle threshold) | API behavior verified from wow-ui-source and existing codebase. The 3-second sound throttle window is a reasonable starting value but the exact threshold needs validation against real multi-mob pulls — expose as a named constant, not a magic number. |
+| Stack | HIGH | All APIs verified against wow-ui-source 12.0.1.66337; taint annotations confirmed; `UnitClassification` usage confirmed in Blizzard's own nameplate code on nameplate unit tokens |
+| Features | HIGH | Feature scope is well-defined; no novel UX patterns; competitor analysis confirms this is novel but design space is well-understood from first principles |
+| Architecture | HIGH | All integration points derived from direct source analysis of the v0.1.0 codebase; build order has clear dependency rationale; no speculative components |
+| Pitfalls | HIGH | Critical pitfalls verified against API documentation with exact line references; `UnitEffectiveLevel` trap confirmed with full call-chain analysis; taint model consistent with existing codebase patterns |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **`UnitCastingInfo` in M+ instances:** One in-dungeon validation pass at the start of Phase 3. The documented restriction is PvP-only, but the annotation `SecretWhenUnitSpellCastRestricted` should be confirmed inactive in instanced content. Recovery cost is LOW — the fallback is contained to `NameplateScanner.lua`.
+- **`UnitIsLieutenant` runtime behavior (MEDIUM confidence):** Documented in 12.0.0, not used by any Blizzard UI code. Wrap in `pcall` at implementation time. Have a fallback plan ready: if it misbehaves, remove it and treat all non-boss mobs without explicit `mobCategory = "miniboss"` in data files as `"unknown"`. Recovery cost is LOW — one function call removed.
 
-- **Sound throttle threshold:** The 3-second per-spellID throttle window is research-derived, not benchmarked. Define it as `ALERT_THROTTLE_SECONDS = 3` in `IconDisplay.lua` and tune during Phase 3 testing. Do not hardcode inline.
+- **Skyreach `mobCategory` accuracy:** Category assignments are authored based on mob names and spell lists in the data files, not confirmed against in-game combat behavior. Some mobs may be miscategorized (a mob named "Warrior" may primarily cast spells). Validate during the first post-implementation dungeon run and update before treating Skyreach as reference data for expanding to other dungeons.
 
-- **7 remaining dungeon mapIDs:** Windrunner Spire (mapID 557) and Maisara Caverns (mapID 560) are confirmed. The remaining 7 need to be read from `MDT.mapInfo[dungeonIndex].mapID` in each MDT dungeon file. This is a 5-minute lookup task, not a research question.
+- **`UNIT_CLASSIFICATION_CHANGED` trigger frequency in M+:** Confirmed the event exists and Blizzard uses it in their nameplate code, but the exact conditions that fire it in Midnight M+ dungeon content are not documented. In practice it fires on boss phase transitions and elite promotions. Low risk — the cache is always correct at nameplate-add time; the event only matters for mid-combat classification changes.
+
+---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- `wow-ui-source/Blizzard_APIDocumentationGenerated/UnitDocumentation.lua` lines 811–877 — UnitCastingInfo/UnitChannelInfo signatures, return value positions, restriction flag `SecretWhenUnitSpellCastRestricted`
-- `wow-ui-source/Blizzard_APIDocumentationGenerated/SoundDocumentation.lua` lines 52–71 — PlaySound signature and parameters
-- `wow-ui-source/Blizzard_APIDocumentationGenerated/SpellDocumentation.lua` lines 336–350 — C_Spell.GetSpellInfo signature; `AllowedWhenTainted` status
-- `wow-ui-source/Blizzard_CooldownViewer/CooldownViewerSoundAlertData.lua` — CDM 67-sound library with all soundKitIDs and category names
-- `wow-ui-source/Blizzard_CooldownViewer/CooldownViewerAlert.lua` lines 231–236 — PlaySound bare call pattern; default sound selection
-- `wow-ui-source/Blizzard_CooldownViewer/CooldownViewerSettings.lua` / `.xml` lines 97–103, 201–220 — ScrollFrame layout, collapse/expand mixin pattern, category list structure
-- `wow-ui-source/Blizzard_CombatAudioAlerts/Blizzard_CombatAudioAlertManager.lua` — UnitCastingInfo usage for cast detection; confirms UNIT_SPELLCAST_START is player/target only (not arbitrary nameplates)
-- `wow-ui-source/Blizzard_NamePlates/Blizzard_ClassNameplateBar.lua` — `select(9, UnitCastingInfo(unit))` pattern for spellID extraction
-- `MythicDungeonTools/Midnight/WindrunnerSpire.lua` — MDT enemy/spell table structure; `spells` sub-tables confirmed always `{}`
-- `MythicDungeonTools/Midnight/MaisaraCaverns.lua` — Confirms same MDT structure across multiple dungeon files
-- `MythicDungeonTools/AceGUIWidgets/AceGUIWidget-MythicDungeonToolsPullButton.lua` — Portrait count display ("x"..data.quantity), count-descending sort pattern
-- `MythicDungeonTools/Modules/DungeonSelect.lua` — Dungeon switching pattern, per-dungeon preset storage structure
-- All 10 Lua files in TerriblePackWarnings v0.0.4 — direct source analysis for all integration questions and build order
+- `C:/Users/jonat/Repositories/wow-ui-source/Interface/AddOns/Blizzard_APIDocumentationGenerated/UnitDocumentation.lua` — `UnitClassification` (line 947), `UnitIsLieutenant` (line 1995), `UnitEffectiveLevel` (line 1086, cstring arg confirmed), `UnitName` (line 2345, SecretWhenUnitIdentityRestricted), `UnitCastingInfo`/`UnitChannelInfo` (lines 811–877)
+- `C:/Users/jonat/Repositories/wow-ui-source/Interface/AddOns/Blizzard_NamePlates/Blizzard_NamePlateUnitFrame.lua` line 359 — `UnitClassification` called on nameplate unit token in Blizzard's own code; confirms Midnight M+ compatibility
+- `C:/Users/jonat/Repositories/wow-ui-source/Interface/AddOns/Blizzard_NamePlates/Blizzard_NamePlateClassificationFrame.lua` line 26 — `UNIT_CLASSIFICATION_CHANGED` event registration confirmed; full return value set confirmed
+- `C:/Users/jonat/Repositories/wow-ui-source/Interface/AddOns/Blizzard_UnitFrame/Mainline/TargetFrame.lua` lines 370–440 — `UnitClassification` full branch coverage and `UnitIsBossMob` usage (line 427)
+- `C:/Users/jonat/Repositories/MythicDungeonTools/Midnight/WindrunnerSpire.lua` and `MaisaraCaverns.lua` — MDT enemy/spell table structure; confirmed `isBoss` boolean only, no role-based categories
+- `C:/Users/jonat/Repositories/TerriblePackWarnings/Engine/NameplateScanner.lua` — plateCache structure; existing API call patterns confirmed working in production; integration points for new fields
+- `C:/Users/jonat/Repositories/TerriblePackWarnings/Import/Pipeline.lua` — `MergeSkillConfig` output fields; SavedVariables write path confirmed
 
 ### Secondary (MEDIUM confidence)
-- Sound throttle 3-second window — derived from common addon alert practice; not benchmarked against Midnight specifically
+- Warcraft Wiki: https://warcraft.wiki.gg/wiki/Patch_12.0.0/API_changes — `UnitIsLieutenant` listed as newly added in 12.0.0
+- Warcraft Wiki: https://warcraft.wiki.gg/wiki/API_UnitClassification — return value set and `AllowedWhenUntainted` annotation
+
+### Tertiary (needs in-game validation)
+- `UnitIsLieutenant` runtime behavior in Midnight M+ dungeons — documented with correct taint annotation, not exercised in any known Blizzard Lua file; behavior unverified until first dungeon pull
 
 ---
-*Research completed: 2026-03-17*
+*Research completed: 2026-03-23*
 *Ready for roadmap: yes*
